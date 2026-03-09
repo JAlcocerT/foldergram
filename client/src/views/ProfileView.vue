@@ -1,15 +1,15 @@
 <template>
   <section class="content-column content-column--profile">
-    <ErrorState v-if="profilesStore.profileError" title="Could not load profile" :message="profilesStore.profileError" />
+    <ErrorState v-if="profilesStore.profileError" title="Could not load folder" :message="profilesStore.profileError" />
     <template v-else-if="profilesStore.currentProfile">
       <ProfileHeader :profile="profilesStore.currentProfile" />
       <EmptyState
         v-if="!profilesStore.loadingProfile && profilesStore.currentImages.length === 0"
-        title="No images in this profile"
-        description="Drop supported images into this profile folder and rescan to see them here."
+        title="No images in this folder"
+        description="Drop supported images into this folder and rescan to see them here."
       />
       <template v-else>
-        <div class="profile-tabs" aria-label="Profile sections">
+        <div class="profile-tabs" aria-label="Folder sections">
           <span class="profile-tabs__item profile-tabs__item--active">Posts</span>
         </div>
         <ProfileGrid :items="profilesStore.currentImages" />

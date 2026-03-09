@@ -1,6 +1,8 @@
 <template>
   <aside class="sidebar">
-    <RouterLink class="sidebar__brand" to="/">Gallery</RouterLink>
+    <RouterLink class="sidebar__brand" to="/" aria-label="Foldergram home">
+      <BrandMark />
+    </RouterLink>
     <nav class="sidebar__nav">
       <RouterLink class="sidebar__link" to="/">
         <span class="sidebar__icon" aria-hidden="true">
@@ -33,7 +35,7 @@
         <span>Likes</span>
         <small class="sidebar__badge">{{ likesStore.items.length }}</small>
       </RouterLink>
-      <span class="sidebar__section-label">Profiles</span>
+      <span class="sidebar__section-label">Folders</span>
       <RouterLink
         v-for="profile in featuredProfiles"
         :key="profile.id"
@@ -83,6 +85,7 @@ import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 import { useProfilesStore } from '../stores/profiles';
 import Avatar from './Avatar.vue';
+import BrandMark from './BrandMark.vue';
 
 const appStore = useAppStore();
 const likesStore = useLikesStore();

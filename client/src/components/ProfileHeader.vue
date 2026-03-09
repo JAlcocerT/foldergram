@@ -7,7 +7,7 @@
       <div class="profile-header__top-row">
         <div class="profile-header__title-row">
           <h1>{{ profile.slug }}</h1>
-          <span class="profile-header__badge">Local profile</span>
+          <span class="profile-header__badge">Local folder</span>
         </div>
         <RouterLink class="profile-header__button" to="/">Open feed</RouterLink>
       </div>

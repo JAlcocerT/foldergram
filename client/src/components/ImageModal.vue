@@ -42,7 +42,7 @@
       </div>
       <aside class="viewer__sidebar">
         <div class="viewer__header">
-          <RouterLink class="viewer__profile" :to="{ name: 'profile', params: { slug: image.profileSlug } }">
+          <RouterLink class="viewer__profile" :to="{ name: 'profile', params: { slug: image.profileSlug } }" aria-label="Open folder">
             <Avatar :name="image.profileName" :src="profileAvatar" />
             <div>
               <h2>{{ image.profileSlug }}</h2>

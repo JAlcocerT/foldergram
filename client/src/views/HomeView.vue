@@ -1,16 +1,10 @@
 <template>
   <section class="content-column content-column--feed">
-    <header class="page-header page-header--feed">
-      <div>
-        <span class="eyebrow">Local gallery</span>
-        <h1>Home</h1>
-      </div>
-      <p v-if="appStore.stats">
-        {{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} profiles
-      </p>
+    <header v-if="appStore.stats" class="page-header page-header--feed page-header--compact">
+      <p>{{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} folders</p>
     </header>
 
-    <section v-if="storyProfiles.length" class="stories-bar" aria-label="Profiles">
+    <section v-if="storyProfiles.length" class="stories-bar" aria-label="Folders">
       <RouterLink
         v-for="profile in storyProfiles"
         :key="profile.id"
@@ -28,7 +22,7 @@
     <EmptyState
       v-else-if="feedStore.initialized && feedStore.items.length === 0"
       title="No images indexed yet"
-      description="Add profile folders under gallery/ and the feed will populate after the next scan."
+      description="Add folders under gallery/ and the feed will populate after the next scan."
     />
     <template v-else>
       <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />

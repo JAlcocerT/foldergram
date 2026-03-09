@@ -1,5 +1,5 @@
 :root {
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -8,7 +8,7 @@
   -moz-osx-font-smoothing: grayscale;
   color: #0f1419;
   background: #fafafa;
-  --font-brand: "Georgia", "Times New Roman", serif;
+  --font-brand: "Sora", "Manrope", "Segoe UI", sans-serif;
   --bg: #fafafa;
   --surface: #ffffff;
   --surface-alt: #f8f8f8;
@@ -127,10 +127,27 @@ svg {
 
 .sidebar__brand,
 .topbar__brand {
-  font-family: var(--font-brand);
-  font-size: 1.75rem;
-  line-height: 1;
-  letter-spacing: -0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0.3rem;
+  border-radius: 1rem;
+  color: var(--text);
+  transition: background-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+
+.sidebar__brand svg,
+.topbar__brand svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar__brand:hover,
+.topbar__brand:hover {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
 }
 
 .sidebar__nav {

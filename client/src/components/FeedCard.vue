@@ -59,7 +59,7 @@
               </svg>
             </a>
           </RouterLink>
-          <RouterLink class="feed-card__icon-button" :to="{ name: 'profile', params: { slug: item.profileSlug } }" aria-label="Open profile">
+          <RouterLink class="feed-card__icon-button" :to="{ name: 'profile', params: { slug: item.profileSlug } }" aria-label="Open folder">
             <svg viewBox="0 0 24 24" role="presentation">
               <path
                 d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5C19 16 16 14 12 14Z"

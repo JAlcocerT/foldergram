@@ -1,6 +1,8 @@
 <template>
   <header class="topbar">
-    <RouterLink class="topbar__brand" to="/">Gallery</RouterLink>
+    <RouterLink class="topbar__brand" to="/" aria-label="Foldergram home">
+      <BrandMark />
+    </RouterLink>
     <div class="topbar__actions">
       <RouterLink class="topbar__icon-link" to="/" aria-label="Home">
         <svg viewBox="0 0 24 24" role="presentation">
@@ -30,7 +32,7 @@
         v-if="profilesStore.items[0]"
         class="topbar__icon-link"
         :to="{ name: 'profile', params: { slug: profilesStore.items[0].slug } }"
-        aria-label="Profiles"
+        aria-label="Folders"
       >
         <svg viewBox="0 0 24 24" role="presentation">
           <path
@@ -76,6 +78,7 @@ import { RouterLink } from 'vue-router';
 import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 import { useProfilesStore } from '../stores/profiles';
+import BrandMark from './BrandMark.vue';
 
 const appStore = useAppStore();
 const likesStore = useLikesStore();
