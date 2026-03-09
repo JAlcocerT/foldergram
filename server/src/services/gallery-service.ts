@@ -5,6 +5,7 @@ import path from 'node:path';
 import { appConfig } from '../config/env.js';
 import { imageRepository, likeRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
 import type { FeedImage, ImageDetail, ProfileRecord } from '../types/models.js';
+import { storageService } from './storage-service.js';
 
 function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
   const encodedSegments = relativePath.split('/').map(encodeURIComponent).join('/');
@@ -75,6 +76,16 @@ function buildProfileSummary(profile: ProfileRecord) {
 
 export const galleryService = {
   getFeed(page: number, limit: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return {
+        items: [],
+        page,
+        limit,
+        total: 0,
+        hasMore: false
+      };
+    }
+
     const total = imageRepository.countFeed();
     const items = imageRepository.listFeed(page, limit).map(mapFeedImage);
 
@@ -88,10 +99,18 @@ export const galleryService = {
   },
 
   listProfiles() {
+    if (!storageService.getState().libraryAvailable) {
+      return [];
+    }
+
     return profileRepository.getAll().map(buildProfileSummary);
   },
 
   getProfileBySlug(slug: string) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const profile = profileRepository.getBySlug(slug);
     if (!profile) {
       return null;
@@ -101,6 +120,10 @@ export const galleryService = {
   },
 
   getProfileImages(slug: string, page: number, limit: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const profile = profileRepository.getBySlug(slug);
     if (!profile) {
       return null;
@@ -119,6 +142,10 @@ export const galleryService = {
   },
 
   getImageDetail(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const detail = imageRepository.getImageDetail(id);
     if (!detail) {
       return null;
@@ -128,12 +155,22 @@ export const galleryService = {
   },
 
   getLikes() {
+    if (!storageService.getState().libraryAvailable) {
+      return {
+        items: []
+      };
+    }
+
     return {
       items: likeRepository.listLikedImages().map(mapFeedImage)
     };
   },
 
   likeImage(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const image = imageRepository.getById(id);
     if (!image || image.is_deleted) {
       return null;
@@ -148,6 +185,10 @@ export const galleryService = {
   },
 
   unlikeImage(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const image = imageRepository.getById(id);
     if (!image || image.is_deleted) {
       return null;
@@ -163,18 +204,28 @@ export const galleryService = {
 
   getStats() {
     const lastScan = scanRunRepository.latest();
+    const storageState = storageService.getState();
 
     return {
-      profiles: profileRepository.count(),
-      indexedImages: imageRepository.countFeed(),
-      deletedImages: imageRepository.countDeleted(),
-      thumbnailCount: imageRepository.countWithThumbnail(),
-      previewCount: imageRepository.countWithPreview(),
-      lastScan: lastScan ?? null
+      profiles: storageState.libraryAvailable ? profileRepository.count() : 0,
+      indexedImages: storageState.libraryAvailable ? imageRepository.countFeed() : 0,
+      deletedImages: storageState.libraryAvailable ? imageRepository.countDeleted() : 0,
+      thumbnailCount: storageState.libraryAvailable ? imageRepository.countWithThumbnail() : 0,
+      previewCount: storageState.libraryAvailable ? imageRepository.countWithPreview() : 0,
+      lastScan: lastScan ?? null,
+      storage: {
+        available: storageState.libraryAvailable,
+        reason: storageState.reason,
+        usingInMemoryDatabase: storageState.usingInMemoryDatabase
+      }
     };
   },
 
   getOriginalImagePath(id: number): string | null {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const detail = imageRepository.getById(id);
     if (!detail || detail.is_deleted) {
       return null;
@@ -189,6 +240,10 @@ export const galleryService = {
   },
 
   async deleteImage(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
     const imageRecord = imageRepository.getById(id);
     const imageDetail = imageRepository.getImageDetail(id);
 

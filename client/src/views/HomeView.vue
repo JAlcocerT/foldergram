@@ -19,11 +19,16 @@
         </RouterLink>
       </section>
 
-      <ErrorState v-if="feedStore.error" title="Could not load feed" :message="feedStore.error" />
+      <EmptyState
+        v-if="appStore.isLibraryUnavailable"
+        title="Library storage unavailable"
+        :description="appStore.libraryUnavailableReason"
+      />
+      <ErrorState v-else-if="feedStore.error" title="Could not load feed" :message="feedStore.error" />
       <EmptyState
         v-else-if="feedStore.initialized && feedStore.items.length === 0"
         title="No images indexed yet"
-        description="Add folders under gallery/ and the feed will populate after the next scan."
+        description="Add folders under data/gallery/ and the feed will populate after the next scan."
       />
       <template v-else>
         <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />
@@ -31,7 +36,7 @@
       </template>
     </div>
 
-    <aside v-if="homeSummaryFolder" class="home-rail" aria-label="Folder recommendations">
+    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="home-rail" aria-label="Folder recommendations">
       <div class="home-rail__summary">
         <Avatar :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
         <div>
@@ -86,6 +91,10 @@ const homeSummaryFolder = computed(() => profilesStore.items[0] ?? null);
 const recommendedFolders = computed(() => profilesStore.items.slice(1, 6));
 
 onMounted(async () => {
+  if (appStore.isLibraryUnavailable) {
+    return;
+  }
+
   await feedStore.loadInitial();
 });
 </script>

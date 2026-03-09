@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { galleryService } from '../services/gallery-service.js';
 import { scannerService } from '../services/scanner-service.js';
+import { storageService } from '../services/storage-service.js';
+import { watcherService } from '../services/watcher-service.js';
 
 const router = express.Router();
 
@@ -20,9 +22,15 @@ const imageIdSchema = z.object({
 });
 
 router.get('/health', (_request, response) => {
+  const storageState = storageService.getState();
   response.json({
     ok: true,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    storage: {
+      available: storageState.libraryAvailable,
+      reason: storageState.reason,
+      usingInMemoryDatabase: storageState.usingInMemoryDatabase
+    }
   });
 });
 
@@ -137,6 +145,7 @@ router.get('/originals/:id', (request, response) => {
 
 router.post('/admin/rescan', async (_request, response) => {
   const lastScan = await scannerService.scanAll('manual');
+  await watcherService.start();
   response.json({
     ok: true,
     lastScan

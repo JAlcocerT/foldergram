@@ -19,6 +19,10 @@ export const useAppStore = defineStore('app', {
     theme: 'light',
     imageModalBackgroundPath: null
   }),
+  getters: {
+    isLibraryUnavailable: (state) => state.stats?.storage.available === false,
+    libraryUnavailableReason: (state) => state.stats?.storage.reason ?? 'Configured library storage is unavailable.'
+  },
   actions: {
     initializeTheme() {
       const savedTheme = window.localStorage.getItem('insta-local-theme');

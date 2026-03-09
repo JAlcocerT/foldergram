@@ -1,6 +1,6 @@
-# Local Gallery
+# Foldergram
 
-Local-only photo gallery app for browsing folders in an Instagram-inspired layout. It indexes images from `gallery/`, stores metadata in SQLite, generates thumbnails and previews with Sharp, and serves a Vue 3 SPA over localhost.
+Foldergram is a local-only photo gallery app for browsing folders in an Instagram-inspired layout. It indexes images from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews with Sharp, and serves a Vue 3 SPA over localhost.
 
 ## Stack
 
@@ -20,21 +20,22 @@ Local-only photo gallery app for browsing folders in an Instagram-inspired layou
 .
 ├─ client/
 ├─ data/
-├─ gallery/
-├─ previews/
 ├─ server/
-└─ thumbnails/
+├─ .env.example
+└─ README.md
 ```
 
 ## How it works
 
-- Each direct child folder inside `gallery/` becomes one profile.
+- Each direct child folder inside the configured `GALLERY_ROOT` becomes one folder profile.
 - Each supported image file inside that folder becomes one indexed post.
-- The backend scans `gallery/` on startup, writes metadata to `data/gallery.sqlite`, and generates:
-  - square feed/grid thumbnails in `thumbnails/`
-  - larger detail previews in `previews/`
+- Images placed directly inside the gallery root are ignored.
+- The backend scans the configured gallery root on startup, writes metadata to `data/db/gallery.sqlite` by default, and generates:
+  - square feed/grid thumbnails in `data/thumbnails/`
+  - larger detail previews in `data/previews/`
 - Feed and profile requests read from SQLite only. They do not scan the filesystem during API requests.
-- In development mode, Chokidar watches `gallery/` and batches file changes before re-indexing.
+- In development mode, Chokidar watches the configured gallery root and batches file changes before re-indexing.
+- If the configured storage is unavailable, the app shows a library-unavailable state instead of soft-deleting indexed content.
 
 ## Supported image formats
 
@@ -50,7 +51,7 @@ Nested subfolders are ignored by design.
 
 1. Copy `.env.example` to `.env`.
 2. Keep the default paths unless you want custom directories.
-3. Add profile folders under `gallery/`.
+3. Add profile folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
 4. Add image files inside each profile folder.
 5. Install dependencies:
 
@@ -67,7 +68,7 @@ pnpm dev
 - Client: `http://localhost:5173`
 - API: `http://localhost:4173`
 
-The server performs an initial scan on startup. In development mode it also watches the gallery folder for changes.
+The server performs an initial scan on startup. In development mode it also watches the configured gallery root for changes.
 
 ## Build
 
@@ -97,16 +98,38 @@ Current tests cover:
 - derivative path generation
 - path normalization for Windows-style separators
 
-## Environment variables
+## Configuration
+
+The app uses `.env` for local storage and runtime configuration.
+
+With the default config, Foldergram creates and uses:
+
+```text
+data/
+  gallery/
+  db/
+    gallery.sqlite
+  thumbnails/
+  previews/
+```
+
+If you want to place the library on another drive, update `GALLERY_ROOT` or the other path variables in `.env`.
+
+If you already have an older local setup using top-level `gallery/`, `thumbnails/`, `previews/`, or `data/gallery.sqlite`, either move those into the new `data/` layout or point `.env` at the existing locations.
 
 ```env
 PORT=4173
-GALLERY_ROOT=./gallery
-DATA_DIR=./data
-THUMBNAILS_DIR=./thumbnails
-PREVIEWS_DIR=./previews
+DATA_ROOT=./data
+GALLERY_ROOT=./data/gallery
+DB_DIR=./data/db
+THUMBNAILS_DIR=./data/thumbnails
+PREVIEWS_DIR=./data/previews
 NODE_ENV=development
 ```
+
+WSL note:
+
+- if the server runs inside WSL, use WSL paths like `/mnt/d/...` instead of raw Windows paths like `D:\...`
 
 ## API endpoints
 
@@ -115,7 +138,11 @@ NODE_ENV=development
 - `GET /api/profiles`
 - `GET /api/profiles/:slug`
 - `GET /api/profiles/:slug/images?page=1&limit=24`
+- `GET /api/likes`
 - `GET /api/images/:id`
+- `POST /api/images/:id/like`
+- `DELETE /api/images/:id/like`
+- `DELETE /api/images/:id`
 - `GET /api/admin/stats`
 - `POST /api/admin/rescan`
 - `GET /api/originals/:id`
@@ -125,10 +152,11 @@ NODE_ENV=development
 - `server/src/config`: environment and runtime directory setup
 - `server/src/db`: schema and SQL repositories
 - `server/src/services/scanner-service.ts`: startup scans, incremental scans, deletion handling
+- `server/src/services/storage-service.ts`: configured storage availability and startup path handling
 - `server/src/services/derivative-service.ts`: Sharp thumbnail and preview generation
 - `server/src/services/watcher-service.ts`: debounced Chokidar watch mode
-- `client/src/stores`: Pinia state for feed, profiles, viewer, and app stats
-- `client/src/views`: home feed, profile page, and image detail page
+- `client/src/stores`: Pinia state for feed, folders, likes, viewer, and app stats
+- `client/src/views`: home feed, folder page, likes page, and image detail page
 - `client/src/components`: reusable UI shell and gallery components
 
 ## Why this scan/index strategy
@@ -138,6 +166,7 @@ NODE_ENV=development
 - The scanner uses a lightweight fingerprint of `relative_path + file_size + mtime_ms` to avoid unnecessary heavy hashing.
 - `sort_timestamp` stays stable across rescans by preserving persisted sort data once an image is known.
 - Dev watching batches filesystem bursts so one copy operation does not trigger repeated expensive image work.
+- The current startup scan runs before the server starts listening, so very large libraries can delay first response until indexing finishes.
 
 ## Where to change thumbnail sizes later
 

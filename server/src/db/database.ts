@@ -1,14 +1,13 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { appConfig, ensureRuntimeDirectories } from '../config/env.js';
 import { schemaSql } from './schema.js';
+import { storageService } from '../services/storage-service.js';
 
 class DatabaseManager {
   private database: DatabaseSync;
 
   constructor() {
-    ensureRuntimeDirectories();
-    this.database = new DatabaseSync(appConfig.databasePath);
+    this.database = new DatabaseSync(storageService.getDatabasePath());
     this.database.exec(schemaSql);
   }
 

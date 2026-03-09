@@ -62,6 +62,11 @@ export interface AppStats {
   deletedImages: number;
   thumbnailCount: number;
   previewCount: number;
+  storage: {
+    available: boolean;
+    reason: string | null;
+    usingInMemoryDatabase: boolean;
+  };
   lastScan: {
     id: number;
     started_at: string;

@@ -3,6 +3,7 @@ import chokidar, { type FSWatcher } from 'chokidar';
 import { appConfig } from '../config/env.js';
 import { scannerService } from './scanner-service.js';
 import { log } from './log-service.js';
+import { storageService } from './storage-service.js';
 import { getRelativeGalleryPath, isHiddenPath } from '../utils/path-utils.js';
 
 class WatcherService {
@@ -13,6 +14,14 @@ class WatcherService {
 
   async start(): Promise<void> {
     if (this.watcher || !appConfig.isDevelopment) {
+      return;
+    }
+
+    const storageState = storageService.refreshAvailability();
+    if (!storageState.libraryAvailable) {
+      log.info('Gallery watcher not started because configured storage is unavailable', {
+        reason: storageState.reason
+      });
       return;
     }
 

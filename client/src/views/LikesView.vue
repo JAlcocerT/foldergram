@@ -1,6 +1,11 @@
 <template>
   <section class="content-column content-column--profile">
-    <ErrorState v-if="likesStore.error" title="Could not load likes" :message="likesStore.error" />
+    <EmptyState
+      v-if="appStore.isLibraryUnavailable"
+      title="Library storage unavailable"
+      :description="appStore.libraryUnavailableReason"
+    />
+    <ErrorState v-else-if="likesStore.error" title="Could not load likes" :message="likesStore.error" />
     <template v-else>
       <div class="profile-tabs" aria-label="Likes sections">
         <span class="profile-tabs__item profile-tabs__item--active">Liked posts</span>
@@ -24,11 +29,17 @@ import { onMounted } from 'vue';
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
 import ProfileGrid from '../components/ProfileGrid.vue';
+import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 
+const appStore = useAppStore();
 const likesStore = useLikesStore();
 
 onMounted(async () => {
+  if (appStore.isLibraryUnavailable) {
+    return;
+  }
+
   await likesStore.initialize();
 });
 </script>

@@ -1,6 +1,11 @@
 <template>
   <section class="content-column content-column--profile">
-    <ErrorState v-if="profilesStore.profileError" title="Could not load folder" :message="profilesStore.profileError" />
+    <EmptyState
+      v-if="appStore.isLibraryUnavailable"
+      title="Library storage unavailable"
+      :description="appStore.libraryUnavailableReason"
+    />
+    <ErrorState v-else-if="profilesStore.profileError" title="Could not load folder" :message="profilesStore.profileError" />
     <template v-else-if="profilesStore.currentProfile">
       <ProfileHeader :profile="profilesStore.currentProfile" />
       <EmptyState
@@ -27,15 +32,21 @@ import ErrorState from '../components/ErrorState.vue';
 import InfiniteLoader from '../components/InfiniteLoader.vue';
 import ProfileGrid from '../components/ProfileGrid.vue';
 import ProfileHeader from '../components/ProfileHeader.vue';
+import { useAppStore } from '../stores/app';
 import { useProfilesStore } from '../stores/profiles';
 
 const props = defineProps<{
   slug: string;
 }>();
 
+const appStore = useAppStore();
 const profilesStore = useProfilesStore();
 
 async function loadProfile() {
+  if (appStore.isLibraryUnavailable) {
+    return;
+  }
+
   await profilesStore.loadProfile(props.slug, true);
 }
 

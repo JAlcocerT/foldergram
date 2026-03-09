@@ -7,6 +7,7 @@ import { appConfig } from '../config/env.js';
 import { imageRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
 import { generateDerivatives } from './derivative-service.js';
 import { log } from './log-service.js';
+import { storageService } from './storage-service.js';
 import { createFingerprint, getMimeTypeFromExtension, getStableSortTimestamp, isSupportedImageFile } from '../utils/image-utils.js';
 import { getProfileSlugFromRelativePath, getRelativeGalleryPath, isHiddenPath, normalizePath } from '../utils/path-utils.js';
 import { resolveUniqueSlug, slugifyProfileName } from '../utils/slug.js';
@@ -70,10 +71,34 @@ class ScannerService {
     return this.queue;
   }
 
+  private finishUnavailableRun(runId: number, reason: string): ScanSummary {
+    const storageState = storageService.refreshAvailability();
+    const summary = {
+      ...createEmptySummary(),
+      status: 'skipped_unavailable',
+      error_text: storageState.reason ?? 'Configured library storage is unavailable'
+    };
+
+    scanRunRepository.finish(runId, {
+      ...summary,
+      finished_at: new Date().toISOString()
+    });
+
+    log.info(`Skipped scan (${reason}) because configured storage is unavailable`, {
+      reason: storageState.reason
+    });
+
+    return summary;
+  }
+
   private async performFullScan(reason: string): Promise<ScanSummary> {
     const runId = scanRunRepository.start();
     const summary = createEmptySummary();
     const errors: string[] = [];
+
+    if (!storageService.refreshAvailability().libraryAvailable) {
+      return this.finishUnavailableRun(runId, reason);
+    }
 
     log.info(`Starting full scan (${reason})`);
 
@@ -156,6 +181,10 @@ class ScannerService {
     const errors: string[] = [];
     const impactedProfileIds = new Set<number>();
     let fallbackReason: string | null = null;
+
+    if (!storageService.refreshAvailability().libraryAvailable) {
+      return this.finishUnavailableRun(runId, reason);
+    }
 
     log.info(`Starting incremental scan (${reason})`, { count: relativePaths.length });
 

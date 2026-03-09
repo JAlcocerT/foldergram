@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,10 +11,12 @@ dotenv.config({ path: path.join(repositoryRoot, '.env') });
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4173),
-  GALLERY_ROOT: z.string().default('./gallery'),
-  DATA_DIR: z.string().default('./data'),
-  THUMBNAILS_DIR: z.string().default('./thumbnails'),
-  PREVIEWS_DIR: z.string().default('./previews'),
+  DATA_ROOT: z.string().default('./data'),
+  DATA_DIR: z.string().optional(),
+  GALLERY_ROOT: z.string().optional(),
+  DB_DIR: z.string().optional(),
+  THUMBNAILS_DIR: z.string().optional(),
+  PREVIEWS_DIR: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
 
@@ -25,26 +26,28 @@ function resolveFromRoot(value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(repositoryRoot, value);
 }
 
+function resolveConfiguredPath(value: string | null | undefined, fallbackAbsolutePath: string): string {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return resolveFromRoot(value);
+  }
+
+  return fallbackAbsolutePath;
+}
+
+const dataRoot = resolveConfiguredPath(parsed.DATA_ROOT ?? parsed.DATA_DIR, resolveFromRoot('./data'));
+const galleryRoot = resolveConfiguredPath(parsed.GALLERY_ROOT, path.join(dataRoot, 'gallery'));
+const dbDir = resolveConfiguredPath(parsed.DB_DIR, path.join(dataRoot, 'db'));
+const thumbnailsDir = resolveConfiguredPath(parsed.THUMBNAILS_DIR, path.join(dataRoot, 'thumbnails'));
+const previewsDir = resolveConfiguredPath(parsed.PREVIEWS_DIR, path.join(dataRoot, 'previews'));
+
 export const appConfig = {
   port: parsed.PORT,
   nodeEnv: parsed.NODE_ENV,
   isDevelopment: parsed.NODE_ENV === 'development',
-  galleryRoot: resolveFromRoot(parsed.GALLERY_ROOT),
-  dataDir: resolveFromRoot(parsed.DATA_DIR),
-  thumbnailsDir: resolveFromRoot(parsed.THUMBNAILS_DIR),
-  previewsDir: resolveFromRoot(parsed.PREVIEWS_DIR),
-  databasePath: path.join(resolveFromRoot(parsed.DATA_DIR), 'gallery.sqlite')
+  dataRoot,
+  galleryRoot,
+  dbDir,
+  thumbnailsDir,
+  previewsDir,
+  databasePath: path.join(dbDir, 'gallery.sqlite')
 };
-
-export function ensureRuntimeDirectories(): void {
-  for (const directory of [
-    appConfig.galleryRoot,
-    appConfig.dataDir,
-    appConfig.thumbnailsDir,
-    appConfig.previewsDir
-  ]) {
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true });
-    }
-  }
-}
