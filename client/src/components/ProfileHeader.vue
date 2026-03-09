@@ -9,7 +9,6 @@
           <h1>{{ profile.slug }}</h1>
           <span class="profile-header__badge">Local folder</span>
         </div>
-        <RouterLink class="profile-header__button" to="/">Open feed</RouterLink>
       </div>
       <div class="profile-header__stats">
         <span><strong>{{ profile.imageCount }}</strong> posts</span>
@@ -24,8 +23,6 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-
 import type { ProfileSummary } from '../types/api';
 import Avatar from './Avatar.vue';
 

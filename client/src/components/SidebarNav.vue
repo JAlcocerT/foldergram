@@ -17,7 +17,7 @@
             />
           </svg>
         </span>
-        <span>Home</span>
+        <span class="sidebar__label">Home</span>
       </RouterLink>
       <RouterLink class="sidebar__link" :to="{ name: 'likes' }">
         <span class="sidebar__icon" aria-hidden="true">
@@ -32,10 +32,10 @@
             />
           </svg>
         </span>
-        <span>Likes</span>
-        <small class="sidebar__badge">{{ likesStore.items.length }}</small>
+        <span class="sidebar__label">Likes</span>
+        <small class="sidebar__badge sidebar__meta">{{ likesStore.items.length }}</small>
       </RouterLink>
-      <span class="sidebar__section-label">Folders</span>
+      <span class="sidebar__section-label sidebar__meta">Folders</span>
       <RouterLink
         v-for="profile in featuredProfiles"
         :key="profile.id"
@@ -43,7 +43,7 @@
         :to="{ name: 'profile', params: { slug: profile.slug } }"
       >
         <Avatar :name="profile.name" :src="profile.avatarUrl" />
-        <span class="sidebar__profile-copy">
+        <span class="sidebar__profile-copy sidebar__meta">
           <strong>{{ profile.slug }}</strong>
           <small>{{ profile.imageCount }} posts</small>
         </span>
@@ -72,7 +72,7 @@
           />
         </svg>
       </span>
-      <span>{{ themeLabel }}</span>
+      <span class="sidebar__label">Theme</span>
     </button>
   </aside>
 </template>
@@ -92,5 +92,4 @@ const likesStore = useLikesStore();
 const profilesStore = useProfilesStore();
 
 const featuredProfiles = computed(() => profilesStore.items.slice(0, 10));
-const themeLabel = computed(() => (appStore.theme === 'light' ? 'Dark mode' : 'Light mode'));
 </script>

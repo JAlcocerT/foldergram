@@ -82,14 +82,10 @@
             :disabled="likesStore.isPending(image.id)"
             @click="likesStore.toggleLike(image)"
           >
-            <svg viewBox="0 0 24 24" role="presentation">
+            <svg viewBox="0 0 48 48" role="presentation">
               <path
-                d="m12 20.25-.7-.64C6.35 15.09 4 12.96 4 9.96A4.21 4.21 0 0 1 8.28 5.5c1.44 0 2.83.67 3.72 1.73.89-1.06 2.28-1.73 3.72-1.73A4.21 4.21 0 0 1 20 9.96c0 3-2.35 5.13-7.3 9.65Z"
-                :fill="likesStore.isLiked(image.id) ? 'currentColor' : 'none'"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.8"
+                d="M7.923 10.155a10.42 10.42 0 0 1 13.806.684l2.272 2.223l2.266-2.22a10.42 10.42 0 0 1 13.809-.687c4.85 3.887 5.242 11.13.837 15.516l-16.03 15.964a1.25 1.25 0 0 1-1.764 0L7.087 25.67c-4.405-4.386-4.015-11.628.836-15.516zm12.057 2.47a7.92 7.92 0 0 0-10.494-.52C5.8 15.06 5.503 20.565 8.851 23.9L24 38.986l15.148-15.087c3.348-3.334 3.05-8.839-.636-11.793a7.921 7.921 0 0 0-10.496.522l-3.141 3.077a1.25 1.25 0 0 1-1.75 0l-3.146-3.08z"
+                fill="currentColor"
               />
             </svg>
           </button>
@@ -97,12 +93,28 @@
             <a class="viewer__action-icon" :href="image.originalUrl" target="_blank" rel="noreferrer" aria-label="Open original image">
               <svg viewBox="0 0 24 24" role="presentation">
                 <path
-                  d="M14 5h5v5m0-5-7.5 7.5M10 7H7.5A2.5 2.5 0 0 0 5 9.5v7A2.5 2.5 0 0 0 7.5 19h7a2.5 2.5 0 0 0 2.5-2.5V14"
+                  d="M11 7H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-5"
                   fill="none"
                   stroke="currentColor"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="1.8"
+                  stroke-width="1"
+                />
+                <path
+                  d="M10 14L20 4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1"
+                />
+                <path
+                  d="M15 4h5v5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1"
                 />
               </svg>
             </a>
@@ -113,15 +125,11 @@
               :disabled="deleting"
               @click="$emit('delete')"
             >
-              <svg viewBox="0 0 24 24" role="presentation">
-                <path
-                  d="M9 4.75h6m-8 3h10m-8.5 0v10a1.25 1.25 0 0 0 1.25 1.25h4.5A1.25 1.25 0 0 0 15.5 17.75v-10m-4 3v5m4-5v5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.8"
-                />
+              <svg viewBox="0 0 32 32" role="presentation">
+                <path d="M12 12h2v12h-2z" fill="currentColor" />
+                <path d="M18 12h2v12h-2z" fill="currentColor" />
+                <path d="M4 6v2h2v20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8h2V6zm4 22V8h16v20z" fill="currentColor" />
+                <path d="M12 2h8v2h-8z" fill="currentColor" />
               </svg>
             </button>
           </div>
