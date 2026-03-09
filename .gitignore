@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+data/*.db
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+coverage
+client/dist
+server/dist
+thumbnails/*
+!thumbnails/.gitkeep
+previews/*
+!previews/.gitkeep
+gallery/*
+!gallery/.gitkeep
+_mocks/

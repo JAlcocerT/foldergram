@@ -1,0 +1,68 @@
+export const schemaSql = `
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  folder_path TEXT NOT NULL,
+  avatar_image_id INTEGER NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (avatar_image_id) REFERENCES images(id)
+);
+
+CREATE TABLE IF NOT EXISTS images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  extension TEXT NOT NULL,
+  relative_path TEXT NOT NULL UNIQUE,
+  absolute_path TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  mime_type TEXT NOT NULL,
+  checksum_or_fingerprint TEXT NOT NULL,
+  mtime_ms REAL NOT NULL,
+  first_seen_at TEXT NOT NULL,
+  sort_timestamp INTEGER NOT NULL,
+  thumbnail_path TEXT NOT NULL,
+  preview_path TEXT NOT NULL,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS scan_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT NULL,
+  status TEXT NOT NULL,
+  scanned_files INTEGER NOT NULL DEFAULT 0,
+  new_files INTEGER NOT NULL DEFAULT 0,
+  updated_files INTEGER NOT NULL DEFAULT 0,
+  removed_files INTEGER NOT NULL DEFAULT 0,
+  error_text TEXT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+  image_id INTEGER PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_slug ON profiles(slug);
+CREATE INDEX IF NOT EXISTS idx_images_profile_id ON images(profile_id);
+CREATE INDEX IF NOT EXISTS idx_images_sort_timestamp ON images(sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_profile_sort ON images(profile_id, is_deleted, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);
+CREATE INDEX IF NOT EXISTS idx_likes_created_at ON likes(created_at DESC);
+`;

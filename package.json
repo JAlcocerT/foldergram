@@ -1,0 +1,23 @@
+{
+  "name": "insta-local-gallery",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@10.28.0",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:client\"",
+    "dev:server": "pnpm --filter @insta-local/server dev",
+    "dev:client": "pnpm --filter @insta-local/client dev",
+    "build": "pnpm build:server && pnpm build:client",
+    "build:server": "pnpm --filter @insta-local/server build",
+    "build:client": "pnpm --filter @insta-local/client build",
+    "rescan": "pnpm --filter @insta-local/server rescan",
+    "test": "pnpm --filter @insta-local/server test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
