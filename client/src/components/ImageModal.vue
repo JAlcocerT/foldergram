@@ -38,7 +38,7 @@
     </RouterLink>
     <div class="viewer__card">
       <div class="viewer__media">
-        <img :src="image.previewUrl" :alt="image.filename" />
+        <ResilientImage :src="image.previewUrl" :alt="image.filename" loading="eager" :retry-while="appStore.isScanning" />
       </div>
       <aside class="viewer__sidebar">
         <div class="viewer__header">
@@ -144,8 +144,10 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import type { ImageDetail, ProfileSummary } from '../types/api';
+import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 import Avatar from './Avatar.vue';
+import ResilientImage from './ResilientImage.vue';
 
 const props = defineProps<{
   image: ImageDetail | null;
@@ -160,6 +162,7 @@ defineEmits<{
 }>();
 
 const likesStore = useLikesStore();
+const appStore = useAppStore();
 
 const fileSize = computed(() => {
   if (!props.image) {

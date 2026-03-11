@@ -75,6 +75,15 @@ img {
   max-width: 100%;
 }
 
+img[data-loaded='false'] {
+  opacity: 0;
+}
+
+img[data-loaded='true'] {
+  opacity: 1;
+  transition: opacity 0.22s ease;
+}
+
 svg {
   display: block;
 }
@@ -101,6 +110,28 @@ svg {
 
 .shell__main {
   padding: 1.75rem 2.5rem 4rem;
+}
+
+.scan-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1rem;
+  margin: 1rem 2.5rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(0, 149, 246, 0.1) 0%, rgba(0, 149, 246, 0.04) 100%);
+  box-shadow: var(--shadow);
+}
+
+.scan-banner strong {
+  font-size: 0.88rem;
+}
+
+.scan-banner span {
+  color: var(--muted);
+  font-size: 0.83rem;
 }
 
 .route-modal {
@@ -377,6 +408,69 @@ svg {
   border-radius: 0;
   scrollbar-width: none;
   box-shadow: none;
+}
+
+.scan-state {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.2rem 1.25rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(0, 149, 246, 0.12), transparent 38%),
+    linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);
+  box-shadow: var(--shadow);
+}
+
+.scan-state--inline {
+  gap: 0.3rem;
+  padding: 0.95rem 1rem;
+}
+
+.scan-state strong,
+.scan-state h2 {
+  margin: 0;
+}
+
+.scan-state p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.scan-state__eyebrow {
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scan-state__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0;
+}
+
+.scan-state__stats div {
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%);
+}
+
+.scan-state__stats dt {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scan-state__stats dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .stories-bar::-webkit-scrollbar {
@@ -1310,6 +1404,10 @@ svg {
     padding: 1rem 0.9rem 2.5rem;
   }
 
+  .scan-banner {
+    margin: 0.85rem 0.9rem 0;
+  }
+
   .home-layout {
     grid-template-columns: 1fr;
     width: 100%;
@@ -1348,6 +1446,10 @@ svg {
   .page-header {
     flex-direction: column;
     align-items: start;
+  }
+
+  .scan-state__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-header {

@@ -9,6 +9,8 @@ interface AppState {
   error: string | null;
   theme: 'light' | 'dark';
   imageModalBackgroundPath: string | null;
+  statsPollFailures: number;
+  statsPollTimer: ReturnType<typeof setInterval> | null;
 }
 
 export const useAppStore = defineStore('app', {
@@ -17,11 +19,16 @@ export const useAppStore = defineStore('app', {
     loadingStats: false,
     error: null,
     theme: 'light',
-    imageModalBackgroundPath: null
+    imageModalBackgroundPath: null,
+    statsPollFailures: 0,
+    statsPollTimer: null
   }),
   getters: {
     isLibraryUnavailable: (state) => state.stats?.storage.available === false,
-    libraryUnavailableReason: (state) => state.stats?.storage.reason ?? 'Configured library storage is unavailable.'
+    libraryUnavailableReason: (state) => state.stats?.storage.reason ?? 'Configured library storage is unavailable.',
+    isScanning: (state) => state.stats?.scan.isScanning === true,
+    hasCompletedScan: (state) => state.stats?.scan.lastCompletedScan !== null,
+    isInitialScan: (state) => state.stats?.scan.isScanning === true && state.stats?.scan.lastCompletedScan === null
   },
   actions: {
     initializeTheme() {
@@ -54,6 +61,53 @@ export const useAppStore = defineStore('app', {
       this.imageModalBackgroundPath = null;
     },
 
+    markScanStatusUnavailable() {
+      if (!this.stats) {
+        return;
+      }
+
+      this.stats = {
+        ...this.stats,
+        scan: {
+          ...this.stats.scan,
+          isScanning: false,
+          scanReason: null,
+          phase: 'idle',
+          startedAt: null,
+          runId: null,
+          currentFolder: null
+        }
+      };
+    },
+
+    startStatsPolling() {
+      if (this.statsPollTimer) {
+        return;
+      }
+
+      this.statsPollTimer = setInterval(() => {
+        if (document.visibilityState === 'hidden') {
+          return;
+        }
+
+        if (!this.stats?.scan.isScanning) {
+          this.stopStatsPolling();
+          return;
+        }
+
+        void this.fetchStats({ background: true });
+      }, 2500);
+    },
+
+    stopStatsPolling() {
+      if (this.statsPollTimer) {
+        clearInterval(this.statsPollTimer);
+        this.statsPollTimer = null;
+      }
+
+      this.statsPollFailures = 0;
+    },
+
     removeIndexedImage() {
       if (!this.stats) {
         return;
@@ -63,16 +117,43 @@ export const useAppStore = defineStore('app', {
       this.stats.deletedImages += 1;
     },
 
-    async fetchStats() {
-      this.loadingStats = true;
-      this.error = null;
+    async fetchStats(options: { background?: boolean } = {}) {
+      if (!options.background) {
+        this.loadingStats = true;
+        this.error = null;
+      }
 
       try {
         this.stats = await fetchStats();
+        this.statsPollFailures = 0;
+
+        if (options.background && this.error) {
+          this.error = null;
+        }
+
+        if (this.stats.scan.isScanning) {
+          this.startStatsPolling();
+        } else {
+          this.stopStatsPolling();
+        }
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unable to load app stats';
+        const message = error instanceof Error ? error.message : 'Unable to load app stats';
+
+        if (options.background) {
+          this.statsPollFailures += 1;
+
+          if (this.statsPollFailures >= 3) {
+            this.stopStatsPolling();
+            this.markScanStatusUnavailable();
+            this.error = 'Lost connection while refreshing scan status.';
+          }
+        } else {
+          this.error = message;
+        }
       } finally {
-        this.loadingStats = false;
+        if (!options.background) {
+          this.loadingStats = false;
+        }
       }
     }
   }

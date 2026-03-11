@@ -12,6 +12,8 @@ export interface DerivativeResult {
   previewPath: string;
   width: number;
   height: number;
+  generatedThumbnail: boolean;
+  generatedPreview: boolean;
 }
 
 async function ensureParentDirectory(filePath: string): Promise<void> {
@@ -27,14 +29,20 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+export async function readImageMetadata(sourcePath: string): Promise<Pick<DerivativeResult, 'width' | 'height'>> {
+  const metadata = await sharp(sourcePath, { animated: false }).metadata();
+
+  return {
+    width: metadata.width ?? THUMBNAIL_SIZE,
+    height: metadata.height ?? THUMBNAIL_SIZE
+  };
+}
+
 export async function generateDerivatives(sourcePath: string, relativePath: string, force = false): Promise<DerivativeResult> {
   const derivativeRelativePath = getDerivativeRelativePath(relativePath);
   const thumbnailAbsolutePath = safeJoin(appConfig.thumbnailsDir, derivativeRelativePath);
   const previewAbsolutePath = safeJoin(appConfig.previewsDir, derivativeRelativePath);
-
-  const metadata = await sharp(sourcePath, { animated: false }).metadata();
-  const width = metadata.width ?? THUMBNAIL_SIZE;
-  const height = metadata.height ?? THUMBNAIL_SIZE;
+  const { width, height } = await readImageMetadata(sourcePath);
 
   const shouldWriteThumbnail = force || !(await fileExists(thumbnailAbsolutePath));
   const shouldWritePreview = force || !(await fileExists(previewAbsolutePath));
@@ -67,6 +75,8 @@ export async function generateDerivatives(sourcePath: string, relativePath: stri
     thumbnailPath: derivativeRelativePath,
     previewPath: derivativeRelativePath,
     width,
-    height
+    height,
+    generatedThumbnail: shouldWriteThumbnail,
+    generatedPreview: shouldWritePreview
   };
 }

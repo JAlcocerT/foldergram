@@ -7,14 +7,16 @@ import { scannerService } from './services/scanner-service.js';
 import { watcherService } from './services/watcher-service.js';
 
 async function bootstrap(): Promise<void> {
-  await scannerService.scanAll('startup');
-  await watcherService.start();
-
   const app = createApp();
   const server = createServer(app);
 
   server.listen(appConfig.port, () => {
     log.info(`HTTP server listening on http://localhost:${appConfig.port}`);
+    void watcherService.start().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error('Failed to start gallery watcher', message);
+    });
+    scannerService.startStartupScan('startup');
   });
 
   async function shutdown(signal: string): Promise<void> {

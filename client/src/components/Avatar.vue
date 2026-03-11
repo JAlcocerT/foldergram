@@ -1,6 +1,6 @@
 <template>
   <div class="avatar">
-    <img v-if="src" :src="src" :alt="name" loading="lazy" />
+    <ResilientImage v-if="src" :src="src" :alt="name" loading="lazy" :retry-while="appStore.isScanning" />
     <span v-else>{{ initials }}</span>
   </div>
 </template>
@@ -8,11 +8,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import { useAppStore } from '../stores/app';
+import ResilientImage from './ResilientImage.vue';
+
 const props = defineProps<{
   name: string;
   src: string | null;
 }>();
 
+const appStore = useAppStore();
 const initials = computed(() =>
   props.name
     .split(' ')

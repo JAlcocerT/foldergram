@@ -2,7 +2,7 @@
   <section class="profile-grid">
     <RouterLink v-for="item in items" :key="item.id" custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
       <a :href="href" class="profile-grid__item" @click="handleImageNavigation($event, navigate)">
-        <img :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" />
+        <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
       </a>
     </RouterLink>
   </section>
@@ -13,6 +13,7 @@ import { RouterLink, useRoute } from 'vue-router';
 
 import { useAppStore } from '../stores/app';
 import type { FeedItem } from '../types/api';
+import ResilientImage from './ResilientImage.vue';
 
 defineProps<{
   items: FeedItem[];

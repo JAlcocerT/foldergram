@@ -6,6 +6,7 @@ import type { FeedItem, ProfileSummary } from '../types/api';
 interface ProfilesState {
   items: ProfileSummary[];
   loadingList: boolean;
+  pendingListRefresh: boolean;
   listError: string | null;
   currentProfile: ProfileSummary | null;
   currentImages: FeedItem[];
@@ -20,6 +21,7 @@ export const useProfilesStore = defineStore('profiles', {
   state: (): ProfilesState => ({
     items: [],
     loadingList: false,
+    pendingListRefresh: false,
     listError: null,
     currentProfile: null,
     currentImages: [],
@@ -49,8 +51,13 @@ export const useProfilesStore = defineStore('profiles', {
       }
     },
 
-    async fetchProfiles() {
-      if (this.loadingList || this.items.length > 0) {
+    async fetchProfiles(force = false) {
+      if (this.loadingList) {
+        this.pendingListRefresh = this.pendingListRefresh || force;
+        return;
+      }
+
+      if (!force && this.items.length > 0) {
         return;
       }
 
@@ -63,6 +70,11 @@ export const useProfilesStore = defineStore('profiles', {
         this.listError = error instanceof Error ? error.message : 'Unable to load profiles';
       } finally {
         this.loadingList = false;
+      }
+
+      if (this.pendingListRefresh) {
+        this.pendingListRefresh = false;
+        await this.fetchProfiles(true);
       }
     },
 

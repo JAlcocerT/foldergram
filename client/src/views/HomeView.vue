@@ -5,6 +5,11 @@
         <p>{{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} folders</p>
       </header>
 
+      <section v-if="appStore.isScanning && appStore.stats" class="scan-state scan-state--inline" aria-live="polite">
+        <strong>Scanning library</strong>
+        <p>{{ scanDescription }}</p>
+      </section>
+
       <section v-if="storyProfiles.length" class="stories-bar" aria-label="Folders">
         <RouterLink
           v-for="profile in storyProfiles"
@@ -25,6 +30,29 @@
         :description="appStore.libraryUnavailableReason"
       />
       <ErrorState v-else-if="feedStore.error" title="Could not load feed" :message="feedStore.error" />
+      <section v-else-if="showInitialScanState" class="scan-state">
+        <span class="scan-state__eyebrow">Startup scan in progress</span>
+        <h2>Indexing your library</h2>
+        <p>{{ scanDescription }}</p>
+        <dl class="scan-state__stats">
+          <div>
+            <dt>Folders</dt>
+            <dd>{{ appStore.stats?.scan.processedProfiles ?? 0 }}/{{ appStore.stats?.scan.discoveredProfiles ?? 0 }}</dd>
+          </div>
+          <div>
+            <dt>Images indexed</dt>
+            <dd>{{ appStore.stats?.scan.processedImages ?? 0 }}/{{ appStore.stats?.scan.discoveredImages ?? 0 }}</dd>
+          </div>
+          <div>
+            <dt>Thumbnails</dt>
+            <dd>{{ appStore.stats?.scan.generatedThumbnails ?? 0 }}</dd>
+          </div>
+          <div>
+            <dt>Previews</dt>
+            <dd>{{ appStore.stats?.scan.generatedPreviews ?? 0 }}</dd>
+          </div>
+        </dl>
+      </section>
       <EmptyState
         v-else-if="feedStore.initialized && feedStore.items.length === 0"
         title="No images indexed yet"
@@ -71,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import Avatar from '../components/Avatar.vue';
@@ -89,6 +117,22 @@ const profilesStore = useProfilesStore();
 const storyProfiles = computed(() => profilesStore.items.slice(0, 10));
 const homeSummaryFolder = computed(() => profilesStore.items[0] ?? null);
 const recommendedFolders = computed(() => profilesStore.items.slice(1, 6));
+const showInitialScanState = computed(
+  () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
+);
+const scanDescription = computed(() => {
+  const scan = appStore.stats?.scan;
+  if (!scan) {
+    return 'Preparing scan status...';
+  }
+
+  const currentFolder = scan.currentFolder ? ` Current folder: ${scan.currentFolder}.` : '';
+  if (scan.phase === 'derivatives') {
+    return `Generating thumbnails and previews in the background.${currentFolder}`;
+  }
+
+  return `Indexing folders and images so the library can open immediately.${currentFolder}`;
+});
 
 onMounted(async () => {
   if (appStore.isLibraryUnavailable) {
@@ -97,4 +141,21 @@ onMounted(async () => {
 
   await feedStore.loadInitial();
 });
+
+watch(
+  () => [appStore.stats?.indexedImages ?? 0, appStore.stats?.profiles ?? 0] as const,
+  async ([indexedImages, profileCount]) => {
+    if (appStore.isLibraryUnavailable) {
+      return;
+    }
+
+    if (profileCount > 0 && profileCount !== profilesStore.items.length) {
+      await profilesStore.fetchProfiles(true);
+    }
+
+    if (indexedImages > 0 && feedStore.items.length === 0 && !feedStore.loading) {
+      await feedStore.loadInitial(true);
+    }
+  }
+);
 </script>

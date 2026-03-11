@@ -29,6 +29,10 @@ export const useFeedStore = defineStore('feed', {
     },
 
     async loadInitial(force = false) {
+      if (this.loading) {
+        return;
+      }
+
       if (this.initialized && !force) {
         return;
       }

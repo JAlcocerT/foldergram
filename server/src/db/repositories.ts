@@ -31,6 +31,20 @@ export interface UpsertImageInput {
   previewPath: string;
 }
 
+export interface RefreshIndexedImageInput {
+  profileId: number;
+  filename: string;
+  extension: string;
+  relativePath: string;
+  absolutePath: string;
+  fileSize: number;
+  mimeType: string;
+  fingerprint: string;
+  mtimeMs: number;
+  thumbnailPath: string;
+  previewPath: string;
+}
+
 export const profileRepository = {
   getAll(): ProfileRecord[] {
     return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as ProfileRecord[];
@@ -115,6 +129,43 @@ export const imageRepository = {
       input.thumbnailPath,
       input.previewPath,
       nowIso()
+    );
+
+    return this.getByRelativePath(input.relativePath) as ImageRecord;
+  },
+
+  refreshIndexed(input: RefreshIndexedImageInput): ImageRecord {
+    database.prepare(
+      `
+      UPDATE images
+      SET
+        profile_id = ?,
+        filename = ?,
+        extension = ?,
+        absolute_path = ?,
+        file_size = ?,
+        mime_type = ?,
+        checksum_or_fingerprint = ?,
+        mtime_ms = ?,
+        thumbnail_path = ?,
+        preview_path = ?,
+        is_deleted = 0,
+        updated_at = ?
+      WHERE relative_path = ?
+      `
+    ).run(
+      input.profileId,
+      input.filename,
+      input.extension,
+      input.absolutePath,
+      input.fileSize,
+      input.mimeType,
+      input.fingerprint,
+      input.mtimeMs,
+      input.thumbnailPath,
+      input.previewPath,
+      nowIso(),
+      input.relativePath
     );
 
     return this.getByRelativePath(input.relativePath) as ImageRecord;
@@ -350,5 +401,11 @@ export const scanRunRepository = {
 
   latest(): ScanRunRecord | undefined {
     return database.prepare('SELECT * FROM scan_runs ORDER BY id DESC LIMIT 1').get() as ScanRunRecord | undefined;
+  },
+
+  latestCompleted(): ScanRunRecord | undefined {
+    return database
+      .prepare('SELECT * FROM scan_runs WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1')
+      .get() as ScanRunRecord | undefined;
   }
 };

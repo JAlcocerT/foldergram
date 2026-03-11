@@ -5,6 +5,7 @@ import path from 'node:path';
 import { appConfig } from '../config/env.js';
 import { imageRepository, likeRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
 import type { FeedImage, ImageDetail, ProfileRecord } from '../types/models.js';
+import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
 
 function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
@@ -213,6 +214,7 @@ export const galleryService = {
       thumbnailCount: storageState.libraryAvailable ? imageRepository.countWithThumbnail() : 0,
       previewCount: storageState.libraryAvailable ? imageRepository.countWithPreview() : 0,
       lastScan: lastScan ?? null,
+      scan: scannerService.getProgress(),
       storage: {
         available: storageState.libraryAvailable,
         reason: storageState.reason,

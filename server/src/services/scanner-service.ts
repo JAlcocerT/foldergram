@@ -5,10 +5,16 @@ import pLimit from 'p-limit';
 
 import { appConfig } from '../config/env.js';
 import { imageRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
-import { generateDerivatives } from './derivative-service.js';
+import { generateDerivatives, readImageMetadata } from './derivative-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
-import { createFingerprint, getMimeTypeFromExtension, getStableSortTimestamp, isSupportedImageFile } from '../utils/image-utils.js';
+import {
+  createFingerprint,
+  getDerivativeRelativePath,
+  getMimeTypeFromExtension,
+  getStableSortTimestamp,
+  isSupportedImageFile
+} from '../utils/image-utils.js';
 import { getProfileSlugFromRelativePath, getRelativeGalleryPath, isHiddenPath, normalizePath } from '../utils/path-utils.js';
 import { resolveUniqueSlug, slugifyProfileName } from '../utils/slug.js';
 import type { ProfileRecord, ScanRunRecord } from '../types/models.js';
@@ -22,12 +28,39 @@ interface ScanSummary {
   error_text: string | null;
 }
 
+interface DerivativeJob {
+  absolutePath: string;
+  relativePath: string;
+  force: boolean;
+}
+
 interface ProcessedFileSummary {
   status: 'unchanged' | 'new' | 'updated';
+  derivativeJob: DerivativeJob;
   relativePath: string;
 }
 
-const processingLimit = pLimit(4);
+type ScanPhase = 'idle' | 'discovery' | 'derivatives';
+
+export interface ScanProgressSnapshot {
+  isScanning: boolean;
+  scanReason: string | null;
+  phase: ScanPhase;
+  startedAt: string | null;
+  runId: number | null;
+  discoveredProfiles: number;
+  processedProfiles: number;
+  discoveredImages: number;
+  processedImages: number;
+  generatedThumbnails: number;
+  generatedPreviews: number;
+  currentFolder: string | null;
+  lastCompletedScan: ScanRunRecord | null;
+}
+
+const discoveryLimit = pLimit(4);
+const derivativeLimit = pLimit(4);
+const HEARTBEAT_INTERVAL_MS = 5000;
 
 function createEmptySummary(): ScanSummary {
   return {
@@ -38,6 +71,42 @@ function createEmptySummary(): ScanSummary {
     removed_files: 0,
     error_text: null
   };
+}
+
+function createIdleProgress(lastCompletedScan: ScanRunRecord | null = null): ScanProgressSnapshot {
+  return {
+    isScanning: false,
+    scanReason: null,
+    phase: 'idle',
+    startedAt: null,
+    runId: null,
+    discoveredProfiles: 0,
+    processedProfiles: 0,
+    discoveredImages: 0,
+    processedImages: 0,
+    generatedThumbnails: 0,
+    generatedPreviews: 0,
+    currentFolder: null,
+    lastCompletedScan
+  };
+}
+
+function formatElapsed(startedAt: string | null): string {
+  if (!startedAt) {
+    return '00:00';
+  }
+
+  const elapsedMs = Math.max(0, Date.now() - Date.parse(startedAt));
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 async function directoryExists(targetPath: string): Promise<boolean> {
@@ -51,6 +120,23 @@ async function directoryExists(targetPath: string): Promise<boolean> {
 
 class ScannerService {
   private queue = Promise.resolve<ScanSummary>(createEmptySummary());
+  private progress = createIdleProgress(scanRunRepository.latestCompleted() ?? null);
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+
+  getProgress(): ScanProgressSnapshot {
+    return {
+      ...this.progress,
+      lastCompletedScan: this.progress.lastCompletedScan ? { ...this.progress.lastCompletedScan } : null
+    };
+  }
+
+  startStartupScan(reason = 'startup'): void {
+    log.info('Startup scan queued');
+    void this.scanAll(reason).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error(`Startup scan failed (${reason})`, message);
+    });
+  }
 
   async scanAll(reason = 'manual'): Promise<ScanRunRecord | undefined> {
     await this.enqueue(async () => this.performFullScan(reason));
@@ -71,6 +157,73 @@ class ScannerService {
     return this.queue;
   }
 
+  private beginProgress(reason: string, runId: number): void {
+    this.progress = {
+      ...createIdleProgress(this.progress.lastCompletedScan),
+      isScanning: true,
+      scanReason: reason,
+      phase: 'discovery',
+      startedAt: new Date().toISOString(),
+      runId
+    };
+
+    this.startHeartbeat();
+    this.logProgress('started');
+  }
+
+  private setProgress(patch: Partial<Omit<ScanProgressSnapshot, 'lastCompletedScan'>>): void {
+    this.progress = {
+      ...this.progress,
+      ...patch
+    };
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      this.logProgress('heartbeat');
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private logProgress(kind: 'started' | 'heartbeat' | 'profile' | 'phase' = 'heartbeat'): void {
+    if (!this.progress.isScanning) {
+      return;
+    }
+
+    log.info('Scan progress', {
+      kind,
+      reason: this.progress.scanReason,
+      phase: this.progress.phase,
+      discoveredProfiles: this.progress.discoveredProfiles,
+      processedProfiles: this.progress.processedProfiles,
+      discoveredImages: this.progress.discoveredImages,
+      processedImages: this.progress.processedImages,
+      generatedThumbnails: this.progress.generatedThumbnails,
+      generatedPreviews: this.progress.generatedPreviews,
+      currentFolder: this.progress.currentFolder,
+      elapsed: formatElapsed(this.progress.startedAt)
+    });
+  }
+
+  private finishProgress(): void {
+    this.stopHeartbeat();
+    this.progress = createIdleProgress(scanRunRepository.latestCompleted() ?? this.progress.lastCompletedScan);
+  }
+
+  private finishRun(runId: number, summary: ScanSummary): void {
+    scanRunRepository.finish(runId, {
+      ...summary,
+      finished_at: new Date().toISOString()
+    });
+  }
+
   private finishUnavailableRun(runId: number, reason: string): ScanSummary {
     const storageState = storageService.refreshAvailability();
     const summary = {
@@ -79,10 +232,8 @@ class ScannerService {
       error_text: storageState.reason ?? 'Configured library storage is unavailable'
     };
 
-    scanRunRepository.finish(runId, {
-      ...summary,
-      finished_at: new Date().toISOString()
-    });
+    this.finishRun(runId, summary);
+    this.finishProgress();
 
     log.info(`Skipped scan (${reason}) because configured storage is unavailable`, {
       reason: storageState.reason
@@ -95,11 +246,13 @@ class ScannerService {
     const runId = scanRunRepository.start();
     const summary = createEmptySummary();
     const errors: string[] = [];
+    const derivativeJobs = new Map<string, DerivativeJob>();
 
     if (!storageService.refreshAvailability().libraryAvailable) {
       return this.finishUnavailableRun(runId, reason);
     }
 
+    this.beginProgress(reason, runId);
     log.info(`Starting full scan (${reason})`);
 
     try {
@@ -109,35 +262,50 @@ class ScannerService {
       const profileDirectories = directories.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
       const activeFolderPaths = new Set<string>();
 
+      this.setProgress({ discoveredProfiles: profileDirectories.length });
+
       for (const directory of profileDirectories) {
         const profilePath = path.join(appConfig.galleryRoot, directory.name);
         activeFolderPaths.add(normalizePath(profilePath));
+        this.setProgress({ currentFolder: directory.name });
+
         const profile = this.resolveProfile(existingProfiles, usedSlugs, directory.name, profilePath);
         const activeRelativePaths: string[] = [];
 
         const entries = await fs.readdir(profilePath, { withFileTypes: true });
         const imageFiles = entries.filter((entry) => entry.isFile() && isSupportedImageFile(entry.name) && !entry.name.startsWith('.'));
+
         summary.scanned_files += imageFiles.length;
+        this.setProgress({
+          discoveredImages: this.progress.discoveredImages + imageFiles.length
+        });
 
         await Promise.all(
           imageFiles.map((entry) =>
-            processingLimit(async () => {
+            discoveryLimit(async () => {
               try {
                 const absolutePath = path.join(profilePath, entry.name);
                 const relativePath = getRelativeGalleryPath(appConfig.galleryRoot, absolutePath);
                 activeRelativePaths.push(relativePath);
 
                 const result = await this.processImageFile(profile, absolutePath, relativePath);
+                this.queueDerivativeJob(derivativeJobs, result.derivativeJob);
+
                 if (result.status === 'new') {
                   summary.new_files += 1;
                 }
+
                 if (result.status === 'updated') {
                   summary.updated_files += 1;
                 }
               } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 errors.push(`${directory.name}/${entry.name}: ${message}`);
-                log.error('Failed to process image', { file: entry.name, error: message });
+                log.error('Failed to index image', { file: entry.name, error: message });
+              } finally {
+                this.setProgress({
+                  processedImages: this.progress.processedImages + 1
+                });
               }
             })
           )
@@ -145,6 +313,11 @@ class ScannerService {
 
         summary.removed_files += imageRepository.markProfileImagesDeleted(profile.id, activeRelativePaths);
         profileRepository.setAvatar(profile.id, imageRepository.getLatestProfileImageId(profile.id));
+
+        this.setProgress({
+          processedProfiles: this.progress.processedProfiles + 1
+        });
+        this.logProgress('profile');
       }
 
       for (const profile of existingProfiles) {
@@ -153,6 +326,8 @@ class ScannerService {
           profileRepository.setAvatar(profile.id, null);
         }
       }
+
+      await this.processDerivativeJobs([...derivativeJobs.values()], errors);
     } catch (error) {
       summary.status = 'failed';
       summary.error_text = error instanceof Error ? error.message : String(error);
@@ -166,12 +341,10 @@ class ScannerService {
       }
     }
 
-    scanRunRepository.finish(runId, {
-      ...summary,
-      finished_at: new Date().toISOString()
-    });
-
+    this.finishRun(runId, summary);
     log.info(`Finished full scan (${reason})`, summary);
+    this.finishProgress();
+
     return summary;
   }
 
@@ -180,18 +353,27 @@ class ScannerService {
     const summary = createEmptySummary();
     const errors: string[] = [];
     const impactedProfileIds = new Set<number>();
+    const derivativeJobs = new Map<string, DerivativeJob>();
     let fallbackReason: string | null = null;
 
     if (!storageService.refreshAvailability().libraryAvailable) {
       return this.finishUnavailableRun(runId, reason);
     }
 
-    log.info(`Starting incremental scan (${reason})`, { count: relativePaths.length });
+    const normalizedPaths = [...new Set(relativePaths.map((value) => normalizePath(value)).filter(Boolean))];
+    const impactedFolders = new Set(normalizedPaths.map((value) => getProfileSlugFromRelativePath(value)).filter(Boolean));
+
+    this.beginProgress(reason, runId);
+    this.setProgress({
+      discoveredProfiles: impactedFolders.size,
+      discoveredImages: normalizedPaths.length
+    });
+
+    log.info(`Starting incremental scan (${reason})`, { count: normalizedPaths.length });
 
     try {
       const existingProfiles = profileRepository.getAll();
       const usedSlugs = new Set(existingProfiles.map((profile) => profile.slug));
-      const normalizedPaths = [...new Set(relativePaths.map((value) => normalizePath(value)).filter(Boolean))];
 
       for (const relativePath of normalizedPaths) {
         if (isHiddenPath(relativePath)) {
@@ -208,6 +390,8 @@ class ScannerService {
         if (!isSupportedImageFile(filename)) {
           continue;
         }
+
+        this.setProgress({ currentFolder: folderName });
 
         const absolutePath = path.join(appConfig.galleryRoot, relativePath);
         const profile = this.resolveProfile(existingProfiles, usedSlugs, folderName, path.join(appConfig.galleryRoot, folderName));
@@ -229,23 +413,36 @@ class ScannerService {
           }
 
           const result = await this.processImageFile(profile, absolutePath, relativePath);
+          this.queueDerivativeJob(derivativeJobs, result.derivativeJob);
           impactedProfileIds.add(profile.id);
 
           if (result.status === 'new') {
             summary.new_files += 1;
           }
+
           if (result.status === 'updated') {
             summary.updated_files += 1;
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           errors.push(`${relativePath}: ${message}`);
-          log.error('Incremental image processing failed', { relativePath, error: message });
+          log.error('Incremental image indexing failed', { relativePath, error: message });
+        } finally {
+          this.setProgress({
+            processedImages: this.progress.processedImages + 1
+          });
         }
       }
 
       for (const profileId of impactedProfileIds) {
         profileRepository.setAvatar(profileId, imageRepository.getLatestProfileImageId(profileId));
+      }
+
+      if (fallbackReason === null) {
+        this.setProgress({
+          processedProfiles: impactedFolders.size
+        });
+        await this.processDerivativeJobs([...derivativeJobs.values()], errors);
       }
     } catch (error) {
       summary.status = 'failed';
@@ -260,18 +457,67 @@ class ScannerService {
       }
     }
 
-    scanRunRepository.finish(runId, {
-      ...summary,
-      finished_at: new Date().toISOString()
-    });
-
+    this.finishRun(runId, summary);
     log.info(`Finished incremental scan (${reason})`, summary);
+    this.finishProgress();
 
     if (fallbackReason) {
       return this.performFullScan(fallbackReason);
     }
 
     return summary;
+  }
+
+  private queueDerivativeJob(queue: Map<string, DerivativeJob>, job: DerivativeJob): void {
+    const existing = queue.get(job.relativePath);
+
+    if (!existing) {
+      queue.set(job.relativePath, job);
+      return;
+    }
+
+    queue.set(job.relativePath, {
+      ...job,
+      force: existing.force || job.force
+    });
+  }
+
+  private async processDerivativeJobs(jobs: DerivativeJob[], errors: string[]): Promise<void> {
+    this.setProgress({
+      phase: 'derivatives',
+      currentFolder: jobs[0] ? getProfileSlugFromRelativePath(jobs[0].relativePath) : null
+    });
+    this.logProgress('phase');
+
+    await Promise.all(
+      jobs.map((job) =>
+        derivativeLimit(async () => {
+          try {
+            this.setProgress({
+              currentFolder: getProfileSlugFromRelativePath(job.relativePath)
+            });
+
+            const derivatives = await generateDerivatives(job.absolutePath, job.relativePath, job.force);
+
+            if (derivatives.generatedThumbnail) {
+              this.setProgress({
+                generatedThumbnails: this.progress.generatedThumbnails + 1
+              });
+            }
+
+            if (derivatives.generatedPreview) {
+              this.setProgress({
+                generatedPreviews: this.progress.generatedPreviews + 1
+              });
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            errors.push(`${job.relativePath}: ${message}`);
+            log.error('Derivative generation failed', { relativePath: job.relativePath, error: message });
+          }
+        })
+      )
+    );
   }
 
   private resolveProfile(existingProfiles: ProfileRecord[], usedSlugs: Set<string>, folderName: string, folderPath: string): ProfileRecord {
@@ -306,21 +552,36 @@ class ScannerService {
     const stats = await fs.stat(absolutePath);
     const fingerprint = createFingerprint(relativePath, stats.size, stats.mtimeMs);
     const existing = imageRepository.getByRelativePath(relativePath);
+    const extension = path.extname(absolutePath).toLowerCase();
+    const derivativeRelativePath = getDerivativeRelativePath(relativePath);
 
     if (existing && existing.checksum_or_fingerprint === fingerprint) {
-      if (existing.is_deleted) {
-        imageRepository.reactivate(relativePath);
-      }
+      imageRepository.refreshIndexed({
+        profileId: profile.id,
+        filename: path.basename(absolutePath),
+        extension,
+        relativePath,
+        absolutePath,
+        fileSize: stats.size,
+        mimeType: getMimeTypeFromExtension(extension),
+        fingerprint,
+        mtimeMs: stats.mtimeMs,
+        thumbnailPath: existing.thumbnail_path || derivativeRelativePath,
+        previewPath: existing.preview_path || derivativeRelativePath
+      });
 
-      await generateDerivatives(absolutePath, relativePath, false);
       return {
         status: 'unchanged',
+        derivativeJob: {
+          absolutePath,
+          relativePath,
+          force: false
+        },
         relativePath
       };
     }
 
-    const derivatives = await generateDerivatives(absolutePath, relativePath, !existing || existing.checksum_or_fingerprint !== fingerprint);
-    const extension = path.extname(absolutePath).toLowerCase();
+    const metadata = await readImageMetadata(absolutePath);
     const sortTimestamp = getStableSortTimestamp(
       existing
         ? {
@@ -339,19 +600,24 @@ class ScannerService {
       relativePath,
       absolutePath,
       fileSize: stats.size,
-      width: derivatives.width,
-      height: derivatives.height,
+      width: metadata.width,
+      height: metadata.height,
       mimeType: getMimeTypeFromExtension(extension),
       fingerprint,
       mtimeMs: stats.mtimeMs,
       firstSeenAt,
       sortTimestamp,
-      thumbnailPath: derivatives.thumbnailPath,
-      previewPath: derivatives.previewPath
+      thumbnailPath: derivativeRelativePath,
+      previewPath: derivativeRelativePath
     });
 
     return {
       status: existing ? 'updated' : 'new',
+      derivativeJob: {
+        absolutePath,
+        relativePath,
+        force: true
+      },
       relativePath
     };
   }

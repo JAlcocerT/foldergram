@@ -18,7 +18,7 @@
     </div>
     <RouterLink custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
       <a :href="href" class="feed-card__media" @click="handleImageNavigation($event, navigate)">
-        <img :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" />
+        <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
       </a>
     </RouterLink>
     <div class="feed-card__body">
@@ -158,6 +158,7 @@ import { useRoute } from 'vue-router';
 import { RouterLink } from 'vue-router';
 
 import ConfirmDialog from './ConfirmDialog.vue';
+import ResilientImage from './ResilientImage.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';

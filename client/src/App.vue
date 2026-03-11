@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router';
 
 import AppShell from './components/AppShell.vue';
 import ImageView from './views/ImageView.vue';
@@ -23,17 +23,52 @@ const profilesStore = useProfilesStore();
 const route = useRoute();
 const router = useRouter();
 
-const modalBackgroundRoute = computed(() =>
-  appStore.imageModalBackgroundPath ? router.resolve(appStore.imageModalBackgroundPath) : null
-);
+function resolveDisplayRoute(targetPath: string): RouteLocationNormalizedLoaded | null {
+  const resolved = router.resolve(targetPath);
+  const resolvedName = resolved.name;
+  if (resolvedName === null) {
+    return null;
+  }
+
+  const { href: _href, name: _ignoredName, ...displayRoute } = resolved;
+  return {
+    ...displayRoute,
+    name: resolvedName
+  };
+}
+
+const modalBackgroundRoute = computed<RouteLocationNormalizedLoaded | null>(() => {
+  if (!appStore.imageModalBackgroundPath) {
+    return null;
+  }
+
+  return resolveDisplayRoute(appStore.imageModalBackgroundPath);
+});
 const showImageModal = computed(
   () => route.name === 'image' && modalBackgroundRoute.value !== null && modalBackgroundRoute.value.fullPath !== route.fullPath
 );
-const displayRoute = computed(() => (showImageModal.value && modalBackgroundRoute.value ? modalBackgroundRoute.value : route));
+const displayRoute = computed<RouteLocationNormalizedLoaded | undefined>(() =>
+  showImageModal.value ? modalBackgroundRoute.value ?? undefined : route
+);
 
 onMounted(async () => {
   await Promise.all([appStore.fetchStats(), profilesStore.fetchProfiles(), likesStore.initialize()]);
 });
+
+onUnmounted(() => {
+  appStore.stopStatsPolling();
+});
+
+watch(
+  () => appStore.stats?.profiles ?? 0,
+  async (profileCount) => {
+    if (appStore.isLibraryUnavailable || profileCount === 0 || profileCount === profilesStore.items.length) {
+      return;
+    }
+
+    await profilesStore.fetchProfiles(true);
+  }
+);
 
 watch(
   () => route.name,

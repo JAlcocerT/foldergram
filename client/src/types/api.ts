@@ -56,26 +56,45 @@ export interface LikeMutationResult {
   ok: boolean;
 }
 
+export interface ScanRunSummary {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  scanned_files: number;
+  new_files: number;
+  updated_files: number;
+  removed_files: number;
+  error_text: string | null;
+}
+
+export interface ScanProgress {
+  isScanning: boolean;
+  scanReason: string | null;
+  phase: 'idle' | 'discovery' | 'derivatives';
+  startedAt: string | null;
+  runId: number | null;
+  discoveredProfiles: number;
+  processedProfiles: number;
+  discoveredImages: number;
+  processedImages: number;
+  generatedThumbnails: number;
+  generatedPreviews: number;
+  currentFolder: string | null;
+  lastCompletedScan: ScanRunSummary | null;
+}
+
 export interface AppStats {
   profiles: number;
   indexedImages: number;
   deletedImages: number;
   thumbnailCount: number;
   previewCount: number;
+  scan: ScanProgress;
   storage: {
     available: boolean;
     reason: string | null;
     usingInMemoryDatabase: boolean;
   };
-  lastScan: {
-    id: number;
-    started_at: string;
-    finished_at: string | null;
-    status: string;
-    scanned_files: number;
-    new_files: number;
-    updated_files: number;
-    removed_files: number;
-    error_text: string | null;
-  } | null;
+  lastScan: ScanRunSummary | null;
 }
