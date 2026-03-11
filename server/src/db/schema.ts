@@ -52,6 +52,15 @@ CREATE TABLE IF NOT EXISTS app_settings (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS folder_scan_state (
+  folder_path TEXT PRIMARY KEY,
+  signature TEXT NOT NULL,
+  file_count INTEGER NOT NULL,
+  max_mtime_ms REAL NOT NULL,
+  total_size INTEGER NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS likes (
   image_id INTEGER PRIMARY KEY,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,5 +73,6 @@ CREATE INDEX IF NOT EXISTS idx_images_sort_timestamp ON images(sort_timestamp DE
 CREATE INDEX IF NOT EXISTS idx_images_profile_sort ON images(profile_id, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);
+CREATE INDEX IF NOT EXISTS idx_folder_scan_state_updated_at ON folder_scan_state(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_likes_created_at ON likes(created_at DESC);
 `;

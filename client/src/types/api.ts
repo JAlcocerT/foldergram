@@ -74,8 +74,8 @@ export interface ScanProgress {
   phase: 'idle' | 'discovery' | 'derivatives';
   startedAt: string | null;
   runId: number | null;
-  discoveredProfiles: number;
-  processedProfiles: number;
+  discoveredFolders: number;
+  processedFolders: number;
   discoveredImages: number;
   processedImages: number;
   generatedThumbnails: number;

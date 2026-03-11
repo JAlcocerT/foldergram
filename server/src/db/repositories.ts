@@ -1,5 +1,6 @@
 import { databaseManager } from './database.js';
-import type { FeedImage, ImageDetail, ImageRecord, LikeRecord, ProfileRecord, ScanRunRecord } from '../types/models.js';
+import { normalizePath } from '../utils/path-utils.js';
+import type { AppSettingRecord, FeedImage, FolderScanStateRecord, ImageDetail, ImageRecord, LikeRecord, ProfileRecord, ScanRunRecord } from '../types/models.js';
 
 const database = databaseManager.connection;
 
@@ -11,6 +12,11 @@ export interface UpsertProfileInput {
   slug: string;
   name: string;
   folderPath: string;
+}
+
+export interface SaveProfileResult {
+  profile: ProfileRecord;
+  wrote: boolean;
 }
 
 export interface UpsertImageInput {
@@ -45,6 +51,14 @@ export interface RefreshIndexedImageInput {
   previewPath: string;
 }
 
+export interface UpsertFolderScanStateInput {
+  folderPath: string;
+  signature: string;
+  fileCount: number;
+  maxMtimeMs: number;
+  totalSize: number;
+}
+
 export const profileRepository = {
   getAll(): ProfileRecord[] {
     return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as ProfileRecord[];
@@ -69,12 +83,32 @@ export const profileRepository = {
     return this.getBySlug(input.slug) as ProfileRecord;
   },
 
+  save(input: UpsertProfileInput): SaveProfileResult {
+    const existing = this.getBySlug(input.slug);
+    if (existing && existing.name === input.name && normalizePath(existing.folder_path) === normalizePath(input.folderPath)) {
+      return {
+        profile: existing,
+        wrote: false
+      };
+    }
+
+    return {
+      profile: this.upsert(input),
+      wrote: true
+    };
+  },
+
   count(): number {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number }).count);
   },
 
   setAvatar(profileId: number, imageId: number | null): void {
-    database.prepare('UPDATE profiles SET avatar_image_id = ?, updated_at = ? WHERE id = ?').run(imageId, nowIso(), profileId);
+    database.prepare('UPDATE profiles SET avatar_image_id = ?, updated_at = ? WHERE id = ? AND avatar_image_id IS NOT ?').run(
+      imageId,
+      nowIso(),
+      profileId,
+      imageId
+    );
   }
 };
 
@@ -376,6 +410,60 @@ export const likeRepository = {
   remove(imageId: number): boolean {
     const result = database.prepare('DELETE FROM likes WHERE image_id = ?').run(imageId);
     return Number(result.changes ?? 0) > 0;
+  }
+};
+
+export const appSettingsRepository = {
+  get(key: string): string | null {
+    const row = database.prepare('SELECT value FROM app_settings WHERE key = ?').get(key) as Pick<AppSettingRecord, 'value'> | undefined;
+    return row?.value ?? null;
+  },
+
+  set(key: string, value: string): void {
+    database
+      .prepare(
+        `
+        INSERT INTO app_settings (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        `
+      )
+      .run(key, value);
+  }
+};
+
+export const folderScanStateRepository = {
+  getAll(): FolderScanStateRecord[] {
+    return database.prepare('SELECT * FROM folder_scan_state ORDER BY folder_path ASC').all() as unknown as FolderScanStateRecord[];
+  },
+
+  upsert(input: UpsertFolderScanStateInput): void {
+    database
+      .prepare(
+        `
+        INSERT INTO folder_scan_state (folder_path, signature, file_count, max_mtime_ms, total_size, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(folder_path) DO UPDATE SET
+          signature = excluded.signature,
+          file_count = excluded.file_count,
+          max_mtime_ms = excluded.max_mtime_ms,
+          total_size = excluded.total_size,
+          updated_at = excluded.updated_at
+        `
+      )
+      .run(input.folderPath, input.signature, input.fileCount, input.maxMtimeMs, input.totalSize, nowIso());
+  },
+
+  deleteMissing(activeFolderPaths: string[]): number {
+    if (activeFolderPaths.length === 0) {
+      const result = database.prepare('DELETE FROM folder_scan_state').run();
+      return Number(result.changes ?? 0);
+    }
+
+    const placeholders = activeFolderPaths.map(() => '?').join(', ');
+    const statement = database.prepare(`DELETE FROM folder_scan_state WHERE folder_path NOT IN (${placeholders})`);
+    const result = statement.run(...activeFolderPaths);
+    return Number(result.changes ?? 0);
   }
 };
 

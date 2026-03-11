@@ -42,6 +42,20 @@ export interface ScanRunRecord {
   error_text: string | null;
 }
 
+export interface AppSettingRecord {
+  key: string;
+  value: string;
+}
+
+export interface FolderScanStateRecord {
+  folder_path: string;
+  signature: string;
+  file_count: number;
+  max_mtime_ms: number;
+  total_size: number;
+  updated_at: string;
+}
+
 export interface LikeRecord {
   image_id: number;
   created_at: string;

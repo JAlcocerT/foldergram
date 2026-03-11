@@ -37,7 +37,7 @@
         <dl class="scan-state__stats">
           <div>
             <dt>Folders</dt>
-            <dd>{{ appStore.stats?.scan.processedProfiles ?? 0 }}/{{ appStore.stats?.scan.discoveredProfiles ?? 0 }}</dd>
+            <dd>{{ appStore.stats?.scan.processedFolders ?? 0 }}/{{ appStore.stats?.scan.discoveredFolders ?? 0 }}</dd>
           </div>
           <div>
             <dt>Images indexed</dt>

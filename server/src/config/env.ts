@@ -17,6 +17,8 @@ const envSchema = z.object({
   DB_DIR: z.string().optional(),
   THUMBNAILS_DIR: z.string().optional(),
   PREVIEWS_DIR: z.string().optional(),
+  SCAN_DISCOVERY_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  SCAN_DERIVATIVE_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
 
@@ -49,5 +51,7 @@ export const appConfig = {
   dbDir,
   thumbnailsDir,
   previewsDir,
+  scanDiscoveryConcurrency: parsed.SCAN_DISCOVERY_CONCURRENCY,
+  scanDerivativeConcurrency: parsed.SCAN_DERIVATIVE_CONCURRENCY,
   databasePath: path.join(dbDir, 'gallery.sqlite')
 };
