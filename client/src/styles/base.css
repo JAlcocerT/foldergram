@@ -103,6 +103,8 @@ img[data-loaded='true'] {
 .avatar-base {
   width: 2.65rem;
   height: 2.65rem;
+  /* gradient needs `background` shorthand — bg-[var()] only sets background-color */
+  background: var(--avatar-fallback);
 }
 
 /* ── Image fill rules per context ───────────────────────────── */
