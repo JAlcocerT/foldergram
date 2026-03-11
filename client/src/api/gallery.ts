@@ -4,6 +4,7 @@ import type {
   ImageDetail,
   LikeMutationResult,
   LikesPayload,
+  ManualScanResult,
   PaginatedFeed,
   ProfileImagesPayload,
   ProfileSummary
@@ -55,4 +56,10 @@ export function deleteImage(id: number) {
 
 export function fetchStats() {
   return requestJson<AppStats>('/api/admin/stats');
+}
+
+export function triggerManualScan() {
+  return requestJson<ManualScanResult>('/api/admin/rescan', {
+    method: 'POST'
+  });
 }

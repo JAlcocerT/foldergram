@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ImageView from '../views/ImageView.vue';
 import LikesView from '../views/LikesView.vue';
 import ProfileView from '../views/ProfileView.vue';
+import SettingsView from '../views/SettingsView.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -23,6 +24,11 @@ export const router = createRouter({
       path: '/likes/posts',
       name: 'likes',
       component: LikesView
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingsView
     },
     {
       path: '/:slug',

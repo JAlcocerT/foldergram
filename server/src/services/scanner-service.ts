@@ -103,6 +103,8 @@ export interface ScanProgressSnapshot {
   processedFolders: number;
   discoveredImages: number;
   processedImages: number;
+  queuedDerivativeJobs: number;
+  processedDerivativeJobs: number;
   generatedThumbnails: number;
   generatedPreviews: number;
   currentFolder: string | null;
@@ -136,6 +138,8 @@ function createIdleProgress(lastCompletedScan: ScanRunRecord | null = null): Sca
     processedFolders: 0,
     discoveredImages: 0,
     processedImages: 0,
+    queuedDerivativeJobs: 0,
+    processedDerivativeJobs: 0,
     generatedThumbnails: 0,
     generatedPreviews: 0,
     currentFolder: null,
@@ -265,6 +269,8 @@ class ScannerService {
       processedFolders: this.progress.processedFolders,
       discoveredImages: this.progress.discoveredImages,
       processedImages: this.progress.processedImages,
+      queuedDerivativeJobs: this.progress.queuedDerivativeJobs,
+      processedDerivativeJobs: this.progress.processedDerivativeJobs,
       generatedThumbnails: this.progress.generatedThumbnails,
       generatedPreviews: this.progress.generatedPreviews,
       currentFolder: this.progress.currentFolder,
@@ -810,8 +816,24 @@ class ScannerService {
     let generatedThumbnails = 0;
     let generatedPreviews = 0;
 
+    if (jobs.length === 0) {
+      this.setProgress({
+        queuedDerivativeJobs: 0,
+        processedDerivativeJobs: 0
+      });
+
+      return {
+        durationMs: 0,
+        generatedPreviews: 0,
+        generatedThumbnails: 0,
+        queuedJobs: 0
+      };
+    }
+
     this.setProgress({
       phase: 'derivatives',
+      queuedDerivativeJobs: jobs.length,
+      processedDerivativeJobs: 0,
       currentFolder: jobs[0] ? getProfileSlugFromRelativePath(jobs[0].relativePath) : null
     });
     this.logProgress('phase');
@@ -847,6 +869,10 @@ class ScannerService {
             const message = error instanceof Error ? error.message : String(error);
             errors.push(`${job.relativePath}: ${message}`);
             log.error('Derivative generation failed', { relativePath: job.relativePath, error: message });
+          } finally {
+            this.setProgress({
+              processedDerivativeJobs: this.progress.processedDerivativeJobs + 1
+            });
           }
         })
       )

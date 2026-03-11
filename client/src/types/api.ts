@@ -78,10 +78,17 @@ export interface ScanProgress {
   processedFolders: number;
   discoveredImages: number;
   processedImages: number;
+  queuedDerivativeJobs: number;
+  processedDerivativeJobs: number;
   generatedThumbnails: number;
   generatedPreviews: number;
   currentFolder: string | null;
   lastCompletedScan: ScanRunSummary | null;
+}
+
+export interface ManualScanResult {
+  ok: boolean;
+  lastScan: ScanRunSummary | null;
 }
 
 export interface AppStats {

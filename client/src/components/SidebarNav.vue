@@ -35,6 +35,21 @@
         <span class="sidebar__label">Likes</span>
         <small class="sidebar__badge sidebar__meta">{{ likesStore.items.length }}</small>
       </RouterLink>
+      <RouterLink class="sidebar__link" :to="{ name: 'settings' }">
+        <span class="sidebar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M12 8.75A3.25 3.25 0 1 0 15.25 12 3.25 3.25 0 0 0 12 8.75Zm0-4.5 1.03 1.94a1 1 0 0 0 .86.52h2.12l.6 2.1a1 1 0 0 0 .68.68l2.1.6v2.82l-2.1.6a1 1 0 0 0-.68.68l-.6 2.1h-2.12a1 1 0 0 0-.86.52L12 19.75l-1.03-1.94a1 1 0 0 0-.86-.52H8l-.6-2.1a1 1 0 0 0-.68-.68l-2.1-.6v-2.82l2.1-.6a1 1 0 0 0 .68-.68L8 6.71h2.11a1 1 0 0 0 .86-.52Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </span>
+        <span class="sidebar__label">Settings</span>
+      </RouterLink>
       <span class="sidebar__section-label sidebar__meta">Folders</span>
       <RouterLink
         v-for="profile in featuredProfiles"
