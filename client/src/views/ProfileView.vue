@@ -1,5 +1,5 @@
 <template>
-  <section class="content-column content-column--profile">
+  <section class="w-[min(100%,58rem)] mx-auto">
     <EmptyState
       v-if="appStore.isLibraryUnavailable"
       title="Library storage unavailable"
@@ -14,8 +14,8 @@
         description="Drop supported images into this folder and rescan to see them here."
       />
       <template v-else>
-        <div class="profile-tabs" aria-label="Folder sections">
-          <span class="profile-tabs__item profile-tabs__item--active">Posts</span>
+        <div class="flex justify-center py-[0.95rem] mb-[0.45rem] border-t border-border" aria-label="Folder sections">
+          <span class="relative pt-[0.1rem] text-text text-[0.78rem] font-bold tracking-[0.11em] uppercase profile-tabs__item--active">Posts</span>
         </div>
         <ProfileGrid :items="profilesStore.currentImages" />
         <InfiniteLoader :loading="profilesStore.loadingProfile" :has-more="profilesStore.currentHasMore" @load-more="loadMore" />

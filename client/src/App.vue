@@ -1,7 +1,7 @@
 <template>
   <AppShell>
     <RouterView :route="displayRoute" />
-    <div v-if="showImageModal" class="route-modal" @click.self="closeImageModal">
+    <div v-if="showImageModal" class="fixed inset-0 z-40 flex items-center justify-center px-8 py-8 max-md:px-4 max-md:py-4 bg-black/72" @click.self="closeImageModal">
       <ImageView :id="String(route.params.id ?? '')" modal @close="closeImageModal" />
     </div>
   </AppShell>

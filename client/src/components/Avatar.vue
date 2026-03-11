@@ -1,5 +1,5 @@
 <template>
-  <div class="avatar">
+  <div class="avatar-base">
     <ResilientImage v-if="src" :src="src" :alt="name" loading="lazy" :retry-while="appStore.isScanning" />
     <span v-else>{{ initials }}</span>
   </div>

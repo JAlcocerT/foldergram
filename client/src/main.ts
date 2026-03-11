@@ -4,7 +4,8 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import { router } from './router';
 import { useAppStore } from './stores/app';
-import './styles/main.css';
+import './styles/base.css';
+import 'virtual:uno.css';
 
 const app = createApp(App);
 const pinia = createPinia();

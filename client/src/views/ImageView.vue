@@ -1,8 +1,8 @@
 <template>
-  <div :class="containerClass" @click.stop>
+  <div :class="modal ? 'w-[min(100%,72rem)]' : 'w-[min(100%,72rem)] mx-auto'" @click.stop>
     <ErrorState v-if="viewerStore.error" title="Could not load image" :message="viewerStore.error" />
-    <div v-else-if="viewerStore.loading" class="panel panel--centered">
-      <p>Loading image...</p>
+    <div v-else-if="viewerStore.loading" class="card p-8 text-center">
+      <p class="text-muted">Loading image...</p>
     </div>
     <ImageModal
       v-else
@@ -55,7 +55,6 @@ const router = useRouter();
 const confirmDeleteOpen = ref(false);
 
 const imageId = computed(() => Number(props.id));
-const containerClass = computed(() => (props.modal ? 'route-modal__content' : 'content-column content-column--wide'));
 const profile = computed(() =>
   viewerStore.image ? profilesStore.items.find((entry) => entry.slug === viewerStore.image?.profileSlug) ?? null : null
 );

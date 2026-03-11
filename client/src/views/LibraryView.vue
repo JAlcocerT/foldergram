@@ -1,12 +1,12 @@
 <template>
-  <section class="content-column content-column--wide stack">
-    <header class="page-header">
+  <section class="w-[min(100%,72rem)] mx-auto flex flex-col gap-[1.2rem]">
+    <header class="flex items-end justify-between gap-4 pb-[0.8rem] max-sm:flex-col max-sm:items-start">
       <div>
         <span class="eyebrow">Library</span>
-        <h1>All folders</h1>
-        <p>Browse every indexed folder, search by name or path, and filter what shows up in Foldergram.</p>
+        <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">All folders</h1>
+        <p class="m-0 text-muted">Browse every indexed folder, search by name or path, and filter what shows up in Foldergram.</p>
       </div>
-      <p class="library-header__meta">{{ formatCount(filteredProfiles.length) }} of {{ formatCount(profilesStore.items.length) }} folders</p>
+      <p class="m-0 text-[0.9rem] font-bold">{{ formatCount(filteredProfiles.length) }} of {{ formatCount(profilesStore.items.length) }} folders</p>
     </header>
 
     <EmptyState
@@ -20,35 +20,37 @@
       :message="profilesStore.listError"
     />
     <template v-else>
-      <section class="panel library-toolbar">
-        <div class="library-search">
-          <label class="library-search__label" for="library-search">Search folders</label>
+      <!-- Toolbar card -->
+      <section class="card grid gap-4 p-8">
+        <!-- Search -->
+        <div class="grid gap-[0.45rem]">
+          <label class="text-muted text-[0.76rem] font-bold tracking-[0.08em] uppercase" for="library-search">Search folders</label>
           <input
             id="library-search"
             v-model.trim="searchQuery"
-            class="library-search__input"
+            class="w-full min-h-12 px-4 py-[0.85rem] border border-border rounded-[0.95rem] text-text bg-[color-mix(in_srgb,var(--surface-alt)_86%,var(--surface)_14%)] transition-[border-color,box-shadow,background-color] duration-180 focus:outline-none focus:border-[color-mix(in_srgb,var(--accent)_56%,var(--border)_44%)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent-soft)_85%,transparent_15%)]"
             type="search"
             placeholder="Search by slug, folder name, or path"
           />
         </div>
 
-        <div class="library-controls">
-          <div class="library-filter-group" aria-label="Folder filters">
+        <!-- Controls row -->
+        <div class="flex flex-wrap items-end justify-between gap-4 max-sm:flex-col max-sm:items-start">
+          <div class="inline-flex flex-wrap gap-[0.55rem]" aria-label="Folder filters">
             <button
               v-for="option in filterOptions"
               :key="option.value"
-              class="library-filter-group__button"
-              :class="{ 'library-filter-group__button--active': statusFilter === option.value }"
+              class="min-h-[2.7rem] px-[0.95rem] py-[0.65rem] border border-border rounded-full text-muted bg-[color-mix(in_srgb,var(--surface-alt)_92%,var(--surface)_8%)] cursor-pointer transition-[border-color,background-color,color,transform] duration-180 hover:-translate-y-px"
+              :class="statusFilter === option.value ? 'border-[color-mix(in_srgb,var(--accent)_58%,var(--border)_42%)] text-accent-strong bg-[color-mix(in_srgb,var(--accent-soft)_82%,var(--surface)_18%)]' : ''"
               type="button"
               @click="statusFilter = option.value"
             >
               {{ option.label }}
             </button>
           </div>
-
-          <label class="library-select">
-            <span>Sort</span>
-            <select v-model="sortMode" class="library-select__control">
+          <label class="grid gap-[0.45rem] min-w-[13.5rem] max-sm:w-full max-sm:min-w-0">
+            <span class="text-muted text-[0.76rem] font-bold tracking-[0.08em] uppercase">Sort</span>
+            <select v-model="sortMode" class="w-full min-h-12 px-4 py-[0.85rem] border border-border rounded-[0.95rem] text-text bg-[color-mix(in_srgb,var(--surface-alt)_86%,var(--surface)_14%)] focus:outline-none">
               <option value="images-desc">Most images</option>
               <option value="name-asc">Folder name A-Z</option>
               <option value="name-desc">Folder name Z-A</option>
@@ -57,29 +59,30 @@
           </label>
         </div>
 
-        <dl class="library-summary">
-          <div>
-            <dt>Total folders</dt>
-            <dd>{{ formatCount(profilesStore.items.length) }}</dd>
+        <!-- Summary stats -->
+        <dl class="grid grid-cols-4 gap-[0.8rem] m-0 max-sm:grid-cols-1">
+          <div class="px-[0.95rem] py-[0.85rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Total folders</dt>
+            <dd class="m-0 text-base font-bold">{{ formatCount(profilesStore.items.length) }}</dd>
           </div>
-          <div>
-            <dt>With images</dt>
-            <dd>{{ formatCount(activeFolderCount) }}</dd>
+          <div class="px-[0.95rem] py-[0.85rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">With images</dt>
+            <dd class="m-0 text-base font-bold">{{ formatCount(activeFolderCount) }}</dd>
           </div>
-          <div>
-            <dt>Empty folders</dt>
-            <dd>{{ formatCount(emptyFolderCount) }}</dd>
+          <div class="px-[0.95rem] py-[0.85rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Empty folders</dt>
+            <dd class="m-0 text-base font-bold">{{ formatCount(emptyFolderCount) }}</dd>
           </div>
-          <div>
-            <dt>Indexed images</dt>
-            <dd>{{ formatCount(totalIndexedImages) }}</dd>
+          <div class="px-[0.95rem] py-[0.85rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed images</dt>
+            <dd class="m-0 text-base font-bold">{{ formatCount(totalIndexedImages) }}</dd>
           </div>
         </dl>
       </section>
 
-      <section v-if="profilesStore.loadingList && profilesStore.items.length === 0" class="panel panel--centered">
-        <h2>Loading folders</h2>
-        <p>Reading the indexed library so every folder can be searched and filtered here.</p>
+      <section v-if="profilesStore.loadingList && profilesStore.items.length === 0" class="card p-8 text-center">
+        <h2 class="text-text">Loading folders</h2>
+        <p class="m-0 text-muted">Reading the indexed library so every folder can be searched and filtered here.</p>
       </section>
 
       <EmptyState
@@ -88,32 +91,33 @@
         description="Add folders to the gallery root and run a scan to populate the library."
       />
 
-      <section v-else-if="filteredProfiles.length === 0" class="panel panel--centered">
-        <h2>No folders match</h2>
-        <p>Try a broader search or switch back to a different filter.</p>
+      <section v-else-if="filteredProfiles.length === 0" class="card p-8 text-center">
+        <h2 class="text-text">No folders match</h2>
+        <p class="m-0 text-muted">Try a broader search or switch back to a different filter.</p>
       </section>
 
-      <section v-else class="library-grid" aria-label="All folders">
+      <!-- Library grid -->
+      <section v-else class="grid grid-cols-3 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1" aria-label="All folders">
         <RouterLink
           v-for="profile in filteredProfiles"
           :key="profile.id"
-          class="library-card"
+          class="grid gap-[0.9rem] p-4 border border-border rounded-[1rem] bg-[linear-gradient(180deg,var(--surface)_0%,color-mix(in_srgb,var(--surface)_92%,var(--accent)_8%)_100%)] shadow-[var(--shadow)] transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--accent)_38%,var(--border)_62%)] hover:shadow-[0_18px_36px_rgba(15,20,25,0.1)]"
           :to="{ name: 'profile', params: { slug: profile.slug } }"
         >
-          <div class="library-card__top">
-            <Avatar :name="profile.name" :src="profile.avatarUrl" />
-            <div class="library-card__title">
-              <h2>{{ profile.slug }}</h2>
-              <p>{{ profile.name }}</p>
+          <div class="flex items-center gap-[0.8rem] max-sm:flex-col max-sm:items-start">
+            <Avatar class="w-12 h-12" :name="profile.name" :src="profile.avatarUrl" />
+            <div class="min-w-0 flex-1">
+              <h2 class="m-0 text-[0.96rem] font-bold">{{ profile.slug }}</h2>
+              <p class="m-0 text-muted text-[0.8rem]">{{ profile.name }}</p>
             </div>
-            <span class="library-card__count">{{ formatCount(profile.imageCount) }} posts</span>
+            <span class="max-sm:ml-0 ml-auto px-[0.65rem] py-[0.3rem] rounded-full text-accent-strong bg-[color-mix(in_srgb,var(--accent-soft)_80%,var(--surface)_20%)] text-[0.74rem] font-bold whitespace-nowrap">{{ formatCount(profile.imageCount) }} posts</span>
           </div>
 
-          <p class="library-card__path">{{ profile.folderPath }}</p>
+          <p class="m-0 text-muted text-[0.83rem] break-words">{{ profile.folderPath }}</p>
 
-          <div class="library-card__meta">
+          <div class="flex items-center justify-between gap-3 pt-[0.15rem] text-muted text-[0.8rem] max-sm:flex-col max-sm:items-start">
             <span>{{ profile.imageCount > 0 ? 'Indexed and ready' : 'Indexed, awaiting images' }}</span>
-            <span>Open folder</span>
+            <span class="text-accent-strong font-bold">Open folder</span>
           </div>
         </RouterLink>
       </section>

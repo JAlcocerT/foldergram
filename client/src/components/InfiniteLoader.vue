@@ -1,10 +1,15 @@
 <template>
-  <div ref="sentinel" class="infinite-loader">
-    <button v-if="showButton" class="infinite-loader__button" type="button" @click="$emit('load-more')">
+  <div ref="sentinel" class="flex justify-center pt-[1.2rem]">
+    <button
+      v-if="showButton"
+      class="btn-primary min-w-[8.5rem]"
+      type="button"
+      @click="$emit('load-more')"
+    >
       Load more
     </button>
-    <span v-else-if="loading" class="infinite-loader__label">Loading more...</span>
-    <span v-else class="infinite-loader__label">You are caught up</span>
+    <span v-else-if="loading" class="text-muted">Loading more...</span>
+    <span v-else class="text-muted">You are caught up</span>
   </div>
 </template>
 

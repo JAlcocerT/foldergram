@@ -1,97 +1,100 @@
 <template>
-  <section class="home-layout">
-    <div class="home-feed">
-      <header v-if="appStore.stats" class="page-header page-header--feed page-header--compact">
-        <p>{{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} folders</p>
+  <section class="grid grid-cols-[minmax(0,39.75rem)_19rem] gap-[3.5rem] items-start justify-center w-[min(100%,67rem)] mx-auto max-md:grid-cols-1 max-md:w-full">
+    <!-- Main feed column -->
+    <div class="min-w-0">
+      <header v-if="appStore.stats" class="flex items-end justify-between gap-4 pb-[0.8rem]">
+        <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} folders</p>
       </header>
 
-      <section v-if="appStore.isScanning && appStore.stats" class="scan-state scan-state--inline" aria-live="polite">
+      <!-- Inline scan state (while feed already loaded) -->
+      <section v-if="appStore.isScanning && appStore.stats" class="grid gap-[0.3rem] px-4 py-[0.95rem] mb-[1.1rem] border border-border rounded-[1rem] bg-surface shadow-[var(--shadow)]" aria-live="polite">
         <strong>Scanning library</strong>
-        <p>{{ scanDescription }}</p>
+        <p class="m-0 text-muted">{{ scanDescription }}</p>
       </section>
 
-      <section v-if="storyProfiles.length" class="stories-bar" aria-label="Folders">
+      <!-- Stories bar -->
+      <section v-if="storyProfiles.length" class="flex gap-4 overflow-x-auto pb-4 mb-5 [scrollbar-width:none]" aria-label="Folders">
         <RouterLink
           v-for="profile in storyProfiles"
           :key="profile.id"
-          class="stories-bar__item"
+          class="flex flex-col items-center gap-[0.45rem] min-w-[4.55rem] text-muted text-[0.69rem] text-center"
           :to="{ name: 'profile', params: { slug: profile.slug } }"
         >
-          <div class="stories-bar__ring">
-            <Avatar :name="profile.name" :src="profile.avatarUrl" />
+          <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
+            <Avatar class="w-[3.95rem] h-[3.95rem] border-2 border-bg" :name="profile.name" :src="profile.avatarUrl" />
           </div>
-          <span>{{ profile.slug }}</span>
+          <span class="max-w-full overflow-hidden text-ellipsis">{{ profile.slug }}</span>
         </RouterLink>
       </section>
 
-      <EmptyState
-        v-if="appStore.isLibraryUnavailable"
-        title="Library storage unavailable"
-        :description="appStore.libraryUnavailableReason"
-      />
+      <!-- States -->
+      <EmptyState v-if="appStore.isLibraryUnavailable" title="Library storage unavailable" :description="appStore.libraryUnavailableReason" />
       <ErrorState v-else-if="feedStore.error" title="Could not load feed" :message="feedStore.error" />
-      <section v-else-if="showInitialScanState" class="scan-state">
-        <span class="scan-state__eyebrow">Startup scan in progress</span>
-        <h2>Indexing your library</h2>
-        <p>{{ scanDescription }}</p>
-        <dl class="scan-state__stats">
-          <div>
-            <dt>Folders</dt>
-            <dd>{{ appStore.stats?.scan.processedFolders ?? 0 }}/{{ appStore.stats?.scan.discoveredFolders ?? 0 }}</dd>
+
+      <!-- Initial scan state (no feed yet) -->
+      <section v-else-if="showInitialScanState" class="grid gap-[0.85rem] px-5 py-5 mb-[1.1rem] border border-border rounded-[1rem] shadow-[var(--shadow)]" style="background: radial-gradient(circle at top right, rgba(0,149,246,0.12), transparent 38%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);">
+        <span class="text-accent-strong text-[0.75rem] font-bold tracking-[0.08em] uppercase">Startup scan in progress</span>
+        <h2 class="m-0">Indexing your library</h2>
+        <p class="m-0 text-muted">{{ scanDescription }}</p>
+        <dl class="grid grid-cols-4 gap-[0.8rem] m-0 max-sm:grid-cols-2">
+          <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Folders</dt>
+            <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.processedFolders ?? 0 }}/{{ appStore.stats?.scan.discoveredFolders ?? 0 }}</dd>
           </div>
-          <div>
-            <dt>Images indexed</dt>
-            <dd>{{ appStore.stats?.scan.processedImages ?? 0 }}/{{ appStore.stats?.scan.discoveredImages ?? 0 }}</dd>
+          <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Images indexed</dt>
+            <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.processedImages ?? 0 }}/{{ appStore.stats?.scan.discoveredImages ?? 0 }}</dd>
           </div>
-          <div>
-            <dt>Thumbnails</dt>
-            <dd>{{ appStore.stats?.scan.generatedThumbnails ?? 0 }}</dd>
+          <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Thumbnails</dt>
+            <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.generatedThumbnails ?? 0 }}</dd>
           </div>
-          <div>
-            <dt>Previews</dt>
-            <dd>{{ appStore.stats?.scan.generatedPreviews ?? 0 }}</dd>
+          <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Previews</dt>
+            <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.generatedPreviews ?? 0 }}</dd>
           </div>
         </dl>
       </section>
-      <EmptyState
-        v-else-if="feedStore.initialized && feedStore.items.length === 0"
-        title="No images indexed yet"
-        description="Add folders under data/gallery/ and the feed will populate after the next scan."
-      />
+
+      <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No images indexed yet" description="Add folders under data/gallery/ and the feed will populate after the next scan." />
       <template v-else>
-        <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />
+        <!-- Feed cards in home-layout context: transparent card, no shadow -->
+        <div class="flex flex-col gap-[1.2rem]">
+          <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />
+        </div>
         <InfiniteLoader :loading="feedStore.loading" :has-more="feedStore.hasMore" @load-more="feedStore.loadMore" />
       </template>
     </div>
 
-    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="home-rail" aria-label="Folder recommendations">
-      <div class="home-rail__summary">
-        <Avatar :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
-        <div>
-          <strong>{{ homeSummaryFolder.slug }}</strong>
-          <p>{{ homeSummaryFolder.name }}</p>
+    <!-- Right rail (suggestions) — hidden on mobile -->
+    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="sticky top-8 grid gap-[1.15rem] text-muted max-md:hidden" aria-label="Folder recommendations">
+      <div class="flex items-center gap-[0.8rem]">
+        <Avatar class="w-11 h-11" :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
+        <div class="flex-1 min-w-0">
+          <strong class="block text-text text-[0.87rem] font-bold">{{ homeSummaryFolder.slug }}</strong>
+          <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ homeSummaryFolder.name }}</p>
         </div>
-        <RouterLink :to="{ name: 'profile', params: { slug: homeSummaryFolder.slug } }">Open</RouterLink>
+        <RouterLink class="ml-auto text-accent-strong text-[0.76rem] font-bold" :to="{ name: 'profile', params: { slug: homeSummaryFolder.slug } }">Open</RouterLink>
       </div>
 
-      <div class="home-rail__header">
+      <div class="flex items-center justify-between gap-4 text-text text-[0.96rem] font-bold">
         <span>Suggested folders</span>
-        <RouterLink :to="{ name: 'likes' }">View likes</RouterLink>
+        <RouterLink class="text-muted text-[0.76rem] font-bold" :to="{ name: 'likes' }">View likes</RouterLink>
       </div>
 
-      <div class="home-rail__list">
+      <div class="grid gap-[0.95rem]">
         <RouterLink
           v-for="profile in recommendedFolders"
           :key="profile.id"
-          class="home-rail__item"
+          class="flex items-center gap-[0.8rem]"
           :to="{ name: 'profile', params: { slug: profile.slug } }"
         >
-          <Avatar :name="profile.name" :src="profile.avatarUrl" />
-          <div>
-            <strong>{{ profile.slug }}</strong>
-            <p>{{ profile.imageCount }} posts</p>
+          <Avatar class="w-11 h-11" :name="profile.name" :src="profile.avatarUrl" />
+          <div class="flex-1 min-w-0">
+            <strong class="block text-text text-[0.87rem] font-bold">{{ profile.slug }}</strong>
+            <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ profile.imageCount }} posts</p>
           </div>
-          <span>Open</span>
+          <span class="ml-auto text-accent-strong text-[0.76rem] font-bold">Open</span>
         </RouterLink>
       </div>
     </aside>

@@ -15,8 +15,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "@unocss/transformer-directives": "^66.6.6",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "^5.8.2",
+    "unocss": "^66.6.6",
     "vite": "^6.2.0",
     "vue-tsc": "^2.2.8"
   }

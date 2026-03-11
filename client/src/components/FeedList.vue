@@ -1,5 +1,5 @@
 <template>
-  <section class="stack">
+  <section class="flex flex-col gap-[1.2rem]">
     <SkeletonCard v-if="showSkeleton" v-for="index in 4" :key="index" />
     <FeedCard
       v-for="item in items"

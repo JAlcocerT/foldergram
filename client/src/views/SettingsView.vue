@@ -1,127 +1,139 @@
 <template>
-  <section class="content-column content-column--wide stack">
-    <header class="page-header">
+  <section class="w-[min(100%,72rem)] mx-auto flex flex-col gap-[1.2rem]">
+    <header class="flex items-end justify-between gap-4 pb-[0.8rem] max-sm:flex-col max-sm:items-start">
       <div>
         <span class="eyebrow">Settings</span>
-        <h1>Library Controls</h1>
-        <p>Run a manual scan, watch live progress, and keep Foldergram in sync with your folders.</p>
+        <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">Library Controls</h1>
+        <p class="m-0 text-muted">Run a manual scan, watch live progress, and keep Foldergram in sync with your folders.</p>
       </div>
     </header>
 
-    <section class="settings-layout">
-      <div class="stack">
-        <section class="panel settings-card settings-card--primary">
-          <div class="settings-card__header">
+    <section class="grid grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.95fr)] gap-6 items-start max-md:grid-cols-1">
+      <!-- Left: Scan controls -->
+      <div class="flex flex-col gap-[1.15rem]">
+        <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(0,149,246,0.15), transparent 40%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);">
+          <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
-              <h2>Scan Library</h2>
-              <p>Use a manual scan after adding folders or when you want a full derivative repair pass.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Scan Library</h2>
+              <p class="m-0 text-muted">Use a manual scan after adding folders or when you want a full derivative repair pass.</p>
             </div>
-            <span :class="['settings-status', `settings-status--${statusTone}`]">{{ statusLabel }}</span>
+            <span
+              class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
+              :class="{
+                'text-muted bg-surface-alt': statusTone === 'idle',
+                'text-accent-strong bg-[color-mix(in_srgb,var(--accent-soft)_78%,transparent_22%)]': statusTone === 'active',
+                'text-[#b76e00] bg-[rgba(242,164,30,0.14)]': statusTone === 'warning',
+                'text-[#c0392b] bg-[rgba(214,48,49,0.12)]': statusTone === 'danger',
+              }"
+            >{{ statusLabel }}</span>
           </div>
 
-          <div class="settings-actions">
+          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
             <button
-              class="profile-header__button settings-actions__button"
+              class="btn-primary min-w-[11.5rem]"
               type="button"
               :disabled="scanActionDisabled"
               @click="runManualScan"
             >
               {{ scanButtonLabel }}
             </button>
-            <p class="settings-note">
-              {{ scanActionNote }}
-            </p>
+            <p class="m-0 text-muted">{{ scanActionNote }}</p>
           </div>
 
+          <!-- Progress bar -->
           <div
-            class="settings-progress"
+            class="relative h-[0.88rem] overflow-hidden rounded-full"
+            style="background: color-mix(in srgb, var(--surface-alt) 82%, var(--accent) 18%)"
             role="progressbar"
             aria-label="Scan progress"
             aria-valuemin="0"
             aria-valuemax="100"
             :aria-valuenow="progressPercent"
           >
-            <div class="settings-progress__fill" :style="{ width: `${progressPercent}%` }" />
+            <div
+              class="settings-progress__fill absolute inset-y-0 left-0 rounded-full bg-[linear-gradient(90deg,var(--accent)_0%,#4ec5ff_100%)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
+              :style="{ width: `${progressPercent}%` }"
+            />
           </div>
 
-          <p class="settings-progress__caption">{{ progressDescription }}</p>
+          <p class="m-0 text-muted">{{ progressDescription }}</p>
 
-          <dl class="settings-metrics">
-            <div>
-              <dt>Phase</dt>
-              <dd>{{ phaseLabel }}</dd>
+          <!-- Metrics grid -->
+          <dl class="grid grid-cols-2 gap-[0.8rem] m-0 max-sm:grid-cols-1">
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Phase</dt>
+              <dd class="m-0 text-base font-bold">{{ phaseLabel }}</dd>
             </div>
-            <div>
-              <dt>Folders</dt>
-              <dd>{{ folderMetric }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Folders</dt>
+              <dd class="m-0 text-base font-bold">{{ folderMetric }}</dd>
             </div>
-            <div>
-              <dt>Images</dt>
-              <dd>{{ imageMetric }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Images</dt>
+              <dd class="m-0 text-base font-bold">{{ imageMetric }}</dd>
             </div>
-            <div>
-              <dt>Derivatives</dt>
-              <dd>{{ derivativeMetric }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Derivatives</dt>
+              <dd class="m-0 text-base font-bold">{{ derivativeMetric }}</dd>
             </div>
           </dl>
 
-          <p v-if="scanError" class="settings-inline-error">{{ scanError }}</p>
+          <p v-if="scanError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ scanError }}</p>
         </section>
       </div>
 
-      <aside class="stack">
-        <section class="panel settings-card">
-          <div class="settings-card__header">
+      <!-- Right: Status cards -->
+      <aside class="flex flex-col gap-[1.15rem]">
+        <section class="card grid gap-[1.15rem] p-8">
+          <div class="flex items-start justify-between gap-4">
             <div>
-              <h2>Library Status</h2>
-              <p>Current storage and index state.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Library Status</h2>
+              <p class="m-0 text-muted">Current storage and index state.</p>
             </div>
           </div>
-
-          <dl class="settings-facts">
-            <div>
-              <dt>Storage</dt>
-              <dd>{{ storageLabel }}</dd>
+          <dl class="grid grid-cols-2 gap-[0.8rem] m-0">
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Storage</dt>
+              <dd class="m-0 text-base font-bold">{{ storageLabel }}</dd>
             </div>
-            <div>
-              <dt>Folders</dt>
-              <dd>{{ formatCount(appStore.stats?.profiles ?? 0) }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Folders</dt>
+              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.profiles ?? 0) }}</dd>
             </div>
-            <div>
-              <dt>Indexed images</dt>
-              <dd>{{ formatCount(appStore.stats?.indexedImages ?? 0) }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed images</dt>
+              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedImages ?? 0) }}</dd>
             </div>
-            <div>
-              <dt>Previews</dt>
-              <dd>{{ formatCount(appStore.stats?.previewCount ?? 0) }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previews</dt>
+              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.previewCount ?? 0) }}</dd>
             </div>
           </dl>
         </section>
 
-        <section class="panel settings-card">
-          <div class="settings-card__header">
+        <section class="card grid gap-[1.15rem] p-8">
+          <div class="flex items-start justify-between gap-4">
             <div>
-              <h2>Last Scan</h2>
-              <p>Most recent completed run tracked by the app.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Last Scan</h2>
+              <p class="m-0 text-muted">Most recent completed run tracked by the app.</p>
             </div>
           </div>
-
-          <dl class="settings-facts">
-            <div>
-              <dt>Status</dt>
-              <dd>{{ lastScanStatus }}</dd>
+          <dl class="grid grid-cols-2 gap-[0.8rem] m-0">
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Status</dt>
+              <dd class="m-0 text-base font-bold">{{ lastScanStatus }}</dd>
             </div>
-            <div>
-              <dt>Finished</dt>
-              <dd>{{ lastScanFinishedAt }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Finished</dt>
+              <dd class="m-0 text-base font-bold">{{ lastScanFinishedAt }}</dd>
             </div>
-            <div>
-              <dt>Files scanned</dt>
-              <dd>{{ formatCount(lastCompletedScan?.scanned_files ?? 0) }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Files scanned</dt>
+              <dd class="m-0 text-base font-bold">{{ formatCount(lastCompletedScan?.scanned_files ?? 0) }}</dd>
             </div>
-            <div>
-              <dt>Changes</dt>
-              <dd>{{ lastScanChangeSummary }}</dd>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Changes</dt>
+              <dd class="m-0 text-base font-bold">{{ lastScanChangeSummary }}</dd>
             </div>
           </dl>
         </section>
