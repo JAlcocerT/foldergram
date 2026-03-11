@@ -19,6 +19,21 @@
         </span>
         <span class="sidebar__label">Home</span>
       </RouterLink>
+      <RouterLink class="sidebar__link" :to="{ name: 'library' }">
+        <span class="sidebar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M3.75 7.75A1.75 1.75 0 0 1 5.5 6h4.1a1.5 1.5 0 0 1 1.06.44l1.24 1.24a1.5 1.5 0 0 0 1.06.44h5.54a1.75 1.75 0 0 1 1.75 1.75v7.63A1.75 1.75 0 0 1 18.5 19.25h-13A1.75 1.75 0 0 1 3.75 17.5Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+        </span>
+        <span class="sidebar__label">Library</span>
+      </RouterLink>
       <RouterLink class="sidebar__link" :to="{ name: 'likes' }">
         <span class="sidebar__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" role="presentation">

@@ -1,5 +1,5 @@
 <template>
-  <section v-if="image" :class="['viewer', { 'viewer--modal': isModal }]">
+  <section v-if="image" :class="['viewer', { 'viewer--modal': isModal }]" @wheel="handleWheel">
     <button v-if="isModal" class="viewer__close" type="button" aria-label="Close image" @click="$emit('close')">
       <svg viewBox="0 0 24 24" role="presentation">
         <path
@@ -140,8 +140,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
 
 import type { ImageDetail, ProfileSummary } from '../types/api';
 import { useAppStore } from '../stores/app';
@@ -163,6 +163,12 @@ defineEmits<{
 
 const likesStore = useLikesStore();
 const appStore = useAppStore();
+const router = useRouter();
+const wheelDeltaAccumulator = ref(0);
+const navigationLockedUntil = ref(0);
+
+const WHEEL_NAVIGATION_THRESHOLD = 72;
+const NAVIGATION_COOLDOWN_MS = 320;
 
 const fileSize = computed(() => {
   if (!props.image) {
@@ -188,4 +194,92 @@ const formattedDate = computed(() =>
       })
     : ''
 );
+
+watch(
+  () => props.image?.id ?? null,
+  () => {
+    wheelDeltaAccumulator.value = 0;
+    navigationLockedUntil.value = 0;
+  }
+);
+
+async function navigateByDirection(direction: 'previous' | 'next') {
+  if (!props.image) {
+    return;
+  }
+
+  const targetId = direction === 'next' ? props.image.nextImageId : props.image.previousImageId;
+  if (!targetId) {
+    return;
+  }
+
+  navigationLockedUntil.value = Date.now() + NAVIGATION_COOLDOWN_MS;
+  await router.push({ name: 'image', params: { id: String(targetId) } });
+}
+
+function handleWheel(event: WheelEvent) {
+  if (!props.isModal || !props.image) {
+    return;
+  }
+
+  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (Date.now() < navigationLockedUntil.value) {
+    return;
+  }
+
+  wheelDeltaAccumulator.value += event.deltaY;
+
+  if (Math.abs(wheelDeltaAccumulator.value) < WHEEL_NAVIGATION_THRESHOLD) {
+    return;
+  }
+
+  const direction = wheelDeltaAccumulator.value > 0 ? 'next' : 'previous';
+  wheelDeltaAccumulator.value = 0;
+  void navigateByDirection(direction);
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (!props.isModal || !props.image || event.defaultPrevented) {
+    return;
+  }
+
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return;
+  }
+
+  if (Date.now() < navigationLockedUntil.value) {
+    return;
+  }
+
+  let direction: 'previous' | 'next' | null = null;
+
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    direction = 'previous';
+  }
+
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    direction = 'next';
+  }
+
+  if (!direction) {
+    return;
+  }
+
+  event.preventDefault();
+  wheelDeltaAccumulator.value = 0;
+  void navigateByDirection(direction);
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
 </script>

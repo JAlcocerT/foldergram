@@ -16,6 +16,18 @@
           />
         </svg>
       </RouterLink>
+      <RouterLink class="topbar__icon-link" :to="{ name: 'library' }" aria-label="Library">
+        <svg viewBox="0 0 24 24" role="presentation">
+          <path
+            d="M3.75 7.75A1.75 1.75 0 0 1 5.5 6h4.1a1.5 1.5 0 0 1 1.06.44l1.24 1.24a1.5 1.5 0 0 0 1.06.44h5.54a1.75 1.75 0 0 1 1.75 1.75v7.63A1.75 1.75 0 0 1 18.5 19.25h-13A1.75 1.75 0 0 1 3.75 17.5Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+          />
+        </svg>
+      </RouterLink>
       <RouterLink class="topbar__icon-link" :to="{ name: 'likes' }" :aria-label="`Likes (${likesStore.items.length})`">
         <svg viewBox="0 0 24 24" role="presentation">
           <path
@@ -37,23 +49,6 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="1.5"
-          />
-        </svg>
-      </RouterLink>
-      <RouterLink
-        v-if="profilesStore.items[0]"
-        class="topbar__icon-link"
-        :to="{ name: 'profile', params: { slug: profilesStore.items[0].slug } }"
-        aria-label="Folders"
-      >
-        <svg viewBox="0 0 24 24" role="presentation">
-          <path
-            d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5C19 16 16 14 12 14Z"
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.8"
           />
         </svg>
       </RouterLink>
@@ -89,11 +84,9 @@ import { RouterLink } from 'vue-router';
 
 import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
-import { useProfilesStore } from '../stores/profiles';
 import BrandMark from './BrandMark.vue';
 
 const appStore = useAppStore();
 const likesStore = useLikesStore();
-const profilesStore = useProfilesStore();
 const themeLabel = computed(() => (appStore.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'));
 </script>
