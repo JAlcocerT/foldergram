@@ -90,6 +90,13 @@ export const useLikesStore = defineStore('likes', {
       this.likedIds = this.likedIds.filter((entry) => entry !== id);
       this.items = this.items.filter((entry) => entry.id !== id);
       this.pendingIds = this.pendingIds.filter((entry) => entry !== id);
+    },
+
+    removeProfileItems(profileSlug: string) {
+      const removedIds = new Set(this.items.filter((item) => item.profileSlug === profileSlug).map((item) => item.id));
+      this.items = this.items.filter((item) => item.profileSlug !== profileSlug);
+      this.likedIds = this.likedIds.filter((id) => !removedIds.has(id));
+      this.pendingIds = this.pendingIds.filter((id) => !removedIds.has(id));
     }
   }
 });

@@ -1,6 +1,7 @@
 import type {
   AppStats,
   DeleteImageResult,
+  DeleteProfileResult,
   ImageDetail,
   LikeMutationResult,
   LikesPayload,
@@ -50,6 +51,12 @@ export function unlikeImage(id: number) {
 
 export function deleteImage(id: number) {
   return requestJson<DeleteImageResult>(`/api/images/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export function deleteProfile(slug: string) {
+  return requestJson<DeleteProfileResult>(`/api/profiles/${encodeURIComponent(slug)}`, {
     method: 'DELETE'
   });
 }

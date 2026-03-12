@@ -17,6 +17,7 @@ export interface ProfileSummary {
   name: string;
   folderPath: string;
   imageCount: number;
+  latestImageMtimeMs: number | null;
   avatarUrl: string | null;
 }
 
@@ -48,6 +49,11 @@ export interface ImageDetail extends FeedItem {
 export interface DeleteImageResult {
   id: number;
   profileSlug: string;
+}
+
+export interface DeleteProfileResult {
+  slug: string;
+  deletedImageCount: number;
 }
 
 export interface LikeMutationResult {

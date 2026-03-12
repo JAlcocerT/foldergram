@@ -112,14 +112,21 @@ import FeedList from '../components/FeedList.vue';
 import InfiniteLoader from '../components/InfiniteLoader.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
+import { useLikesStore } from '../stores/likes';
 import { useProfilesStore } from '../stores/profiles';
+import { buildLikedCountByProfile, selectHomeRecommendations } from '../utils/home-recommendations';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
+const likesStore = useLikesStore();
 const profilesStore = useProfilesStore();
 const storyProfiles = computed(() => profilesStore.items.slice(0, 10));
-const homeSummaryFolder = computed(() => profilesStore.items[0] ?? null);
-const recommendedFolders = computed(() => profilesStore.items.slice(1, 6));
+const likedCountByProfile = computed(() => buildLikedCountByProfile(likesStore.items));
+const homeRecommendations = computed(() =>
+  selectHomeRecommendations(profilesStore.items, likedCountByProfile.value, appStore.lastOpenedProfileSlug)
+);
+const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
+const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
 const showInitialScanState = computed(
   () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
 );

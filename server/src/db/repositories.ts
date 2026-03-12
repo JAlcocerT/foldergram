@@ -1,6 +1,16 @@
 import { databaseManager } from './database.js';
 import { normalizePath } from '../utils/path-utils.js';
-import type { AppSettingRecord, FeedImage, FolderScanStateRecord, ImageDetail, ImageRecord, LikeRecord, ProfileRecord, ScanRunRecord } from '../types/models.js';
+import type {
+  AppSettingRecord,
+  FeedImage,
+  FolderScanStateRecord,
+  ImageDetail,
+  ImageRecord,
+  LikeRecord,
+  ProfileRecord,
+  ProfileSummaryRecord,
+  ScanRunRecord
+} from '../types/models.js';
 
 const database = databaseManager.connection;
 
@@ -64,8 +74,42 @@ export const profileRepository = {
     return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as ProfileRecord[];
   },
 
+  getAllSummaries(): ProfileSummaryRecord[] {
+    return database
+      .prepare(
+        `
+        SELECT
+          profiles.*,
+          COUNT(images.id) AS image_count,
+          MAX(images.mtime_ms) AS latest_image_mtime_ms
+        FROM profiles
+        LEFT JOIN images ON images.profile_id = profiles.id AND images.is_deleted = 0
+        GROUP BY profiles.id
+        ORDER BY profiles.name COLLATE NOCASE ASC
+        `
+      )
+      .all() as unknown as ProfileSummaryRecord[];
+  },
+
   getBySlug(slug: string): ProfileRecord | undefined {
     return database.prepare('SELECT * FROM profiles WHERE slug = ?').get(slug) as ProfileRecord | undefined;
+  },
+
+  getSummaryBySlug(slug: string): ProfileSummaryRecord | undefined {
+    return database
+      .prepare(
+        `
+        SELECT
+          profiles.*,
+          COUNT(images.id) AS image_count,
+          MAX(images.mtime_ms) AS latest_image_mtime_ms
+        FROM profiles
+        LEFT JOIN images ON images.profile_id = profiles.id AND images.is_deleted = 0
+        WHERE profiles.slug = ?
+        GROUP BY profiles.id
+        `
+      )
+      .get(slug) as ProfileSummaryRecord | undefined;
   },
 
   upsert(input: UpsertProfileInput): ProfileRecord {
@@ -109,6 +153,10 @@ export const profileRepository = {
       profileId,
       imageId
     );
+  },
+
+  delete(id: number): void {
+    database.prepare('DELETE FROM profiles WHERE id = ?').run(id);
   }
 };
 
@@ -410,6 +458,13 @@ export const likeRepository = {
   remove(imageId: number): boolean {
     const result = database.prepare('DELETE FROM likes WHERE image_id = ?').run(imageId);
     return Number(result.changes ?? 0) > 0;
+  },
+
+  removeByProfile(profileId: number): number {
+    const result = database.prepare(
+      'DELETE FROM likes WHERE image_id IN (SELECT id FROM images WHERE profile_id = ?)'
+    ).run(profileId);
+    return Number(result.changes ?? 0);
   }
 };
 

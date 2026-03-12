@@ -93,21 +93,22 @@
 
       <!-- Folder list -->
       <section v-else class="bg-surface border border-border rounded-[1.1rem] shadow-[var(--shadow)] overflow-hidden" aria-label="All folders">
-        <RouterLink
+        <div
           v-for="(profile, i) in filteredProfiles"
           :key="profile.id"
           class="group flex items-center gap-4 px-5 py-[0.75rem] transition-colors duration-150 hover:bg-surface-hover"
           :class="i > 0 ? 'border-t border-border' : ''"
-          :to="{ name: 'profile', params: { slug: profile.slug } }"
         >
-          <!-- Avatar -->
-          <Avatar class="w-10 h-10 shrink-0" :name="profile.name" :src="profile.avatarUrl" />
+          <RouterLink class="flex items-center gap-4 flex-1 min-w-0" :to="{ name: 'profile', params: { slug: profile.slug } }">
+            <!-- Avatar -->
+            <Avatar class="w-10 h-10 shrink-0" :name="profile.name" :src="profile.avatarUrl" />
 
-          <!-- Name + path -->
-          <div class="flex-1 min-w-0">
-            <p class="m-0 text-[0.9rem] font-semibold truncate">{{ profile.slug }}</p>
-            <p class="m-0 text-muted text-[0.76rem] truncate font-mono opacity-70">{{ profile.folderPath }}</p>
-          </div>
+            <!-- Name + path -->
+            <div class="flex-1 min-w-0">
+              <p class="m-0 text-[0.9rem] font-semibold truncate">{{ profile.slug }}</p>
+              <p class="m-0 text-muted text-[0.76rem] truncate font-mono opacity-70">{{ profile.folderPath }}</p>
+            </div>
+          </RouterLink>
 
           <!-- Count + status -->
           <div class="flex items-center gap-3 shrink-0 text-right">
@@ -119,24 +120,94 @@
             ></span>
           </div>
 
-          <!-- Arrow -->
-          <svg class="w-4 h-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m9 18 6-6-6-6"/>
-          </svg>
-        </RouterLink>
+          <!-- 3-dot menu -->
+          <button
+            class="inline-flex items-center justify-center w-8 h-8 p-0 border-0 text-muted bg-transparent cursor-pointer rounded-full hover:bg-surface-alt transition-colors duration-150 shrink-0"
+            type="button"
+            aria-label="More options"
+            @click.prevent="openMenu(profile)"
+          >
+            <svg class="w-[1.15rem] h-[1.15rem]" viewBox="0 0 24 24" role="presentation">
+              <circle cx="12" cy="6.5" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="17.5" r="1.5" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
       </section>
     </template>
+
+    <!-- Context menu modal -->
+    <div v-if="menuProfile" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/48" @click.self="menuProfile = null">
+      <div class="w-[min(100%,22rem)] overflow-hidden bg-surface border border-border rounded-[1rem] shadow-[var(--shadow)]">
+        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 border-b border-border text-text bg-transparent cursor-pointer text-left" type="button" @click="navigateToProfile">
+          <svg class="w-[1.15rem] h-[1.15rem] shrink-0" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+          <span>Open folder</span>
+        </button>
+        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 border-b border-border text-[#d93025] bg-transparent cursor-pointer text-left" type="button" @click="handleDelete">
+          <svg class="w-[1.15rem] h-[1.15rem] shrink-0" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M9 4.75h6m-8 3h10m-8.5 0v10a1.25 1.25 0 0 0 1.25 1.25h4.5A1.25 1.25 0 0 0 15.5 17.75v-10m-4 3v5m4-5v5"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+          <span>Delete folder</span>
+        </button>
+        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left" type="button" @click="menuProfile = null">
+          <svg class="w-[1.15rem] h-[1.15rem] shrink-0" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="m7 7 10 10M17 7 7 17"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+          <span>Cancel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Delete confirmation dialog -->
+    <ConfirmDialog
+      v-if="confirmDeleteProfile"
+      title="Delete this folder?"
+      :message="`This folder and all ${formatCount(confirmDeleteProfile.imageCount)} image${confirmDeleteProfile.imageCount !== 1 ? 's' : ''} in it will be permanently deleted from the hard drive. This action cannot be undone.`"
+      confirm-label="Delete folder"
+      loading-label="Deleting…"
+      :loading="deleting"
+      @cancel="confirmDeleteProfile = null"
+      @confirm="confirmDelete"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 
 import Avatar from '../components/Avatar.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
+import { deleteProfile } from '../api/gallery';
 import { useAppStore } from '../stores/app';
+import { useFeedStore } from '../stores/feed';
+import { useLikesStore } from '../stores/likes';
 import { useProfilesStore } from '../stores/profiles';
 import type { ProfileSummary } from '../types/api';
 
@@ -150,10 +221,16 @@ const filterOptions: Array<{ label: string; value: LibraryFilter }> = [
 ];
 
 const appStore = useAppStore();
+const feedStore = useFeedStore();
+const likesStore = useLikesStore();
 const profilesStore = useProfilesStore();
+const router = useRouter();
 const searchQuery = ref('');
 const statusFilter = ref<LibraryFilter>('all');
 const sortMode = ref<LibrarySort>('images-desc');
+const menuProfile = ref<ProfileSummary | null>(null);
+const confirmDeleteProfile = ref<ProfileSummary | null>(null);
+const deleting = ref(false);
 
 function formatCount(value: number) {
   return new Intl.NumberFormat().format(value);
@@ -203,6 +280,44 @@ const filteredProfiles = computed(() =>
     .slice()
     .sort(sortProfiles)
 );
+
+function openMenu(profile: ProfileSummary) {
+  menuProfile.value = profile;
+}
+
+function navigateToProfile() {
+  if (!menuProfile.value) {
+    return;
+  }
+
+  const slug = menuProfile.value.slug;
+  menuProfile.value = null;
+  router.push({ name: 'profile', params: { slug } });
+}
+
+function handleDelete() {
+  confirmDeleteProfile.value = menuProfile.value;
+  menuProfile.value = null;
+}
+
+async function confirmDelete() {
+  if (!confirmDeleteProfile.value) {
+    return;
+  }
+
+  deleting.value = true;
+
+  try {
+    const result = await deleteProfile(confirmDeleteProfile.value.slug);
+    profilesStore.removeProfile(result.slug);
+    feedStore.removeProfileItems(result.slug);
+    likesStore.removeProfileItems(result.slug);
+    appStore.removeProfile(result.deletedImageCount);
+    confirmDeleteProfile.value = null;
+  } finally {
+    deleting.value = false;
+  }
+}
 
 onMounted(async () => {
   if (appStore.isLibraryUnavailable) {

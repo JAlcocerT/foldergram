@@ -8,6 +8,11 @@ export interface ProfileRecord {
   updated_at: string;
 }
 
+export interface ProfileSummaryRecord extends ProfileRecord {
+  image_count: number;
+  latest_image_mtime_ms: number | null;
+}
+
 export interface ImageRecord {
   id: number;
   profile_id: number;

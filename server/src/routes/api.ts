@@ -57,6 +57,21 @@ router.get('/profiles/:slug', (request, response) => {
   response.json(profile);
 });
 
+router.delete('/profiles/:slug', async (request, response) => {
+  const params = slugSchema.parse(request.params);
+  const deleted = await galleryService.deleteProfile(params.slug);
+
+  if (!deleted) {
+    response.status(404).json({ message: 'Profile not found' });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    ...deleted
+  });
+});
+
 router.get('/profiles/:slug/images', (request, response) => {
   const params = slugSchema.parse(request.params);
   const query = paginationQuerySchema.parse(request.query);

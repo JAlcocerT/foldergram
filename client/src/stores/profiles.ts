@@ -51,6 +51,15 @@ export const useProfilesStore = defineStore('profiles', {
       }
     },
 
+    removeProfile(slug: string) {
+      this.items = this.items.filter((profile) => profile.slug !== slug);
+
+      if (this.currentProfile?.slug === slug) {
+        this.currentProfile = null;
+        this.currentImages = [];
+      }
+    },
+
     async fetchProfiles(force = false) {
       if (this.loadingList) {
         this.pendingListRefresh = this.pendingListRefresh || force;

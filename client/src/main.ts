@@ -13,5 +13,17 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 
-useAppStore(pinia).initializeTheme();
+const appStore = useAppStore(pinia);
+
+appStore.initializeTheme();
+appStore.initializeLastOpenedProfile();
+
+router.afterEach((to) => {
+  if (to.name !== 'profile' || typeof to.params.slug !== 'string') {
+    return;
+  }
+
+  appStore.recordOpenedProfile(to.params.slug);
+});
+
 app.mount('#app');

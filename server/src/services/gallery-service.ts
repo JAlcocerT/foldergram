@@ -3,8 +3,8 @@ import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
 import { appConfig } from '../config/env.js';
-import { imageRepository, likeRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
-import type { FeedImage, ImageDetail, ProfileRecord } from '../types/models.js';
+import { folderScanStateRepository, imageRepository, likeRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
+import type { FeedImage, ImageDetail, ProfileSummaryRecord } from '../types/models.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
 
@@ -60,8 +60,7 @@ function mapImageDetail(image: ImageDetail): ImageDetail {
   };
 }
 
-function buildProfileSummary(profile: ProfileRecord) {
-  const imageCount = imageRepository.countByProfile(profile.id);
+function buildProfileSummary(profile: ProfileSummaryRecord) {
   const avatarImageId = profile.avatar_image_id ?? imageRepository.getLatestProfileImageId(profile.id);
   const avatar = avatarImageId ? imageRepository.getImageDetail(avatarImageId) : undefined;
 
@@ -70,7 +69,8 @@ function buildProfileSummary(profile: ProfileRecord) {
     slug: profile.slug,
     name: profile.name,
     folderPath: profile.folder_path,
-    imageCount,
+    imageCount: profile.image_count,
+    latestImageMtimeMs: profile.latest_image_mtime_ms,
     avatarUrl: avatar ? mapImageDetail(avatar).thumbnailUrl : null
   };
 }
@@ -104,7 +104,7 @@ export const galleryService = {
       return [];
     }
 
-    return profileRepository.getAll().map(buildProfileSummary);
+    return profileRepository.getAllSummaries().map(buildProfileSummary);
   },
 
   getProfileBySlug(slug: string) {
@@ -112,7 +112,7 @@ export const galleryService = {
       return null;
     }
 
-    const profile = profileRepository.getBySlug(slug);
+    const profile = profileRepository.getSummaryBySlug(slug);
     if (!profile) {
       return null;
     }
@@ -125,12 +125,12 @@ export const galleryService = {
       return null;
     }
 
-    const profile = profileRepository.getBySlug(slug);
+    const profile = profileRepository.getSummaryBySlug(slug);
     if (!profile) {
       return null;
     }
 
-    const total = imageRepository.countByProfile(profile.id);
+    const total = profile.image_count;
 
     return {
       profile: buildProfileSummary(profile),
@@ -282,6 +282,55 @@ export const galleryService = {
     return {
       id: imageRecord.id,
       profileSlug: imageDetail.profileSlug
+    };
+  },
+
+  async deleteProfile(slug: string) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
+    const profile = profileRepository.getBySlug(slug);
+    if (!profile) {
+      return null;
+    }
+
+    const imageCount = imageRepository.countByProfile(profile.id);
+
+    // Resolve and validate the folder path before deleting
+    const folderPath = resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, profile.folder_path));
+    if (!folderPath) {
+      throw new Error('Stored folder path is outside the gallery root');
+    }
+
+    // Delete the entire folder from disk (originals, everything inside)
+    await fsPromises.rm(folderPath, { recursive: true, force: true });
+
+    // Delete thumbnail and preview directories for this profile
+    const thumbnailFolderPath = resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, profile.folder_path));
+    const previewFolderPath = resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, profile.folder_path));
+
+    if (thumbnailFolderPath) {
+      await fsPromises.rm(thumbnailFolderPath, { recursive: true, force: true });
+    }
+
+    if (previewFolderPath) {
+      await fsPromises.rm(previewFolderPath, { recursive: true, force: true });
+    }
+
+    // DB cleanup
+    likeRepository.removeByProfile(profile.id);
+    imageRepository.markAllDeletedByProfile(profile.id);
+    folderScanStateRepository.deleteMissing(
+      folderScanStateRepository.getAll()
+        .map((s) => s.folder_path)
+        .filter((fp) => fp !== profile.folder_path)
+    );
+    profileRepository.delete(profile.id);
+
+    return {
+      slug: profile.slug,
+      deletedImageCount: imageCount
     };
   }
 };
