@@ -3,8 +3,8 @@ import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
 import { appConfig } from '../config/env.js';
-import { folderScanStateRepository, imageRepository, likeRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
-import type { FeedImage, ImageDetail, ProfileSummaryRecord } from '../types/models.js';
+import { folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
+import type { FeedImage, ImageDetail, FolderSummaryRecord } from '../types/models.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
 
@@ -60,17 +60,17 @@ function mapImageDetail(image: ImageDetail): ImageDetail {
   };
 }
 
-function buildProfileSummary(profile: ProfileSummaryRecord) {
-  const avatarImageId = profile.avatar_image_id ?? imageRepository.getLatestProfileImageId(profile.id);
+function buildFolderSummary(folder: FolderSummaryRecord) {
+  const avatarImageId = folder.avatar_image_id ?? imageRepository.getLatestFolderImageId(folder.id);
   const avatar = avatarImageId ? imageRepository.getImageDetail(avatarImageId) : undefined;
 
   return {
-    id: profile.id,
-    slug: profile.slug,
-    name: profile.name,
-    folderPath: profile.folder_path,
-    imageCount: profile.image_count,
-    latestImageMtimeMs: profile.latest_image_mtime_ms,
+    id: folder.id,
+    slug: folder.slug,
+    name: folder.name,
+    folderPath: folder.folder_path,
+    imageCount: folder.image_count,
+    latestImageMtimeMs: folder.latest_image_mtime_ms,
     avatarUrl: avatar ? mapImageDetail(avatar).thumbnailUrl : null
   };
 }
@@ -99,42 +99,42 @@ export const galleryService = {
     };
   },
 
-  listProfiles() {
+  listFolders() {
     if (!storageService.getState().libraryAvailable) {
       return [];
     }
 
-    return profileRepository.getAllSummaries().map(buildProfileSummary);
+    return folderRepository.getAllSummaries().map(buildFolderSummary);
   },
 
-  getProfileBySlug(slug: string) {
+  getFolderBySlug(slug: string) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
 
-    const profile = profileRepository.getSummaryBySlug(slug);
-    if (!profile) {
+    const folder = folderRepository.getSummaryBySlug(slug);
+    if (!folder) {
       return null;
     }
 
-    return buildProfileSummary(profile);
+    return buildFolderSummary(folder);
   },
 
-  getProfileImages(slug: string, page: number, limit: number) {
+  getFolderImages(slug: string, page: number, limit: number) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
 
-    const profile = profileRepository.getSummaryBySlug(slug);
-    if (!profile) {
+    const folder = folderRepository.getSummaryBySlug(slug);
+    if (!folder) {
       return null;
     }
 
-    const total = profile.image_count;
+    const total = folder.image_count;
 
     return {
-      profile: buildProfileSummary(profile),
-      items: imageRepository.listProfileImages(profile.id, page, limit).map(mapFeedImage),
+      folder: buildFolderSummary(folder),
+      items: imageRepository.listFolderImages(folder.id, page, limit).map(mapFeedImage),
       page,
       limit,
       total,
@@ -208,7 +208,7 @@ export const galleryService = {
     const storageState = storageService.getState();
 
     return {
-      profiles: storageState.libraryAvailable ? profileRepository.count() : 0,
+      folders: storageState.libraryAvailable ? folderRepository.count() : 0,
       indexedImages: storageState.libraryAvailable ? imageRepository.countFeed() : 0,
       deletedImages: storageState.libraryAvailable ? imageRepository.countDeleted() : 0,
       thumbnailCount: storageState.libraryAvailable ? imageRepository.countWithThumbnail() : 0,
@@ -277,28 +277,28 @@ export const galleryService = {
 
     likeRepository.remove(imageRecord.id);
     imageRepository.markDeleted(imageRecord.relative_path);
-    profileRepository.setAvatar(imageRecord.profile_id, imageRepository.getLatestProfileImageId(imageRecord.profile_id));
+    folderRepository.setAvatar(imageRecord.profile_id, imageRepository.getLatestFolderImageId(imageRecord.profile_id));
 
     return {
       id: imageRecord.id,
-      profileSlug: imageDetail.profileSlug
+      folderSlug: imageDetail.folderSlug
     };
   },
 
-  async deleteProfile(slug: string) {
+  async deleteFolder(slug: string) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
 
-    const profile = profileRepository.getBySlug(slug);
-    if (!profile) {
+    const folder = folderRepository.getBySlug(slug);
+    if (!folder) {
       return null;
     }
 
-    const imageCount = imageRepository.countByProfile(profile.id);
+    const imageCount = imageRepository.countByFolder(folder.id);
 
     // Resolve and validate the folder path before deleting
-    const folderPath = resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, profile.folder_path));
+    const folderPath = resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, folder.folder_path));
     if (!folderPath) {
       throw new Error('Stored folder path is outside the gallery root');
     }
@@ -306,9 +306,9 @@ export const galleryService = {
     // Delete the entire folder from disk (originals, everything inside)
     await fsPromises.rm(folderPath, { recursive: true, force: true });
 
-    // Delete thumbnail and preview directories for this profile
-    const thumbnailFolderPath = resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, profile.folder_path));
-    const previewFolderPath = resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, profile.folder_path));
+    // Delete thumbnail and preview directories for this folder.
+    const thumbnailFolderPath = resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, folder.folder_path));
+    const previewFolderPath = resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, folder.folder_path));
 
     if (thumbnailFolderPath) {
       await fsPromises.rm(thumbnailFolderPath, { recursive: true, force: true });
@@ -319,17 +319,17 @@ export const galleryService = {
     }
 
     // DB cleanup
-    likeRepository.removeByProfile(profile.id);
-    imageRepository.markAllDeletedByProfile(profile.id);
+    likeRepository.removeByFolder(folder.id);
+    imageRepository.markAllDeletedByFolder(folder.id);
     folderScanStateRepository.deleteMissing(
       folderScanStateRepository.getAll()
         .map((s) => s.folder_path)
-        .filter((fp) => fp !== profile.folder_path)
+        .filter((fp) => fp !== folder.folder_path)
     );
-    profileRepository.delete(profile.id);
+    folderRepository.delete(folder.id);
 
     return {
-      slug: profile.slug,
+      slug: folder.slug,
       deletedImageCount: imageCount
     };
   }

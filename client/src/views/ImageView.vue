@@ -7,7 +7,7 @@
     <ImageModal
       v-else
       :image="viewerStore.image"
-      :profile="profile"
+      :folder="folder"
       :is-modal="modal"
       :deleting="viewerStore.deleting"
       @close="emit('close')"
@@ -34,7 +34,7 @@ import ImageModal from '../components/ImageModal.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
-import { useProfilesStore } from '../stores/profiles';
+import { useFoldersStore } from '../stores/folders';
 import { useViewerStore } from '../stores/viewer';
 
 const props = defineProps<{
@@ -50,13 +50,13 @@ const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const viewerStore = useViewerStore();
-const profilesStore = useProfilesStore();
+const foldersStore = useFoldersStore();
 const router = useRouter();
 const confirmDeleteOpen = ref(false);
 
 const imageId = computed(() => Number(props.id));
-const profile = computed(() =>
-  viewerStore.image ? profilesStore.items.find((entry) => entry.slug === viewerStore.image?.profileSlug) ?? null : null
+const folder = computed(() =>
+  viewerStore.image ? foldersStore.items.find((entry) => entry.slug === viewerStore.image?.folderSlug) ?? null : null
 );
 
 async function loadImage() {
@@ -79,7 +79,7 @@ async function handleDelete() {
 
   feedStore.removeImage(deleted.id);
   likesStore.removeImage(deleted.id);
-  profilesStore.removeImage(deleted.id, deleted.profileSlug);
+  foldersStore.removeImage(deleted.id, deleted.folderSlug);
   appStore.removeIndexedImage();
 
   if (props.modal) {
@@ -87,6 +87,6 @@ async function handleDelete() {
     return;
   }
 
-  await router.replace({ name: 'profile', params: { slug: deleted.profileSlug } });
+  await router.replace({ name: 'folder', params: { slug: deleted.folderSlug } });
 }
 </script>

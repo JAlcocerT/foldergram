@@ -6,7 +6,7 @@ import path from 'node:path';
 import pLimit from 'p-limit';
 
 import { appConfig } from '../config/env.js';
-import { appSettingsRepository, folderScanStateRepository, imageRepository, profileRepository, scanRunRepository } from '../db/repositories.js';
+import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, scanRunRepository } from '../db/repositories.js';
 import { generateDerivatives, readImageMetadata } from './derivative-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
@@ -17,7 +17,7 @@ import {
   getStableSortTimestamp,
   isSupportedImageFile
 } from '../utils/image-utils.js';
-import { getProfileSlugFromRelativePath, getRelativeGalleryPath, isHiddenPath, normalizePath } from '../utils/path-utils.js';
+import { getFolderSlugFromRelativePath, getRelativeGalleryPath, isHiddenPath, normalizePath } from '../utils/path-utils.js';
 import {
   createFolderScanSignature,
   resolveFullScanOptions,
@@ -27,8 +27,8 @@ import {
   type FullScanOptions,
   type IndexedFileStatus
 } from '../utils/scan-utils.js';
-import { resolveUniqueSlug, slugifyProfileName } from '../utils/slug.js';
-import type { ProfileRecord, ScanRunRecord } from '../types/models.js';
+import { resolveUniqueSlug, slugifyFolderName } from '../utils/slug.js';
+import type { FolderRecord, ScanRunRecord } from '../types/models.js';
 
 interface ScanSummary {
   status: string;
@@ -58,9 +58,9 @@ interface IndexedFileCandidate {
   stats: Stats;
 }
 
-interface ResolvedProfileResult {
-  profile: ProfileRecord;
-  wroteProfile: boolean;
+interface ResolvedFolderResult {
+  folder: FolderRecord;
+  wroteFolder: boolean;
 }
 
 interface ImageProcessingContext {
@@ -256,7 +256,7 @@ class ScannerService {
     }
   }
 
-  private logProgress(kind: 'started' | 'heartbeat' | 'profile' | 'phase' = 'heartbeat'): void {
+  private logProgress(kind: 'started' | 'heartbeat' | 'folder' | 'phase' = 'heartbeat'): void {
     if (!this.progress.isScanning) {
       return;
     }
@@ -361,25 +361,25 @@ class ScannerService {
     });
 
     try {
-      const existingProfiles = profileRepository.getAll();
+      const existingFolders = folderRepository.getAll();
       const folderScanStates = new Map(
         folderScanStateRepository.getAll().map((state) => [normalizePath(state.folder_path), state])
       );
-      const usedSlugs = new Set(existingProfiles.map((profile) => profile.slug));
+      const usedSlugs = new Set(existingFolders.map((folder) => folder.slug));
       const directories = await fs.readdir(appConfig.galleryRoot, { withFileTypes: true });
-      const profileDirectories = directories.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
+      const folderDirectories = directories.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
       const activeFolderPaths = new Set<string>();
-      const discoveredProfileIds = new Set<number>();
+      const discoveredFolderIds = new Set<number>();
       const discoveryStartedAt = performance.now();
 
-      this.setProgress({ discoveredFolders: profileDirectories.length });
+      this.setProgress({ discoveredFolders: folderDirectories.length });
 
-      for (const directory of profileDirectories) {
-        const profilePath = path.join(appConfig.galleryRoot, directory.name);
+      for (const directory of folderDirectories) {
+        const folderPath = path.join(appConfig.galleryRoot, directory.name);
         const folderKey = normalizePath(directory.name);
         activeFolderPaths.add(folderKey);
         this.setProgress({ currentFolder: directory.name });
-        const profileStartedAt = performance.now();
+        const folderStartedAt = performance.now();
         let unchangedFiles = 0;
         let newFiles = 0;
         let updatedFiles = 0;
@@ -387,17 +387,17 @@ class ScannerService {
         let skippedUnchangedRows = 0;
         let usedFolderShortcut = false;
 
-        const resolvedProfile = this.resolveProfile(existingProfiles, usedSlugs, directory.name, profilePath);
-        const profile = resolvedProfile.profile;
-        discoveredProfileIds.add(profile.id);
-        if (resolvedProfile.wroteProfile) {
+        const resolvedFolder = this.resolveFolder(existingFolders, usedSlugs, directory.name, folderPath);
+        const folder = resolvedFolder.folder;
+        discoveredFolderIds.add(folder.id);
+        if (resolvedFolder.wroteFolder) {
           metrics.folderWritesCommitted += 1;
         } else {
           metrics.folderWritesSkipped += 1;
         }
         const activeRelativePaths: string[] = [];
 
-        const entries = await fs.readdir(profilePath, { withFileTypes: true });
+        const entries = await fs.readdir(folderPath, { withFileTypes: true });
         const imageFiles = entries.filter((entry) => entry.isFile() && isSupportedImageFile(entry.name) && !entry.name.startsWith('.'));
         const discoveredFiles: IndexedFileCandidate[] = [];
         let folderHadErrors = false;
@@ -410,7 +410,7 @@ class ScannerService {
         await Promise.all(
           imageFiles.map((entry) =>
             discoveryLimit(async () => {
-              const absolutePath = path.join(profilePath, entry.name);
+              const absolutePath = path.join(folderPath, entry.name);
               const relativePath = getRelativeGalleryPath(appConfig.galleryRoot, absolutePath);
               activeRelativePaths.push(relativePath);
 
@@ -464,10 +464,10 @@ class ScannerService {
             processedImages: this.progress.processedImages + discoveredFiles.length,
             processedFolders: this.progress.processedFolders + 1
           });
-          this.logProgress('profile');
+          this.logProgress('folder');
           log.info('Full scan folder shortcut hit', {
             folder: directory.name,
-            durationMs: elapsedMilliseconds(profileStartedAt),
+            durationMs: elapsedMilliseconds(folderStartedAt),
             fileCount: discoveredFiles.length,
             storedSignatureMatched: true
           });
@@ -481,7 +481,7 @@ class ScannerService {
           discoveredFiles.map((file) =>
             discoveryLimit(async () => {
               try {
-                const result = await this.processImageFile(profile, file, options, imageProcessingContext);
+                const result = await this.processImageFile(folder, file, options, imageProcessingContext);
 
                 if (result.status === 'new') {
                   summary.new_files += 1;
@@ -528,9 +528,9 @@ class ScannerService {
           )
         );
 
-        const removedFiles = imageRepository.markProfileImagesDeleted(profile.id, activeRelativePaths);
+        const removedFiles = imageRepository.markFolderImagesDeleted(folder.id, activeRelativePaths);
         summary.removed_files += removedFiles;
-        profileRepository.setAvatar(profile.id, imageRepository.getLatestProfileImageId(profile.id));
+        folderRepository.setAvatar(folder.id, imageRepository.getLatestFolderImageId(folder.id));
 
         if (!folderHadErrors) {
           folderScanStateRepository.upsert({
@@ -553,10 +553,10 @@ class ScannerService {
         this.setProgress({
           processedFolders: this.progress.processedFolders + 1
         });
-        this.logProgress('profile');
+        this.logProgress('folder');
         log.info('Full scan folder processed', {
           folder: directory.name,
-          durationMs: elapsedMilliseconds(profileStartedAt),
+          durationMs: elapsedMilliseconds(folderStartedAt),
           scannedFiles: imageFiles.length,
           unchangedFiles,
           newFiles,
@@ -568,10 +568,10 @@ class ScannerService {
         });
       }
 
-      for (const profile of existingProfiles) {
-        if (!discoveredProfileIds.has(profile.id)) {
-          summary.removed_files += imageRepository.markAllDeletedByProfile(profile.id);
-          profileRepository.setAvatar(profile.id, null);
+      for (const folder of existingFolders) {
+        if (!discoveredFolderIds.has(folder.id)) {
+          summary.removed_files += imageRepository.markAllDeletedByFolder(folder.id);
+          folderRepository.setAvatar(folder.id, null);
         }
       }
 
@@ -672,7 +672,7 @@ class ScannerService {
     const runId = scanRunRepository.start();
     const summary = createEmptySummary();
     const errors: string[] = [];
-    const impactedProfileIds = new Set<number>();
+    const impactedFolderIds = new Set<number>();
     const derivativeJobs = new Map<string, DerivativeJob>();
     let fallbackReason: string | null = null;
 
@@ -681,7 +681,7 @@ class ScannerService {
     }
 
     const normalizedPaths = [...new Set(relativePaths.map((value) => normalizePath(value)).filter(Boolean))];
-    const impactedFolders = new Set(normalizedPaths.map((value) => getProfileSlugFromRelativePath(value)).filter(Boolean));
+    const impactedFolders = new Set(normalizedPaths.map((value) => getFolderSlugFromRelativePath(value)).filter(Boolean));
 
     this.beginProgress(reason, runId);
     this.setProgress({
@@ -692,8 +692,8 @@ class ScannerService {
     log.info(`Starting incremental scan (${reason})`, { count: normalizedPaths.length });
 
     try {
-      const existingProfiles = profileRepository.getAll();
-      const usedSlugs = new Set(existingProfiles.map((profile) => profile.slug));
+      const existingFolders = folderRepository.getAll();
+      const usedSlugs = new Set(existingFolders.map((folder) => folder.slug));
 
       for (const relativePath of normalizedPaths) {
         if (isHiddenPath(relativePath)) {
@@ -714,10 +714,10 @@ class ScannerService {
         this.setProgress({ currentFolder: folderName });
 
         const absolutePath = path.join(appConfig.galleryRoot, relativePath);
-        const profile = this.resolveProfile(existingProfiles, usedSlugs, folderName, path.join(appConfig.galleryRoot, folderName)).profile;
+        const folder = this.resolveFolder(existingFolders, usedSlugs, folderName, path.join(appConfig.galleryRoot, folderName)).folder;
 
         if (!(await directoryExists(path.join(appConfig.galleryRoot, folderName)))) {
-          fallbackReason = `${reason}:profile-removed`;
+          fallbackReason = `${reason}:folder-removed`;
           break;
         }
 
@@ -727,13 +727,13 @@ class ScannerService {
           const stats = await fs.stat(absolutePath).catch(() => null);
           if (!stats || !stats.isFile()) {
             imageRepository.markDeleted(relativePath);
-            impactedProfileIds.add(profile.id);
+            impactedFolderIds.add(folder.id);
             summary.removed_files += 1;
             continue;
           }
 
           const result = await this.processImageFile(
-            profile,
+            folder,
             {
               absolutePath,
               relativePath,
@@ -743,7 +743,7 @@ class ScannerService {
           if (result.derivativeJob) {
             this.queueDerivativeJob(derivativeJobs, result.derivativeJob);
           }
-          impactedProfileIds.add(profile.id);
+          impactedFolderIds.add(folder.id);
 
           if (result.status === 'new') {
             summary.new_files += 1;
@@ -763,8 +763,8 @@ class ScannerService {
         }
       }
 
-      for (const profileId of impactedProfileIds) {
-        profileRepository.setAvatar(profileId, imageRepository.getLatestProfileImageId(profileId));
+      for (const folderId of impactedFolderIds) {
+        folderRepository.setAvatar(folderId, imageRepository.getLatestFolderImageId(folderId));
       }
 
       if (fallbackReason === null) {
@@ -834,7 +834,7 @@ class ScannerService {
       phase: 'derivatives',
       queuedDerivativeJobs: jobs.length,
       processedDerivativeJobs: 0,
-      currentFolder: jobs[0] ? getProfileSlugFromRelativePath(jobs[0].relativePath) : null
+      currentFolder: jobs[0] ? getFolderSlugFromRelativePath(jobs[0].relativePath) : null
     });
     this.logProgress('phase');
     log.info('Starting derivative phase', {
@@ -847,7 +847,7 @@ class ScannerService {
         derivativeLimit(async () => {
           try {
             this.setProgress({
-              currentFolder: getProfileSlugFromRelativePath(job.relativePath)
+              currentFolder: getFolderSlugFromRelativePath(job.relativePath)
             });
 
             const derivatives = await generateDerivatives(job.absolutePath, job.relativePath, job.force);
@@ -890,76 +890,76 @@ class ScannerService {
     return summary;
   }
 
-  private resolveProfile(existingProfiles: ProfileRecord[], usedSlugs: Set<string>, folderName: string, folderPath: string): ResolvedProfileResult {
-    const existingByFolder = existingProfiles.find((profile) => normalizePath(profile.folder_path) === normalizePath(folderPath));
+  private resolveFolder(existingFolders: FolderRecord[], usedSlugs: Set<string>, folderName: string, folderPath: string): ResolvedFolderResult {
+    const existingByFolder = existingFolders.find((folder) => normalizePath(folder.folder_path) === normalizePath(folderPath));
     if (existingByFolder) {
-      const saved = profileRepository.save({
+      const saved = folderRepository.save({
         slug: existingByFolder.slug,
         name: folderName,
         folderPath
       });
-      this.rememberProfile(existingProfiles, saved.profile);
+      this.rememberFolder(existingFolders, saved.folder);
       return {
-        profile: saved.profile,
-        wroteProfile: saved.wrote
+        folder: saved.folder,
+        wroteFolder: saved.wrote
       };
     }
 
-    const existingByName = existingProfiles.find((profile) => profile.name === folderName);
+    const existingByName = existingFolders.find((folder) => folder.name === folderName);
     if (existingByName) {
-      const saved = profileRepository.save({
+      const saved = folderRepository.save({
         slug: existingByName.slug,
         name: folderName,
         folderPath
       });
-      this.rememberProfile(existingProfiles, saved.profile);
+      this.rememberFolder(existingFolders, saved.folder);
       return {
-        profile: saved.profile,
-        wroteProfile: saved.wrote
+        folder: saved.folder,
+        wroteFolder: saved.wrote
       };
     }
 
-    const baseSlug = slugifyProfileName(folderName);
-    const existingBySlug = existingProfiles.find((profile) => profile.slug === baseSlug);
+    const baseSlug = slugifyFolderName(folderName);
+    const existingBySlug = existingFolders.find((folder) => folder.slug === baseSlug);
     if (existingBySlug) {
-      const saved = profileRepository.save({
+      const saved = folderRepository.save({
         slug: existingBySlug.slug,
         name: folderName,
         folderPath
       });
-      this.rememberProfile(existingProfiles, saved.profile);
+      this.rememberFolder(existingFolders, saved.folder);
       return {
-        profile: saved.profile,
-        wroteProfile: saved.wrote
+        folder: saved.folder,
+        wroteFolder: saved.wrote
       };
     }
 
     const slug = resolveUniqueSlug(folderName, usedSlugs);
-    const saved = profileRepository.save({
+    const saved = folderRepository.save({
       slug,
       name: folderName,
       folderPath
     });
-    this.rememberProfile(existingProfiles, saved.profile);
+    this.rememberFolder(existingFolders, saved.folder);
     return {
-      profile: saved.profile,
-      wroteProfile: saved.wrote
+      folder: saved.folder,
+      wroteFolder: saved.wrote
     };
   }
 
-  private rememberProfile(existingProfiles: ProfileRecord[], profile: ProfileRecord): void {
-    const existingIndex = existingProfiles.findIndex((entry) => entry.id === profile.id);
+  private rememberFolder(existingFolders: FolderRecord[], folder: FolderRecord): void {
+    const existingIndex = existingFolders.findIndex((entry) => entry.id === folder.id);
 
     if (existingIndex >= 0) {
-      existingProfiles[existingIndex] = profile;
+      existingFolders[existingIndex] = folder;
       return;
     }
 
-    existingProfiles.push(profile);
+    existingFolders.push(folder);
   }
 
   private async processImageFile(
-    profile: ProfileRecord,
+    folder: FolderRecord,
     file: IndexedFileCandidate,
     options: FullScanOptions = resolveFullScanOptions(),
     context: ImageProcessingContext = {
@@ -983,7 +983,7 @@ class ScannerService {
 
       if (refreshedIndexedRow) {
         imageRepository.refreshIndexed({
-          profileId: profile.id,
+          folderId: folder.id,
           filename: path.basename(file.absolutePath),
           extension,
           relativePath: file.relativePath,
@@ -1024,7 +1024,7 @@ class ScannerService {
     const firstSeenAt = existing?.first_seen_at ?? new Date().toISOString();
 
     imageRepository.upsert({
-      profileId: profile.id,
+      folderId: folder.id,
       filename: path.basename(file.absolutePath),
       extension,
       relativePath: file.relativePath,

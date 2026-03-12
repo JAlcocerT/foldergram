@@ -1,7 +1,7 @@
 <template>
   <section class="grid grid-cols-3 gap-[0.2rem]">
     <RouterLink v-for="item in items" :key="item.id" custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
-      <a :href="href" class="profile-grid__item aspect-square overflow-hidden bg-surface-alt" @click="handleImageNavigation($event, navigate)">
+      <a :href="href" class="folder-grid__item aspect-square overflow-hidden bg-surface-alt" @click="handleImageNavigation($event, navigate)">
         <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
       </a>
     </RouterLink>

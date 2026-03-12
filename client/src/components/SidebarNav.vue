@@ -10,7 +10,7 @@
       <BrandMark />
     </RouterLink>
 
-    <!-- Nav links + scrollable profiles list -->
+    <!-- Nav links + scrollable folders list -->
     <nav
       class="sidebar__nav flex flex-col flex-1 min-h-0 gap-[0.4rem] overflow-y-auto mt-5 [scrollbar-width:none]"
     >
@@ -88,28 +88,28 @@
         <span class="sidebar__label text-[0.9rem]">Settings</span>
       </RouterLink>
 
-      <!-- Profiles/Folders list — scrolls within sidebar -->
+      <!-- Folders/Folders list — scrolls within sidebar -->
       <span
         class="sidebar__section-label sidebar__meta mb-[0.35rem] px-[0.75rem] text-white/45 text-[0.68rem] font-semibold tracking-[0.12em] uppercase"
         >Folders</span
       >
       <RouterLink
-        v-for="profile in featuredProfiles"
-        :key="profile.id"
-        class="sidebar__profile sidebar-item"
-        :to="{ name: 'profile', params: { slug: profile.slug } }"
+        v-for="folder in featuredFolders"
+        :key="folder.id"
+        class="sidebar__folder sidebar-item"
+        :to="{ name: 'folder', params: { slug: folder.slug } }"
       >
         <Avatar
-          :name="profile.name"
-          :src="profile.avatarUrl"
+          :name="folder.name"
+          :src="folder.avatarUrl"
           class="w-[1.75rem] h-[1.75rem]"
         />
         <span
-          class="sidebar__profile-copy sidebar__meta flex flex-col min-w-0 gap-[0.05rem]"
+          class="sidebar__folder-copy sidebar__meta flex flex-col min-w-0 gap-[0.05rem]"
         >
-          <strong class="text-[0.82rem]">{{ profile.slug }}</strong>
+          <strong class="text-[0.82rem]">{{ folder.slug }}</strong>
           <small class="text-white/55 text-[0.68rem]"
-            >{{ profile.imageCount }} posts</small
+            >{{ folder.imageCount }} posts</small
           >
         </span>
       </RouterLink>
@@ -169,13 +169,13 @@
 
   import { useAppStore } from "../stores/app"
   import { useLikesStore } from "../stores/likes"
-  import { useProfilesStore } from "../stores/profiles"
+  import { useFoldersStore } from "../stores/folders"
   import Avatar from "./Avatar.vue"
   import BrandMark from "./BrandMark.vue"
 
   const appStore = useAppStore()
   const likesStore = useLikesStore()
-  const profilesStore = useProfilesStore()
+  const foldersStore = useFoldersStore()
 
-  const featuredProfiles = computed(() => profilesStore.items.slice(0, 10))
+  const featuredFolders = computed(() => foldersStore.items.slice(0, 10))
 </script>

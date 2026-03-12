@@ -4,7 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ImageView from '../views/ImageView.vue';
 import LibraryView from '../views/LibraryView.vue';
 import LikesView from '../views/LikesView.vue';
-import ProfileView from '../views/ProfileView.vue';
+import FolderView from '../views/FolderView.vue';
 import SettingsView from '../views/SettingsView.vue';
 
 export const router = createRouter({
@@ -38,8 +38,8 @@ export const router = createRouter({
     },
     {
       path: '/:slug',
-      name: 'profile',
-      component: ProfileView,
+      name: 'folder',
+      component: FolderView,
       props: true
     }
   ],

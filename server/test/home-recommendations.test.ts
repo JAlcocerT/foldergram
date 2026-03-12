@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildLikedCountByProfile,
+  buildLikedCountByFolder,
   selectHomeRecommendations
 } from '../../client/src/utils/home-recommendations.js';
 
-const baseProfiles = [
+const baseFolders = [
   {
     id: 1,
     slug: 'alpha',
@@ -71,18 +71,18 @@ const baseProfiles = [
   }
 ];
 
-const likedCountByProfile = buildLikedCountByProfile([
-  { id: 101, profileId: 1, profileSlug: 'alpha', profileName: 'Alpha', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1 },
-  { id: 102, profileId: 1, profileSlug: 'alpha', profileName: 'Alpha', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2 },
-  { id: 103, profileId: 5, profileSlug: 'epsilon', profileName: 'Epsilon', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3 },
-  { id: 104, profileId: 6, profileSlug: 'zeta', profileName: 'Zeta', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4 }
+const likedCountByFolder = buildLikedCountByFolder([
+  { id: 101, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1 },
+  { id: 102, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2 },
+  { id: 103, folderId: 5, folderSlug: 'epsilon', folderName: 'Epsilon', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3 },
+  { id: 104, folderId: 6, folderSlug: 'zeta', folderName: 'Zeta', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4 }
 ]);
 
 describe('home recommendations', () => {
   it('keeps the last opened folder in the top slot when it is still present', () => {
     const recommendations = selectHomeRecommendations(
-      baseProfiles,
-      likedCountByProfile,
+      baseFolders,
+      likedCountByFolder,
       'alpha',
       new Date('2026-03-12T12:00:00.000Z')
     );
@@ -92,8 +92,8 @@ describe('home recommendations', () => {
 
   it('falls back to the most recently active non-empty folder', () => {
     const recommendations = selectHomeRecommendations(
-      baseProfiles,
-      likedCountByProfile,
+      baseFolders,
+      likedCountByFolder,
       null,
       new Date('2026-03-12T12:00:00.000Z')
     );
@@ -103,23 +103,23 @@ describe('home recommendations', () => {
 
   it('builds a stable daily suggestion list from ranked non-empty folders', () => {
     const first = selectHomeRecommendations(
-      baseProfiles,
-      likedCountByProfile,
+      baseFolders,
+      likedCountByFolder,
       null,
       new Date('2026-03-12T12:00:00.000Z')
     );
     const second = selectHomeRecommendations(
-      baseProfiles,
-      likedCountByProfile,
+      baseFolders,
+      likedCountByFolder,
       null,
       new Date('2026-03-12T18:30:00.000Z')
     );
 
-    expect(first.recommendedFolders.map((profile) => profile.slug)).toEqual(
-      second.recommendedFolders.map((profile) => profile.slug)
+    expect(first.recommendedFolders.map((folder) => folder.slug)).toEqual(
+      second.recommendedFolders.map((folder) => folder.slug)
     );
     expect(first.recommendedFolders).toHaveLength(5);
-    expect(first.recommendedFolders.map((profile) => profile.slug)).not.toContain('beta');
-    expect(first.recommendedFolders.map((profile) => profile.slug)).not.toContain('delta');
+    expect(first.recommendedFolders.map((folder) => folder.slug)).not.toContain('beta');
+    expect(first.recommendedFolders.map((folder) => folder.slug)).not.toContain('delta');
   });
 });

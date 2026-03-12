@@ -10,7 +10,7 @@
       <!-- Quick stats strip -->
       <div class="flex items-center gap-[1.4rem] shrink-0 max-sm:w-full max-sm:justify-between">
         <div class="text-center">
-          <p class="m-0 text-[1.35rem] font-bold tracking-tight">{{ formatCount(profilesStore.items.length) }}</p>
+          <p class="m-0 text-[1.35rem] font-bold tracking-tight">{{ formatCount(foldersStore.items.length) }}</p>
           <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">Folders</p>
         </div>
         <div class="w-px h-8 bg-border"></div>
@@ -27,7 +27,7 @@
     </header>
 
     <EmptyState v-if="appStore.isLibraryUnavailable" title="Library storage unavailable" :description="appStore.libraryUnavailableReason" />
-    <ErrorState v-else-if="profilesStore.listError && profilesStore.items.length === 0" title="Could not load folders" :message="profilesStore.listError" />
+    <ErrorState v-else-if="foldersStore.listError && foldersStore.items.length === 0" title="Could not load folders" :message="foldersStore.listError" />
     <template v-else>
 
       <!-- Toolbar -->
@@ -77,46 +77,46 @@
         </div>
 
         <!-- Result count -->
-        <span class="ml-auto text-muted text-[0.8rem] shrink-0">{{ formatCount(filteredProfiles.length) }} result{{ filteredProfiles.length !== 1 ? 's' : '' }}</span>
+        <span class="ml-auto text-muted text-[0.8rem] shrink-0">{{ formatCount(filteredFolders.length) }} result{{ filteredFolders.length !== 1 ? 's' : '' }}</span>
       </div>
 
       <!-- Loading -->
-      <section v-if="profilesStore.loadingList && profilesStore.items.length === 0" class="card p-12 text-center">
+      <section v-if="foldersStore.loadingList && foldersStore.items.length === 0" class="card p-12 text-center">
         <p class="text-muted">Loading folders…</p>
       </section>
 
-      <EmptyState v-else-if="profilesStore.items.length === 0" title="No folders indexed yet" description="Add folders to the gallery root and run a scan." />
+      <EmptyState v-else-if="foldersStore.items.length === 0" title="No folders indexed yet" description="Add folders to the gallery root and run a scan." />
 
-      <section v-else-if="filteredProfiles.length === 0" class="card p-12 text-center">
+      <section v-else-if="filteredFolders.length === 0" class="card p-12 text-center">
         <p class="m-0 text-muted">No folders match. Try a different search or filter.</p>
       </section>
 
       <!-- Folder list -->
       <section v-else class="bg-surface border border-border rounded-[1.1rem] shadow-[var(--shadow)] overflow-hidden" aria-label="All folders">
         <div
-          v-for="(profile, i) in filteredProfiles"
-          :key="profile.id"
+          v-for="(folder, i) in filteredFolders"
+          :key="folder.id"
           class="group flex items-center gap-4 px-5 py-[0.75rem] transition-colors duration-150 hover:bg-surface-hover"
           :class="i > 0 ? 'border-t border-border' : ''"
         >
-          <RouterLink class="flex items-center gap-4 flex-1 min-w-0" :to="{ name: 'profile', params: { slug: profile.slug } }">
+          <RouterLink class="flex items-center gap-4 flex-1 min-w-0" :to="{ name: 'folder', params: { slug: folder.slug } }">
             <!-- Avatar -->
-            <Avatar class="w-10 h-10 shrink-0" :name="profile.name" :src="profile.avatarUrl" />
+            <Avatar class="w-10 h-10 shrink-0" :name="folder.name" :src="folder.avatarUrl" />
 
             <!-- Name + path -->
             <div class="flex-1 min-w-0">
-              <p class="m-0 text-[0.9rem] font-semibold truncate">{{ profile.slug }}</p>
-              <p class="m-0 text-muted text-[0.76rem] truncate font-mono opacity-70">{{ profile.folderPath }}</p>
+              <p class="m-0 text-[0.9rem] font-semibold truncate">{{ folder.slug }}</p>
+              <p class="m-0 text-muted text-[0.76rem] truncate font-mono opacity-70">{{ folder.folderPath }}</p>
             </div>
           </RouterLink>
 
           <!-- Count + status -->
           <div class="flex items-center gap-3 shrink-0 text-right">
-            <span class="text-[0.82rem] font-semibold text-text tabular-nums">{{ formatCount(profile.imageCount) }}</span>
+            <span class="text-[0.82rem] font-semibold text-text tabular-nums">{{ formatCount(folder.imageCount) }}</span>
             <span
               class="w-[7px] h-[7px] rounded-full shrink-0"
-              :class="profile.imageCount > 0 ? 'bg-[#1ca44e]' : 'bg-border'"
-              :title="profile.imageCount > 0 ? 'Ready' : 'Empty'"
+              :class="folder.imageCount > 0 ? 'bg-[#1ca44e]' : 'bg-border'"
+              :title="folder.imageCount > 0 ? 'Ready' : 'Empty'"
             ></span>
           </div>
 
@@ -125,7 +125,7 @@
             class="inline-flex items-center justify-center w-8 h-8 p-0 border-0 text-muted bg-transparent cursor-pointer rounded-full hover:bg-surface-alt transition-colors duration-150 shrink-0"
             type="button"
             aria-label="More options"
-            @click.prevent="openMenu(profile)"
+            @click.prevent="openMenu(folder)"
           >
             <svg class="w-[1.15rem] h-[1.15rem]" viewBox="0 0 24 24" role="presentation">
               <circle cx="12" cy="6.5" r="1.5" fill="currentColor" />
@@ -138,9 +138,9 @@
     </template>
 
     <!-- Context menu modal -->
-    <div v-if="menuProfile" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/48" @click.self="menuProfile = null">
+    <div v-if="menuFolder" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/48" @click.self="menuFolder = null">
       <div class="w-[min(100%,22rem)] overflow-hidden bg-surface border border-border rounded-[1rem] shadow-[var(--shadow)]">
-        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 border-b border-border text-text bg-transparent cursor-pointer text-left" type="button" @click="navigateToProfile">
+        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 border-b border-border text-text bg-transparent cursor-pointer text-left" type="button" @click="navigateToFolder">
           <svg class="w-[1.15rem] h-[1.15rem] shrink-0" viewBox="0 0 24 24" role="presentation">
             <path
               d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z"
@@ -166,7 +166,7 @@
           </svg>
           <span>Delete folder</span>
         </button>
-        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left" type="button" @click="menuProfile = null">
+        <button class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left" type="button" @click="menuFolder = null">
           <svg class="w-[1.15rem] h-[1.15rem] shrink-0" viewBox="0 0 24 24" role="presentation">
             <path
               d="m7 7 10 10M17 7 7 17"
@@ -184,13 +184,13 @@
 
     <!-- Delete confirmation dialog -->
     <ConfirmDialog
-      v-if="confirmDeleteProfile"
+      v-if="confirmDeleteFolder"
       title="Delete this folder?"
-      :message="`This folder and all ${formatCount(confirmDeleteProfile.imageCount)} image${confirmDeleteProfile.imageCount !== 1 ? 's' : ''} in it will be permanently deleted from the hard drive. This action cannot be undone.`"
+      :message="`This folder and all ${formatCount(confirmDeleteFolder.imageCount)} image${confirmDeleteFolder.imageCount !== 1 ? 's' : ''} in it will be permanently deleted from the hard drive. This action cannot be undone.`"
       confirm-label="Delete folder"
       loading-label="Deleting…"
       :loading="deleting"
-      @cancel="confirmDeleteProfile = null"
+      @cancel="confirmDeleteFolder = null"
       @confirm="confirmDelete"
     />
   </section>
@@ -204,12 +204,12 @@ import Avatar from '../components/Avatar.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
-import { deleteProfile } from '../api/gallery';
+import { deleteFolder } from '../api/gallery';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
-import { useProfilesStore } from '../stores/profiles';
-import type { ProfileSummary } from '../types/api';
+import { useFoldersStore } from '../stores/folders';
+import type { FolderSummary } from '../types/api';
 
 type LibraryFilter = 'all' | 'active' | 'empty';
 type LibrarySort = 'images-desc' | 'name-asc' | 'name-desc' | 'slug-asc';
@@ -223,13 +223,13 @@ const filterOptions: Array<{ label: string; value: LibraryFilter }> = [
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
-const profilesStore = useProfilesStore();
+const foldersStore = useFoldersStore();
 const router = useRouter();
 const searchQuery = ref('');
 const statusFilter = ref<LibraryFilter>('all');
 const sortMode = ref<LibrarySort>('images-desc');
-const menuProfile = ref<ProfileSummary | null>(null);
-const confirmDeleteProfile = ref<ProfileSummary | null>(null);
+const menuFolder = ref<FolderSummary | null>(null);
+const confirmDeleteFolder = ref<FolderSummary | null>(null);
 const deleting = ref(false);
 
 function formatCount(value: number) {
@@ -237,19 +237,19 @@ function formatCount(value: number) {
 }
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
-const activeFolderCount = computed(() => profilesStore.items.filter((profile) => profile.imageCount > 0).length);
-const emptyFolderCount = computed(() => profilesStore.items.filter((profile) => profile.imageCount === 0).length);
-const totalIndexedImages = computed(() => profilesStore.items.reduce((total, profile) => total + profile.imageCount, 0));
+const activeFolderCount = computed(() => foldersStore.items.filter((folder) => folder.imageCount > 0).length);
+const emptyFolderCount = computed(() => foldersStore.items.filter((folder) => folder.imageCount === 0).length);
+const totalIndexedImages = computed(() => foldersStore.items.reduce((total, folder) => total + folder.imageCount, 0));
 
-function matchesSearch(profile: ProfileSummary, query: string) {
+function matchesSearch(folder: FolderSummary, query: string) {
   if (!query) {
     return true;
   }
 
-  return [profile.slug, profile.name, profile.folderPath].some((value) => value.toLowerCase().includes(query));
+  return [folder.slug, folder.name, folder.folderPath].some((value) => value.toLowerCase().includes(query));
 }
 
-function sortProfiles(left: ProfileSummary, right: ProfileSummary) {
+function sortFolders(left: FolderSummary, right: FolderSummary) {
   switch (sortMode.value) {
     case 'name-asc':
       return left.name.localeCompare(right.name);
@@ -263,57 +263,57 @@ function sortProfiles(left: ProfileSummary, right: ProfileSummary) {
   }
 }
 
-const filteredProfiles = computed(() =>
-  profilesStore.items
-    .filter((profile) => {
+const filteredFolders = computed(() =>
+  foldersStore.items
+    .filter((folder) => {
       if (statusFilter.value === 'active') {
-        return profile.imageCount > 0;
+        return folder.imageCount > 0;
       }
 
       if (statusFilter.value === 'empty') {
-        return profile.imageCount === 0;
+        return folder.imageCount === 0;
       }
 
       return true;
     })
-    .filter((profile) => matchesSearch(profile, normalizedQuery.value))
+    .filter((folder) => matchesSearch(folder, normalizedQuery.value))
     .slice()
-    .sort(sortProfiles)
+    .sort(sortFolders)
 );
 
-function openMenu(profile: ProfileSummary) {
-  menuProfile.value = profile;
+function openMenu(folder: FolderSummary) {
+  menuFolder.value = folder;
 }
 
-function navigateToProfile() {
-  if (!menuProfile.value) {
+function navigateToFolder() {
+  if (!menuFolder.value) {
     return;
   }
 
-  const slug = menuProfile.value.slug;
-  menuProfile.value = null;
-  router.push({ name: 'profile', params: { slug } });
+  const slug = menuFolder.value.slug;
+  menuFolder.value = null;
+  router.push({ name: 'folder', params: { slug } });
 }
 
 function handleDelete() {
-  confirmDeleteProfile.value = menuProfile.value;
-  menuProfile.value = null;
+  confirmDeleteFolder.value = menuFolder.value;
+  menuFolder.value = null;
 }
 
 async function confirmDelete() {
-  if (!confirmDeleteProfile.value) {
+  if (!confirmDeleteFolder.value) {
     return;
   }
 
   deleting.value = true;
 
   try {
-    const result = await deleteProfile(confirmDeleteProfile.value.slug);
-    profilesStore.removeProfile(result.slug);
-    feedStore.removeProfileItems(result.slug);
-    likesStore.removeProfileItems(result.slug);
-    appStore.removeProfile(result.deletedImageCount);
-    confirmDeleteProfile.value = null;
+    const result = await deleteFolder(confirmDeleteFolder.value.slug);
+    foldersStore.removeFolder(result.slug);
+    feedStore.removeFolderItems(result.slug);
+    likesStore.removeFolderItems(result.slug);
+    appStore.removeFolder(result.deletedImageCount);
+    confirmDeleteFolder.value = null;
   } finally {
     deleting.value = false;
   }
@@ -324,6 +324,6 @@ onMounted(async () => {
     return;
   }
 
-  await profilesStore.fetchProfiles();
+  await foldersStore.fetchFolders();
 });
 </script>

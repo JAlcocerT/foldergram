@@ -1,8 +1,8 @@
 export interface FeedItem {
   id: number;
-  profileId: number;
-  profileSlug: string;
-  profileName: string;
+  folderId: number;
+  folderSlug: string;
+  folderName: string;
   filename: string;
   width: number;
   height: number;
@@ -11,7 +11,7 @@ export interface FeedItem {
   sortTimestamp: number;
 }
 
-export interface ProfileSummary {
+export interface FolderSummary {
   id: number;
   slug: string;
   name: string;
@@ -29,8 +29,8 @@ export interface PaginatedFeed {
   hasMore: boolean;
 }
 
-export interface ProfileImagesPayload extends PaginatedFeed {
-  profile: ProfileSummary;
+export interface FolderImagesPayload extends PaginatedFeed {
+  folder: FolderSummary;
 }
 
 export interface LikesPayload {
@@ -48,10 +48,10 @@ export interface ImageDetail extends FeedItem {
 
 export interface DeleteImageResult {
   id: number;
-  profileSlug: string;
+  folderSlug: string;
 }
 
-export interface DeleteProfileResult {
+export interface DeleteFolderResult {
   slug: string;
   deletedImageCount: number;
 }
@@ -98,7 +98,7 @@ export interface ManualScanResult {
 }
 
 export interface AppStats {
-  profiles: number;
+  folders: number;
   indexedImages: number;
   deletedImages: number;
   thumbnailCount: number;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createFingerprint, getDerivativeRelativePath, getStableSortTimestamp } from '../src/utils/image-utils.js';
 import { normalizePath } from '../src/utils/path-utils.js';
-import { resolveUniqueSlug, slugifyProfileName } from '../src/utils/slug.js';
+import { resolveUniqueSlug, slugifyFolderName } from '../src/utils/slug.js';
 
 describe('scanner utilities', () => {
   it('creates stable normalized fingerprints', () => {
@@ -10,7 +10,7 @@ describe('scanner utilities', () => {
   });
 
   it('generates mirrored webp derivative paths', () => {
-    expect(getDerivativeRelativePath('profile-one/post-1.jpeg')).toBe('profile-one/post-1.webp');
+    expect(getDerivativeRelativePath('folder-one/post-1.jpeg')).toBe('folder-one/post-1.webp');
   });
 
   it('preserves existing sort timestamps before mtime fallback', () => {
@@ -20,10 +20,10 @@ describe('scanner utilities', () => {
   });
 });
 
-describe('profile slug resolution', () => {
+describe('folder slug resolution', () => {
   it('slugifies folder names safely', () => {
-    expect(slugifyProfileName('Summer Trips 2026')).toBe('summer-trips-2026');
-    expect(slugifyProfileName('***')).toBe('profile');
+    expect(slugifyFolderName('Summer Trips 2026')).toBe('summer-trips-2026');
+    expect(slugifyFolderName('***')).toBe('folder');
   });
 
   it('resolves duplicate slugs with numeric suffixes', () => {

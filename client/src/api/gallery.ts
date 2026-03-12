@@ -1,14 +1,14 @@
 import type {
   AppStats,
   DeleteImageResult,
-  DeleteProfileResult,
+  DeleteFolderResult,
   ImageDetail,
   LikeMutationResult,
   LikesPayload,
   ManualScanResult,
   PaginatedFeed,
-  ProfileImagesPayload,
-  ProfileSummary
+  FolderImagesPayload,
+  FolderSummary
 } from '../types/api';
 import { requestJson } from './http';
 
@@ -16,17 +16,17 @@ export function fetchFeed(page = 1, limit = 24) {
   return requestJson<PaginatedFeed>(`/api/feed?page=${page}&limit=${limit}`);
 }
 
-export async function fetchProfiles() {
-  const payload = await requestJson<{ items: ProfileSummary[] }>('/api/profiles');
+export async function fetchFolders() {
+  const payload = await requestJson<{ items: FolderSummary[] }>('/api/folders');
   return payload.items;
 }
 
-export function fetchProfile(slug: string) {
-  return requestJson<ProfileSummary>(`/api/profiles/${encodeURIComponent(slug)}`);
+export function fetchFolder(slug: string) {
+  return requestJson<FolderSummary>(`/api/folders/${encodeURIComponent(slug)}`);
 }
 
-export function fetchProfileImages(slug: string, page = 1, limit = 24) {
-  return requestJson<ProfileImagesPayload>(`/api/profiles/${encodeURIComponent(slug)}/images?page=${page}&limit=${limit}`);
+export function fetchFolderImages(slug: string, page = 1, limit = 24) {
+  return requestJson<FolderImagesPayload>(`/api/folders/${encodeURIComponent(slug)}/images?page=${page}&limit=${limit}`);
 }
 
 export function fetchImage(id: number) {
@@ -55,8 +55,8 @@ export function deleteImage(id: number) {
   });
 }
 
-export function deleteProfile(slug: string) {
-  return requestJson<DeleteProfileResult>(`/api/profiles/${encodeURIComponent(slug)}`, {
+export function deleteFolder(slug: string) {
+  return requestJson<DeleteFolderResult>(`/api/folders/${encodeURIComponent(slug)}`, {
     method: 'DELETE'
   });
 }

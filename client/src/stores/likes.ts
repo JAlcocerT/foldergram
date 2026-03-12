@@ -92,9 +92,9 @@ export const useLikesStore = defineStore('likes', {
       this.pendingIds = this.pendingIds.filter((entry) => entry !== id);
     },
 
-    removeProfileItems(profileSlug: string) {
-      const removedIds = new Set(this.items.filter((item) => item.profileSlug === profileSlug).map((item) => item.id));
-      this.items = this.items.filter((item) => item.profileSlug !== profileSlug);
+    removeFolderItems(folderSlug: string) {
+      const removedIds = new Set(this.items.filter((item) => item.folderSlug === folderSlug).map((item) => item.id));
+      this.items = this.items.filter((item) => item.folderSlug !== folderSlug);
       this.likedIds = this.likedIds.filter((id) => !removedIds.has(id));
       this.pendingIds = this.pendingIds.filter((id) => !removedIds.has(id));
     }

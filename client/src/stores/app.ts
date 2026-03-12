@@ -8,7 +8,7 @@ interface AppState {
   loadingStats: boolean;
   error: string | null;
   theme: 'light' | 'dark';
-  lastOpenedProfileSlug: string | null;
+  lastOpenedFolderSlug: string | null;
   imageModalBackgroundPath: string | null;
   statsPollFailures: number;
   statsPollTimer: ReturnType<typeof setInterval> | null;
@@ -20,7 +20,7 @@ export const useAppStore = defineStore('app', {
     loadingStats: false,
     error: null,
     theme: 'light',
-    lastOpenedProfileSlug: null,
+    lastOpenedFolderSlug: null,
     imageModalBackgroundPath: null,
     statsPollFailures: 0,
     statsPollTimer: null
@@ -45,9 +45,11 @@ export const useAppStore = defineStore('app', {
       this.setTheme(preferredTheme);
     },
 
-    initializeLastOpenedProfile() {
-      const savedSlug = window.localStorage.getItem('insta-local-last-opened-profile');
-      this.lastOpenedProfileSlug = savedSlug && savedSlug.length > 0 ? savedSlug : null;
+    initializeLastOpenedFolder() {
+      const savedSlug =
+        window.localStorage.getItem('insta-local-last-opened-folder') ??
+        window.localStorage.getItem('insta-local-last-opened-profile');
+      this.lastOpenedFolderSlug = savedSlug && savedSlug.length > 0 ? savedSlug : null;
     },
 
     setTheme(theme: 'light' | 'dark') {
@@ -60,9 +62,9 @@ export const useAppStore = defineStore('app', {
       this.setTheme(this.theme === 'light' ? 'dark' : 'light');
     },
 
-    recordOpenedProfile(slug: string) {
-      this.lastOpenedProfileSlug = slug;
-      window.localStorage.setItem('insta-local-last-opened-profile', slug);
+    recordOpenedFolder(slug: string) {
+      this.lastOpenedFolderSlug = slug;
+      window.localStorage.setItem('insta-local-last-opened-folder', slug);
     },
 
     setImageModalBackground(path: string) {
@@ -129,12 +131,12 @@ export const useAppStore = defineStore('app', {
       this.stats.deletedImages += 1;
     },
 
-    removeProfile(deletedImageCount: number) {
+    removeFolder(deletedImageCount: number) {
       if (!this.stats) {
         return;
       }
 
-      this.stats.profiles = Math.max(0, this.stats.profiles - 1);
+      this.stats.folders = Math.max(0, this.stats.folders - 1);
       this.stats.indexedImages = Math.max(0, this.stats.indexedImages - deletedImageCount);
       this.stats.deletedImages += deletedImageCount;
     },

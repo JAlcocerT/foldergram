@@ -15,11 +15,11 @@ import AppShell from './components/AppShell.vue';
 import ImageView from './views/ImageView.vue';
 import { useAppStore } from './stores/app';
 import { useLikesStore } from './stores/likes';
-import { useProfilesStore } from './stores/profiles';
+import { useFoldersStore } from './stores/folders';
 
 const appStore = useAppStore();
 const likesStore = useLikesStore();
-const profilesStore = useProfilesStore();
+const foldersStore = useFoldersStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -52,7 +52,7 @@ const displayRoute = computed<RouteLocationNormalizedLoaded | undefined>(() =>
 );
 
 onMounted(async () => {
-  await Promise.all([appStore.fetchStats(), profilesStore.fetchProfiles(), likesStore.initialize()]);
+  await Promise.all([appStore.fetchStats(), foldersStore.fetchFolders(), likesStore.initialize()]);
 });
 
 onUnmounted(() => {
@@ -60,13 +60,13 @@ onUnmounted(() => {
 });
 
 watch(
-  () => appStore.stats?.profiles ?? 0,
-  async (profileCount) => {
-    if (appStore.isLibraryUnavailable || profileCount === 0 || profileCount === profilesStore.items.length) {
+  () => appStore.stats?.folders ?? 0,
+  async (folderCount) => {
+    if (appStore.isLibraryUnavailable || folderCount === 0 || folderCount === foldersStore.items.length) {
       return;
     }
 
-    await profilesStore.fetchProfiles(true);
+    await foldersStore.fetchFolders(true);
   }
 );
 

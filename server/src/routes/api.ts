@@ -39,30 +39,30 @@ router.get('/feed', (request, response) => {
   response.json(galleryService.getFeed(query.page, query.limit));
 });
 
-router.get('/profiles', (_request, response) => {
+router.get('/folders', (_request, response) => {
   response.json({
-    items: galleryService.listProfiles()
+    items: galleryService.listFolders()
   });
 });
 
-router.get('/profiles/:slug', (request, response) => {
+router.get('/folders/:slug', (request, response) => {
   const params = slugSchema.parse(request.params);
-  const profile = galleryService.getProfileBySlug(params.slug);
+  const folder = galleryService.getFolderBySlug(params.slug);
 
-  if (!profile) {
-    response.status(404).json({ message: 'Profile not found' });
+  if (!folder) {
+    response.status(404).json({ message: 'Folder not found' });
     return;
   }
 
-  response.json(profile);
+  response.json(folder);
 });
 
-router.delete('/profiles/:slug', async (request, response) => {
+router.delete('/folders/:slug', async (request, response) => {
   const params = slugSchema.parse(request.params);
-  const deleted = await galleryService.deleteProfile(params.slug);
+  const deleted = await galleryService.deleteFolder(params.slug);
 
   if (!deleted) {
-    response.status(404).json({ message: 'Profile not found' });
+    response.status(404).json({ message: 'Folder not found' });
     return;
   }
 
@@ -72,13 +72,13 @@ router.delete('/profiles/:slug', async (request, response) => {
   });
 });
 
-router.get('/profiles/:slug/images', (request, response) => {
+router.get('/folders/:slug/images', (request, response) => {
   const params = slugSchema.parse(request.params);
   const query = paginationQuerySchema.parse(request.query);
-  const payload = galleryService.getProfileImages(params.slug, query.page, query.limit);
+  const payload = galleryService.getFolderImages(params.slug, query.page, query.limit);
 
   if (!payload) {
-    response.status(404).json({ message: 'Profile not found' });
+    response.status(404).json({ message: 'Folder not found' });
     return;
   }
 

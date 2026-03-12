@@ -1,4 +1,4 @@
-export function slugifyProfileName(name: string): string {
+export function slugifyFolderName(name: string): string {
   const normalized = name
     .normalize('NFKD')
     .replace(/[^\w\s-]/g, '')
@@ -7,11 +7,11 @@ export function slugifyProfileName(name: string): string {
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return normalized || 'profile';
+  return normalized || 'folder';
 }
 
 export function resolveUniqueSlug(name: string, existing: Set<string>): string {
-  const base = slugifyProfileName(name);
+  const base = slugifyFolderName(name);
   if (!existing.has(base)) {
     existing.add(base);
     return base;

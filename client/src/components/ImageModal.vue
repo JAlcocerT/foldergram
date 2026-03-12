@@ -75,11 +75,11 @@
       >
         <!-- Header -->
         <div class="flex items-center justify-between gap-4 border-b border-border px-5 pt-[1.1rem] pb-4">
-          <RouterLink class="flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'profile', params: { slug: image.profileSlug } }" aria-label="Open folder">
-            <Avatar :name="image.profileName" :src="profileAvatar" />
+          <RouterLink class="flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'folder', params: { slug: image.folderSlug } }" aria-label="Open folder">
+            <Avatar :name="image.folderName" :src="folderAvatar" />
             <div>
-              <h2 class="m-0 text-[0.9rem] font-semibold">{{ image.profileSlug }}</h2>
-              <p class="m-0 text-muted">{{ image.profileName }}</p>
+              <h2 class="m-0 text-[0.9rem] font-semibold">{{ image.folderSlug }}</h2>
+              <p class="m-0 text-muted">{{ image.folderName }}</p>
             </div>
           </RouterLink>
           <span class="text-muted text-[0.78rem] whitespace-nowrap">{{ formattedDate }}</span>
@@ -88,7 +88,7 @@
         <!-- Description -->
         <div class="grid gap-[0.3rem] px-5 pt-[1.1rem]">
           <p class="m-0 text-text">
-            <strong class="mr-[0.35rem]">{{ image.profileSlug }}</strong>
+            <strong class="mr-[0.35rem]">{{ image.folderSlug }}</strong>
             {{ readableFilename }}
           </p>
           <p class="m-0 text-muted">{{ image.relativePath }}</p>
@@ -171,7 +171,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 
-import type { ImageDetail, ProfileSummary } from '../types/api';
+import type { ImageDetail, FolderSummary } from '../types/api';
 import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 import Avatar from './Avatar.vue';
@@ -179,7 +179,7 @@ import ResilientImage from './ResilientImage.vue';
 
 const props = defineProps<{
   image: ImageDetail | null;
-  profile?: ProfileSummary | null;
+  folder?: FolderSummary | null;
   isModal?: boolean;
   deleting?: boolean;
 }>();
@@ -207,7 +207,7 @@ const fileSize = computed(() => {
   return `${megabytes.toFixed(2)} MB`;
 });
 
-const profileAvatar = computed(() => props.profile?.avatarUrl ?? null);
+const folderAvatar = computed(() => props.folder?.avatarUrl ?? null);
 const readableFilename = computed(() =>
   props.image
     ? props.image.filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim()

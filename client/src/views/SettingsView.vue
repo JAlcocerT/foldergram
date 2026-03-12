@@ -98,7 +98,7 @@
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
               <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Folders</dt>
-              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.profiles ?? 0) }}</dd>
+              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.folders ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
               <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed images</dt>
@@ -148,11 +148,11 @@ import { computed, onMounted, ref } from 'vue';
 import { triggerManualScan } from '../api/gallery';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
-import { useProfilesStore } from '../stores/profiles';
+import { useFoldersStore } from '../stores/folders';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
-const profilesStore = useProfilesStore();
+const foldersStore = useFoldersStore();
 const scanError = ref<string | null>(null);
 const requestingScan = ref(false);
 
@@ -328,7 +328,7 @@ async function runManualScan() {
     await warmScanStatus();
     await request;
     await appStore.fetchStats({ background: true });
-    await Promise.all([profilesStore.fetchProfiles(true), feedStore.loadInitial(true)]);
+    await Promise.all([foldersStore.fetchFolders(true), feedStore.loadInitial(true)]);
   } catch (error) {
     scanError.value = error instanceof Error ? error.message : 'Unable to start a manual scan.';
   } finally {

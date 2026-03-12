@@ -16,14 +16,14 @@ app.use(router);
 const appStore = useAppStore(pinia);
 
 appStore.initializeTheme();
-appStore.initializeLastOpenedProfile();
+appStore.initializeLastOpenedFolder();
 
 router.afterEach((to) => {
-  if (to.name !== 'profile' || typeof to.params.slug !== 'string') {
+  if (to.name !== 'folder' || typeof to.params.slug !== 'string') {
     return;
   }
 
-  appStore.recordOpenedProfile(to.params.slug);
+  appStore.recordOpenedFolder(to.params.slug);
 });
 
 app.mount('#app');

@@ -7,8 +7,8 @@ import type {
   ImageDetail,
   ImageRecord,
   LikeRecord,
-  ProfileRecord,
-  ProfileSummaryRecord,
+  FolderRecord,
+  FolderSummaryRecord,
   ScanRunRecord
 } from '../types/models.js';
 
@@ -18,19 +18,19 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-export interface UpsertProfileInput {
+export interface UpsertFolderInput {
   slug: string;
   name: string;
   folderPath: string;
 }
 
-export interface SaveProfileResult {
-  profile: ProfileRecord;
+export interface SaveFolderResult {
+  folder: FolderRecord;
   wrote: boolean;
 }
 
 export interface UpsertImageInput {
-  profileId: number;
+  folderId: number;
   filename: string;
   extension: string;
   relativePath: string;
@@ -48,7 +48,7 @@ export interface UpsertImageInput {
 }
 
 export interface RefreshIndexedImageInput {
-  profileId: number;
+  folderId: number;
   filename: string;
   extension: string;
   relativePath: string;
@@ -69,12 +69,12 @@ export interface UpsertFolderScanStateInput {
   totalSize: number;
 }
 
-export const profileRepository = {
-  getAll(): ProfileRecord[] {
-    return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as ProfileRecord[];
+export const folderRepository = {
+  getAll(): FolderRecord[] {
+    return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as FolderRecord[];
   },
 
-  getAllSummaries(): ProfileSummaryRecord[] {
+  getAllSummaries(): FolderSummaryRecord[] {
     return database
       .prepare(
         `
@@ -88,14 +88,14 @@ export const profileRepository = {
         ORDER BY profiles.name COLLATE NOCASE ASC
         `
       )
-      .all() as unknown as ProfileSummaryRecord[];
+      .all() as unknown as FolderSummaryRecord[];
   },
 
-  getBySlug(slug: string): ProfileRecord | undefined {
-    return database.prepare('SELECT * FROM profiles WHERE slug = ?').get(slug) as ProfileRecord | undefined;
+  getBySlug(slug: string): FolderRecord | undefined {
+    return database.prepare('SELECT * FROM profiles WHERE slug = ?').get(slug) as FolderRecord | undefined;
   },
 
-  getSummaryBySlug(slug: string): ProfileSummaryRecord | undefined {
+  getSummaryBySlug(slug: string): FolderSummaryRecord | undefined {
     return database
       .prepare(
         `
@@ -109,10 +109,10 @@ export const profileRepository = {
         GROUP BY profiles.id
         `
       )
-      .get(slug) as ProfileSummaryRecord | undefined;
+      .get(slug) as FolderSummaryRecord | undefined;
   },
 
-  upsert(input: UpsertProfileInput): ProfileRecord {
+  upsert(input: UpsertFolderInput): FolderRecord {
     database.prepare(
       `
       INSERT INTO profiles (slug, name, folder_path, updated_at)
@@ -124,20 +124,20 @@ export const profileRepository = {
       `
     ).run(input.slug, input.name, input.folderPath, nowIso());
 
-    return this.getBySlug(input.slug) as ProfileRecord;
+    return this.getBySlug(input.slug) as FolderRecord;
   },
 
-  save(input: UpsertProfileInput): SaveProfileResult {
+  save(input: UpsertFolderInput): SaveFolderResult {
     const existing = this.getBySlug(input.slug);
     if (existing && existing.name === input.name && normalizePath(existing.folder_path) === normalizePath(input.folderPath)) {
       return {
-        profile: existing,
+        folder: existing,
         wrote: false
       };
     }
 
     return {
-      profile: this.upsert(input),
+      folder: this.upsert(input),
       wrote: true
     };
   },
@@ -146,11 +146,11 @@ export const profileRepository = {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number }).count);
   },
 
-  setAvatar(profileId: number, imageId: number | null): void {
+  setAvatar(folderId: number, imageId: number | null): void {
     database.prepare('UPDATE profiles SET avatar_image_id = ?, updated_at = ? WHERE id = ? AND avatar_image_id IS NOT ?').run(
       imageId,
       nowIso(),
-      profileId,
+      folderId,
       imageId
     );
   },
@@ -195,7 +195,7 @@ export const imageRepository = {
         updated_at = excluded.updated_at
       `
     ).run(
-      input.profileId,
+      input.folderId,
       input.filename,
       input.extension,
       input.relativePath,
@@ -236,7 +236,7 @@ export const imageRepository = {
       WHERE relative_path = ?
       `
     ).run(
-      input.profileId,
+      input.folderId,
       input.filename,
       input.extension,
       input.absolutePath,
@@ -257,8 +257,8 @@ export const imageRepository = {
     database.prepare('UPDATE images SET is_deleted = 1, updated_at = ? WHERE relative_path = ?').run(nowIso(), relativePath);
   },
 
-  markProfileImagesDeleted(profileId: number, activeRelativePaths: string[]): number {
-    const rows = database.prepare('SELECT relative_path FROM images WHERE profile_id = ? AND is_deleted = 0').all(profileId) as Array<{ relative_path: string }>;
+  markFolderImagesDeleted(folderId: number, activeRelativePaths: string[]): number {
+    const rows = database.prepare('SELECT relative_path FROM images WHERE profile_id = ? AND is_deleted = 0').all(folderId) as Array<{ relative_path: string }>;
     const active = new Set(activeRelativePaths);
     let removedCount = 0;
 
@@ -272,8 +272,8 @@ export const imageRepository = {
     return removedCount;
   },
 
-  markAllDeletedByProfile(profileId: number): number {
-    const result = database.prepare('UPDATE images SET is_deleted = 1, updated_at = ? WHERE profile_id = ? AND is_deleted = 0').run(nowIso(), profileId);
+  markAllDeletedByFolder(folderId: number): number {
+    const result = database.prepare('UPDATE images SET is_deleted = 1, updated_at = ? WHERE profile_id = ? AND is_deleted = 0').run(nowIso(), folderId);
     return Number(result.changes ?? 0);
   },
 
@@ -287,9 +287,9 @@ export const imageRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS profileId,
-        profiles.slug AS profileSlug,
-        profiles.name AS profileName,
+        images.profile_id AS folderId,
+        profiles.slug AS folderSlug,
+        profiles.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -309,15 +309,15 @@ export const imageRepository = {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0').get() as { count: number }).count);
   },
 
-  listProfileImages(profileId: number, page: number, limit: number): FeedImage[] {
+  listFolderImages(folderId: number, page: number, limit: number): FeedImage[] {
     const offset = (page - 1) * limit;
     return database.prepare(
       `
       SELECT
         images.id,
-        images.profile_id AS profileId,
-        profiles.slug AS profileSlug,
-        profiles.name AS profileName,
+        images.profile_id AS folderId,
+        profiles.slug AS folderSlug,
+        profiles.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -330,17 +330,17 @@ export const imageRepository = {
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
-    ).all(profileId, limit, offset) as unknown as FeedImage[];
+    ).all(folderId, limit, offset) as unknown as FeedImage[];
   },
 
-  countByProfile(profileId: number): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE profile_id = ? AND is_deleted = 0').get(profileId) as { count: number }).count);
+  countByFolder(folderId: number): number {
+    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE profile_id = ? AND is_deleted = 0').get(folderId) as { count: number }).count);
   },
 
-  getLatestProfileImageId(profileId: number): number | null {
+  getLatestFolderImageId(folderId: number): number | null {
     const row = database.prepare(
       'SELECT id FROM images WHERE profile_id = ? AND is_deleted = 0 ORDER BY sort_timestamp DESC, id DESC LIMIT 1'
-    ).get(profileId) as { id: number } | undefined;
+    ).get(folderId) as { id: number } | undefined;
     return row?.id ?? null;
   },
 
@@ -349,9 +349,9 @@ export const imageRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS profileId,
-        profiles.slug AS profileSlug,
-        profiles.name AS profileName,
+        images.profile_id AS folderId,
+        profiles.slug AS folderSlug,
+        profiles.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -381,7 +381,7 @@ export const imageRepository = {
       ORDER BY sort_timestamp DESC, id DESC
       LIMIT 1
       `
-    ).get(detail.profileId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
+    ).get(detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
 
     const previous = database.prepare(
       `
@@ -392,7 +392,7 @@ export const imageRepository = {
       ORDER BY sort_timestamp ASC, id ASC
       LIMIT 1
       `
-    ).get(detail.profileId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
+    ).get(detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
 
     return {
       ...detail,
@@ -424,9 +424,9 @@ export const likeRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS profileId,
-        profiles.slug AS profileSlug,
-        profiles.name AS profileName,
+        images.profile_id AS folderId,
+        profiles.slug AS folderSlug,
+        profiles.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -460,10 +460,10 @@ export const likeRepository = {
     return Number(result.changes ?? 0) > 0;
   },
 
-  removeByProfile(profileId: number): number {
+  removeByFolder(folderId: number): number {
     const result = database.prepare(
       'DELETE FROM likes WHERE image_id IN (SELECT id FROM images WHERE profile_id = ?)'
-    ).run(profileId);
+    ).run(folderId);
     return Number(result.changes ?? 0);
   }
 };

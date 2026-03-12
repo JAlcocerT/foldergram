@@ -2,11 +2,11 @@
   <article class="card overflow-hidden">
     <!-- Header -->
     <div class="flex items-center justify-between gap-4 px-4 min-h-[3.65rem]">
-      <RouterLink class="feed-card__profile flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'profile', params: { slug: item.profileSlug } }">
-        <Avatar :name="item.profileName" :src="avatarUrl" />
+      <RouterLink class="feed-card__folder flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'folder', params: { slug: item.folderSlug } }">
+        <Avatar :name="item.folderName" :src="avatarUrl" />
         <div>
-          <h3 class="m-0 text-[0.9rem] font-semibold">{{ item.profileSlug }}</h3>
-          <p class="m-0 text-muted text-[0.85rem]">{{ item.profileName }}</p>
+          <h3 class="m-0 text-[0.9rem] font-semibold">{{ item.folderSlug }}</h3>
+          <p class="m-0 text-muted text-[0.85rem]">{{ item.folderName }}</p>
         </div>
       </RouterLink>
       <button class="inline-flex items-center justify-center w-8 h-8 p-0 border-0 text-muted bg-transparent cursor-pointer" type="button" aria-label="More options" @click="menuOpen = true">
@@ -67,8 +67,8 @@
               </svg>
             </a>
           </RouterLink>
-          <!-- Profile button -->
-          <RouterLink class="inline-flex items-center justify-center w-8 h-8 border-0 bg-transparent cursor-pointer color-inherit transition-[opacity,transform] duration-180 hover:opacity-72 hover:-translate-y-px" :to="{ name: 'profile', params: { slug: item.profileSlug } }" aria-label="Open folder">
+          <!-- Folder button -->
+          <RouterLink class="inline-flex items-center justify-center w-8 h-8 border-0 bg-transparent cursor-pointer color-inherit transition-[opacity,transform] duration-180 hover:opacity-72 hover:-translate-y-px" :to="{ name: 'folder', params: { slug: item.folderSlug } }" aria-label="Open folder">
             <svg class="w-[1.45rem] h-[1.45rem]" viewBox="0 0 24 24" role="presentation">
               <path
                 d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5C19 16 16 14 12 14Z"
@@ -104,7 +104,7 @@
 
       <!-- Caption -->
       <p class="m-0 text-[0.88rem]">
-        <strong class="mr-[0.35rem]">{{ item.profileSlug }}</strong>
+        <strong class="mr-[0.35rem]">{{ item.folderSlug }}</strong>
         {{ caption }}
       </p>
       <!-- Date -->
@@ -178,7 +178,7 @@ import ResilientImage from './ResilientImage.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
-import { useProfilesStore } from '../stores/profiles';
+import { useFoldersStore } from '../stores/folders';
 import type { FeedItem } from '../types/api';
 import Avatar from './Avatar.vue';
 
@@ -190,7 +190,7 @@ const props = defineProps<{
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
-const profilesStore = useProfilesStore();
+const foldersStore = useFoldersStore();
 const route = useRoute();
 const menuOpen = ref(false);
 const deleting = ref(false);
@@ -243,7 +243,7 @@ async function confirmDelete() {
     const deleted = await deleteImage(props.item.id);
     feedStore.removeImage(deleted.id);
     likesStore.removeImage(deleted.id);
-    profilesStore.removeImage(deleted.id, deleted.profileSlug);
+    foldersStore.removeImage(deleted.id, deleted.folderSlug);
     appStore.removeIndexedImage();
     confirmDeleteOpen.value = false;
   } finally {

@@ -28,8 +28,8 @@ export const useFeedStore = defineStore('feed', {
       this.items = this.items.filter((item) => item.id !== id);
     },
 
-    removeProfileItems(profileSlug: string) {
-      this.items = this.items.filter((item) => item.profileSlug !== profileSlug);
+    removeFolderItems(folderSlug: string) {
+      this.items = this.items.filter((item) => item.folderSlug !== folderSlug);
     },
 
     async loadInitial(force = false) {

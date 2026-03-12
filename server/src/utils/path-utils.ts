@@ -34,7 +34,7 @@ export function getRelativeGalleryPath(galleryRoot: string, absolutePath: string
   return normalizePath(path.relative(galleryRoot, absolutePath));
 }
 
-export function getProfileSlugFromRelativePath(relativePath: string): string | null {
-  const [profileSlug] = normalizePath(relativePath).split('/');
-  return profileSlug || null;
+export function getFolderSlugFromRelativePath(relativePath: string): string | null {
+  const [folderSlug] = normalizePath(relativePath).split('/');
+  return folderSlug || null;
 }

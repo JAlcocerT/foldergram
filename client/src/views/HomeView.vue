@@ -3,7 +3,7 @@
     <!-- Main feed column -->
     <div class="min-w-0">
       <header v-if="appStore.stats" class="flex items-end justify-between gap-4 pb-[0.8rem]">
-        <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.profiles }} folders</p>
+        <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders</p>
       </header>
 
       <!-- Inline scan state (while feed already loaded) -->
@@ -13,17 +13,17 @@
       </section>
 
       <!-- Stories bar -->
-      <section v-if="storyProfiles.length" class="flex gap-4 overflow-x-auto pb-4 mb-5 [scrollbar-width:none]" aria-label="Folders">
+      <section v-if="storyFolders.length" class="flex gap-4 overflow-x-auto pb-4 mb-5 [scrollbar-width:none]" aria-label="Folders">
         <RouterLink
-          v-for="profile in storyProfiles"
-          :key="profile.id"
+          v-for="folder in storyFolders"
+          :key="folder.id"
           class="flex flex-col items-center gap-[0.45rem] min-w-[4.55rem] text-muted text-[0.69rem] text-center"
-          :to="{ name: 'profile', params: { slug: profile.slug } }"
+          :to="{ name: 'folder', params: { slug: folder.slug } }"
         >
           <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
-            <Avatar class="w-[3.95rem] h-[3.95rem] border-2 border-bg" :name="profile.name" :src="profile.avatarUrl" />
+            <Avatar class="w-[3.95rem] h-[3.95rem] border-2 border-bg" :name="folder.name" :src="folder.avatarUrl" />
           </div>
-          <span class="max-w-full overflow-hidden text-ellipsis">{{ profile.slug }}</span>
+          <span class="max-w-full overflow-hidden text-ellipsis">{{ folder.slug }}</span>
         </RouterLink>
       </section>
 
@@ -74,7 +74,7 @@
           <strong class="block text-text text-[0.87rem] font-bold">{{ homeSummaryFolder.slug }}</strong>
           <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ homeSummaryFolder.name }}</p>
         </div>
-        <RouterLink class="ml-auto text-accent-strong text-[0.76rem] font-bold" :to="{ name: 'profile', params: { slug: homeSummaryFolder.slug } }">Open</RouterLink>
+        <RouterLink class="ml-auto text-accent-strong text-[0.76rem] font-bold" :to="{ name: 'folder', params: { slug: homeSummaryFolder.slug } }">Open</RouterLink>
       </div>
 
       <div class="flex items-center justify-between gap-4 text-text text-[0.96rem] font-bold">
@@ -84,15 +84,15 @@
 
       <div class="grid gap-[0.95rem]">
         <RouterLink
-          v-for="profile in recommendedFolders"
-          :key="profile.id"
+          v-for="folder in recommendedFolders"
+          :key="folder.id"
           class="flex items-center gap-[0.8rem]"
-          :to="{ name: 'profile', params: { slug: profile.slug } }"
+          :to="{ name: 'folder', params: { slug: folder.slug } }"
         >
-          <Avatar class="w-11 h-11" :name="profile.name" :src="profile.avatarUrl" />
+          <Avatar class="w-11 h-11" :name="folder.name" :src="folder.avatarUrl" />
           <div class="flex-1 min-w-0">
-            <strong class="block text-text text-[0.87rem] font-bold">{{ profile.slug }}</strong>
-            <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ profile.imageCount }} posts</p>
+            <strong class="block text-text text-[0.87rem] font-bold">{{ folder.slug }}</strong>
+            <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ folder.imageCount }} posts</p>
           </div>
           <span class="ml-auto text-accent-strong text-[0.76rem] font-bold">Open</span>
         </RouterLink>
@@ -113,17 +113,17 @@ import InfiniteLoader from '../components/InfiniteLoader.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
-import { useProfilesStore } from '../stores/profiles';
-import { buildLikedCountByProfile, selectHomeRecommendations } from '../utils/home-recommendations';
+import { useFoldersStore } from '../stores/folders';
+import { buildLikedCountByFolder, selectHomeRecommendations } from '../utils/home-recommendations';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
-const profilesStore = useProfilesStore();
-const storyProfiles = computed(() => profilesStore.items.slice(0, 10));
-const likedCountByProfile = computed(() => buildLikedCountByProfile(likesStore.items));
+const foldersStore = useFoldersStore();
+const storyFolders = computed(() => foldersStore.items.slice(0, 10));
+const likedCountByFolder = computed(() => buildLikedCountByFolder(likesStore.items));
 const homeRecommendations = computed(() =>
-  selectHomeRecommendations(profilesStore.items, likedCountByProfile.value, appStore.lastOpenedProfileSlug)
+  selectHomeRecommendations(foldersStore.items, likedCountByFolder.value, appStore.lastOpenedFolderSlug)
 );
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
@@ -153,14 +153,14 @@ onMounted(async () => {
 });
 
 watch(
-  () => [appStore.stats?.indexedImages ?? 0, appStore.stats?.profiles ?? 0] as const,
-  async ([indexedImages, profileCount]) => {
+  () => [appStore.stats?.indexedImages ?? 0, appStore.stats?.folders ?? 0] as const,
+  async ([indexedImages, folderCount]) => {
     if (appStore.isLibraryUnavailable) {
       return;
     }
 
-    if (profileCount > 0 && profileCount !== profilesStore.items.length) {
-      await profilesStore.fetchProfiles(true);
+    if (folderCount > 0 && folderCount !== foldersStore.items.length) {
+      await foldersStore.fetchFolders(true);
     }
 
     if (indexedImages > 0 && feedStore.items.length === 0 && !feedStore.loading) {

@@ -27,13 +27,13 @@ Foldergram is a local-only photo gallery app for browsing folders in an Instagra
 
 ## How it works
 
-- Each direct child folder inside the configured `GALLERY_ROOT` becomes one folder profile.
+- Each direct child folder inside the configured `GALLERY_ROOT` becomes one indexed folder.
 - Each supported image file inside that folder becomes one indexed post.
 - Images placed directly inside the gallery root are ignored.
 - The backend scans the configured gallery root on startup, writes metadata to `data/db/gallery.sqlite` by default, and generates:
   - square feed/grid thumbnails in `data/thumbnails/`
   - larger detail previews in `data/previews/`
-- Feed and profile requests read from SQLite only. They do not scan the filesystem during API requests.
+- Feed and folder requests read from SQLite only. They do not scan the filesystem during API requests.
 - In development mode, Chokidar watches the configured gallery root and batches file changes before re-indexing.
 - If the configured storage is unavailable, the app shows a library-unavailable state instead of soft-deleting indexed content.
 
@@ -51,8 +51,8 @@ Nested subfolders are ignored by design.
 
 1. Copy `.env.example` to `.env`.
 2. Keep the default paths unless you want custom directories.
-3. Add profile folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
-4. Add image files inside each profile folder.
+3. Add folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
+4. Add image files inside each folder.
 5. Install dependencies:
 
 ```bash
@@ -94,7 +94,7 @@ Current tests cover:
 
 - scanner utility fingerprinting
 - stable feed sort timestamp behavior
-- profile slug generation
+- folder slug generation
 - derivative path generation
 - path normalization for Windows-style separators
 
@@ -135,9 +135,9 @@ WSL note:
 
 - `GET /api/health`
 - `GET /api/feed?page=1&limit=24`
-- `GET /api/profiles`
-- `GET /api/profiles/:slug`
-- `GET /api/profiles/:slug/images?page=1&limit=24`
+- `GET /api/folders`
+- `GET /api/folders/:slug`
+- `GET /api/folders/:slug/images?page=1&limit=24`
 - `GET /api/likes`
 - `GET /api/images/:id`
 - `POST /api/images/:id/like`

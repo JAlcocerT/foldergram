@@ -1,4 +1,4 @@
-export interface ProfileRecord {
+export interface FolderRecord {
   id: number;
   slug: string;
   name: string;
@@ -8,7 +8,7 @@ export interface ProfileRecord {
   updated_at: string;
 }
 
-export interface ProfileSummaryRecord extends ProfileRecord {
+export interface FolderSummaryRecord extends FolderRecord {
   image_count: number;
   latest_image_mtime_ms: number | null;
 }
@@ -68,9 +68,9 @@ export interface LikeRecord {
 
 export interface FeedImage {
   id: number;
-  profileId: number;
-  profileSlug: string;
-  profileName: string;
+  folderId: number;
+  folderSlug: string;
+  folderName: string;
   filename: string;
   width: number;
   height: number;
