@@ -79,10 +79,10 @@ const baseFolders = [
 ];
 
 const likedCountByFolder = buildLikedCountByFolder([
-  { id: 101, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1 },
-  { id: 102, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2 },
-  { id: 103, folderId: 5, folderSlug: 'epsilon', folderName: 'Epsilon', folderPath: 'gallery/epsilon', folderBreadcrumb: 'gallery', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3 },
-  { id: 104, folderId: 6, folderSlug: 'zeta', folderName: 'Zeta', folderPath: 'gallery/zeta', folderBreadcrumb: 'gallery', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4 }
+  { id: 101, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1, takenAt: null },
+  { id: 102, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2, takenAt: null },
+  { id: 103, folderId: 5, folderSlug: 'epsilon', folderName: 'Epsilon', folderPath: 'gallery/epsilon', folderBreadcrumb: 'gallery', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3, takenAt: null },
+  { id: 104, folderId: 6, folderSlug: 'zeta', folderName: 'Zeta', folderPath: 'gallery/zeta', folderBreadcrumb: 'gallery', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4, takenAt: null }
 ]);
 
 describe('home recommendations', () => {

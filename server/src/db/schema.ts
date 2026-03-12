@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS images (
   mtime_ms REAL NOT NULL,
   first_seen_at TEXT NOT NULL,
   sort_timestamp INTEGER NOT NULL,
+  taken_at INTEGER NULL,
+  taken_at_source TEXT NULL,
   thumbnail_path TEXT NOT NULL,
   preview_path TEXT NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -71,6 +73,8 @@ CREATE INDEX IF NOT EXISTS idx_folders_slug ON folders(slug);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_folders_folder_path ON folders(folder_path);
 CREATE INDEX IF NOT EXISTS idx_images_folder_id ON images(folder_id);
 CREATE INDEX IF NOT EXISTS idx_images_sort_timestamp ON images(sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_taken_at ON images(taken_at DESC);
+CREATE INDEX IF NOT EXISTS idx_images_taken_at_source ON images(is_deleted, taken_at_source);
 CREATE INDEX IF NOT EXISTS idx_images_folder_sort ON images(folder_id, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);

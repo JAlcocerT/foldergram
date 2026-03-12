@@ -9,10 +9,29 @@ import type {
   LikeRecord,
   FolderRecord,
   FolderSummaryRecord,
-  ScanRunRecord
+  ScanRunRecord,
+  TakenAtSource
 } from '../types/models.js';
 
 const database = databaseManager.connection;
+const EFFECTIVE_FEED_TIME_SQL = 'COALESCE(images.taken_at, images.sort_timestamp)';
+const FEED_IMAGE_SELECT_SQL = `
+  SELECT
+    images.id,
+    images.folder_id AS folderId,
+    folders.slug AS folderSlug,
+    folders.name AS folderName,
+    folders.folder_path AS folderPath,
+    images.filename,
+    images.width,
+    images.height,
+    images.thumbnail_path AS thumbnailUrl,
+    images.preview_path AS previewUrl,
+    images.sort_timestamp AS sortTimestamp,
+    images.taken_at AS takenAt
+  FROM images
+  INNER JOIN folders ON folders.id = images.folder_id
+`;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -43,6 +62,8 @@ export interface UpsertImageInput {
   mtimeMs: number;
   firstSeenAt: string;
   sortTimestamp: number;
+  takenAt: number;
+  takenAtSource: TakenAtSource;
   thumbnailPath: string;
   previewPath: string;
 }
@@ -57,6 +78,8 @@ export interface RefreshIndexedImageInput {
   mimeType: string;
   fingerprint: string;
   mtimeMs: number;
+  takenAt: number;
+  takenAtSource: TakenAtSource;
   thumbnailPath: string;
   previewPath: string;
 }
@@ -201,10 +224,10 @@ export const imageRepository = {
       `
       INSERT INTO images (
         folder_id, filename, extension, relative_path, absolute_path, file_size, width, height,
-        mime_type, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp,
+        mime_type, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp, taken_at, taken_at_source,
         thumbnail_path, preview_path, is_deleted, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
       ON CONFLICT(relative_path) DO UPDATE SET
         folder_id = excluded.folder_id,
         filename = excluded.filename,
@@ -216,6 +239,8 @@ export const imageRepository = {
         mime_type = excluded.mime_type,
         checksum_or_fingerprint = excluded.checksum_or_fingerprint,
         mtime_ms = excluded.mtime_ms,
+        taken_at = excluded.taken_at,
+        taken_at_source = excluded.taken_at_source,
         thumbnail_path = excluded.thumbnail_path,
         preview_path = excluded.preview_path,
         is_deleted = 0,
@@ -235,6 +260,8 @@ export const imageRepository = {
       input.mtimeMs,
       input.firstSeenAt,
       input.sortTimestamp,
+      input.takenAt,
+      input.takenAtSource,
       input.thumbnailPath,
       input.previewPath,
       nowIso()
@@ -256,6 +283,8 @@ export const imageRepository = {
         mime_type = ?,
         checksum_or_fingerprint = ?,
         mtime_ms = ?,
+        taken_at = ?,
+        taken_at_source = ?,
         thumbnail_path = ?,
         preview_path = ?,
         is_deleted = 0,
@@ -271,6 +300,8 @@ export const imageRepository = {
       input.mimeType,
       input.fingerprint,
       input.mtimeMs,
+      input.takenAt,
+      input.takenAtSource,
       input.thumbnailPath,
       input.previewPath,
       nowIso(),
@@ -312,20 +343,7 @@ export const imageRepository = {
     const offset = (page - 1) * limit;
     return database.prepare(
       `
-      SELECT
-        images.id,
-        images.folder_id AS folderId,
-        folders.slug AS folderSlug,
-        folders.name AS folderName,
-        folders.folder_path AS folderPath,
-        images.filename,
-        images.width,
-        images.height,
-        images.thumbnail_path AS thumbnailUrl,
-        images.preview_path AS previewUrl,
-        images.sort_timestamp AS sortTimestamp
-      FROM images
-      INNER JOIN folders ON folders.id = images.folder_id
+      ${FEED_IMAGE_SELECT_SQL}
       WHERE images.is_deleted = 0
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
@@ -337,24 +355,134 @@ export const imageRepository = {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0').get() as { count: number }).count);
   },
 
+  listRecentCandidates(offset: number, limit: number): FeedImage[] {
+    return database.prepare(
+      `
+      ${FEED_IMAGE_SELECT_SQL}
+      WHERE images.is_deleted = 0
+      ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(limit, offset) as unknown as FeedImage[];
+  },
+
+  countRediscover(cutoffTimestamp: number): number {
+    return Number(
+      (
+        database
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?`)
+          .get(cutoffTimestamp) as { count: number }
+      ).count
+    );
+  },
+
+  listRediscoverCandidates(offset: number, limit: number, cutoffTimestamp: number): FeedImage[] {
+    return database.prepare(
+      `
+      ${FEED_IMAGE_SELECT_SQL}
+      LEFT JOIN likes ON likes.image_id = images.id
+      WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+      ORDER BY
+        CASE WHEN likes.image_id IS NULL THEN 0 ELSE 1 END DESC,
+        ${EFFECTIVE_FEED_TIME_SQL} DESC,
+        images.sort_timestamp DESC,
+        images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(cutoffTimestamp, limit, offset) as unknown as FeedImage[];
+  },
+
+  listRandom(page: number, limit: number, seed: number): FeedImage[] {
+    const offset = (page - 1) * limit;
+    return database.prepare(
+      `
+      ${FEED_IMAGE_SELECT_SQL}
+      WHERE images.is_deleted = 0
+      ORDER BY ABS(((images.id * 1103515245) + (? * 1013904223)) % 2147483647), images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(seed, limit, offset) as unknown as FeedImage[];
+  },
+
+  countByMonthDayKeys(monthDayKeys: string[], maxYearExclusive: number): number {
+    if (monthDayKeys.length === 0) {
+      return 0;
+    }
+
+    const placeholders = monthDayKeys.map(() => '?').join(', ');
+    return Number(
+      (
+        database
+          .prepare(
+            `
+            SELECT COUNT(*) AS count
+            FROM images
+            WHERE images.is_deleted = 0
+              AND strftime('%m-%d', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') IN (${placeholders})
+              AND CAST(strftime('%Y', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') AS INTEGER) < ?
+            `
+          )
+          .get(...monthDayKeys, maxYearExclusive) as { count: number }
+      ).count
+    );
+  },
+
+  listByMonthDayKeys(monthDayKeys: string[], maxYearExclusive: number, page: number, limit: number): FeedImage[] {
+    if (monthDayKeys.length === 0) {
+      return [];
+    }
+
+    const offset = (page - 1) * limit;
+    const placeholders = monthDayKeys.map(() => '?').join(', ');
+
+    return database.prepare(
+      `
+      ${FEED_IMAGE_SELECT_SQL}
+      WHERE images.is_deleted = 0
+        AND strftime('%m-%d', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') IN (${placeholders})
+        AND CAST(strftime('%Y', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') AS INTEGER) < ?
+      ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(...monthDayKeys, maxYearExclusive, limit, offset) as unknown as FeedImage[];
+  },
+
+  countByEffectiveTimeRange(startTimestamp: number, endTimestamp: number): number {
+    return Number(
+      (
+        database
+          .prepare(
+            `
+            SELECT COUNT(*) AS count
+            FROM images
+            WHERE images.is_deleted = 0
+              AND ${EFFECTIVE_FEED_TIME_SQL} BETWEEN ? AND ?
+            `
+          )
+          .get(startTimestamp, endTimestamp) as { count: number }
+      ).count
+    );
+  },
+
+  listByEffectiveTimeRange(startTimestamp: number, endTimestamp: number, page: number, limit: number): FeedImage[] {
+    const offset = (page - 1) * limit;
+
+    return database.prepare(
+      `
+      ${FEED_IMAGE_SELECT_SQL}
+      WHERE images.is_deleted = 0
+        AND ${EFFECTIVE_FEED_TIME_SQL} BETWEEN ? AND ?
+      ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(startTimestamp, endTimestamp, limit, offset) as unknown as FeedImage[];
+  },
+
   listFolderImages(folderId: number, page: number, limit: number): FeedImage[] {
     const offset = (page - 1) * limit;
     return database.prepare(
       `
-      SELECT
-        images.id,
-        images.folder_id AS folderId,
-        folders.slug AS folderSlug,
-        folders.name AS folderName,
-        folders.folder_path AS folderPath,
-        images.filename,
-        images.width,
-        images.height,
-        images.thumbnail_path AS thumbnailUrl,
-        images.preview_path AS previewUrl,
-        images.sort_timestamp AS sortTimestamp
-      FROM images
-      INNER JOIN folders ON folders.id = images.folder_id
+      ${FEED_IMAGE_SELECT_SQL}
       WHERE images.folder_id = ? AND images.is_deleted = 0
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
@@ -370,6 +498,28 @@ export const imageRepository = {
     return database
       .prepare('SELECT * FROM images WHERE folder_id = ? AND is_deleted = 0 ORDER BY id ASC')
       .all(folderId) as unknown as ImageRecord[];
+  },
+
+  countMissingTimestampMetadataByFolder(folderId: number): number {
+    return Number(
+      (
+        database
+          .prepare(
+            'SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0 AND (taken_at IS NULL OR taken_at_source IS NULL)'
+          )
+          .get(folderId) as { count: number }
+      ).count
+    );
+  },
+
+  countByTakenAtSource(source: TakenAtSource): number {
+    return Number(
+      (
+        database
+          .prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND taken_at_source = ?')
+          .get(source) as { count: number }
+      ).count
+    );
   },
 
   getLatestFolderImageId(folderId: number): number | null {
@@ -397,7 +547,8 @@ export const imageRepository = {
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
         images.absolute_path AS originalUrl,
-        images.sort_timestamp AS sortTimestamp
+        images.sort_timestamp AS sortTimestamp,
+        images.taken_at AS takenAt
       FROM images
       INNER JOIN folders ON folders.id = images.folder_id
       WHERE images.id = ? AND images.is_deleted = 0
@@ -469,7 +620,8 @@ export const likeRepository = {
         images.height,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
-        images.sort_timestamp AS sortTimestamp
+        images.sort_timestamp AS sortTimestamp,
+        images.taken_at AS takenAt
       FROM likes
       INNER JOIN images ON images.id = likes.image_id
       INNER JOIN folders ON folders.id = images.folder_id
@@ -477,6 +629,51 @@ export const likeRepository = {
       ORDER BY likes.created_at DESC, likes.image_id DESC
       `
     ).all() as unknown as FeedImage[];
+  },
+
+  countLikedOlderThan(cutoffTimestamp: number): number {
+    return Number(
+      (
+        database
+          .prepare(
+            `
+            SELECT COUNT(*) AS count
+            FROM likes
+            INNER JOIN images ON images.id = likes.image_id
+            WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+            `
+          )
+          .get(cutoffTimestamp) as { count: number }
+      ).count
+    );
+  },
+
+  listLikedOlderThan(page: number, limit: number, cutoffTimestamp: number): FeedImage[] {
+    const offset = (page - 1) * limit;
+
+    return database.prepare(
+      `
+      SELECT
+        images.id,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
+        folders.folder_path AS folderPath,
+        images.filename,
+        images.width,
+        images.height,
+        images.thumbnail_path AS thumbnailUrl,
+        images.preview_path AS previewUrl,
+        images.sort_timestamp AS sortTimestamp,
+        images.taken_at AS takenAt
+      FROM likes
+      INNER JOIN images ON images.id = likes.image_id
+      INNER JOIN folders ON folders.id = images.folder_id
+      WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+      ORDER BY likes.created_at DESC, likes.image_id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(cutoffTimestamp, limit, offset) as unknown as FeedImage[];
   },
 
   upsert(imageId: number): LikeRecord {

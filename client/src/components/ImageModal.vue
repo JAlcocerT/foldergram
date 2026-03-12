@@ -215,7 +215,7 @@ const readableFilename = computed(() =>
 );
 const formattedDate = computed(() =>
   props.image
-    ? new Date(props.image.sortTimestamp).toLocaleDateString(undefined, {
+    ? new Date(props.image.takenAt ?? props.image.sortTimestamp).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
         year: 'numeric'

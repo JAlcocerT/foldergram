@@ -12,9 +12,16 @@ const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(60).default(24)
 });
+const feedQuerySchema = paginationQuerySchema.extend({
+  mode: z.enum(['recent', 'rediscover', 'random']).default('recent'),
+  seed: z.coerce.number().int().nonnegative().optional()
+});
 
 const slugSchema = z.object({
   slug: z.string().min(1).max(240)
+});
+const momentIdSchema = z.object({
+  id: z.string().min(1).max(120)
 });
 
 const imageIdSchema = z.object({
@@ -35,8 +42,27 @@ router.get('/health', (_request, response) => {
 });
 
 router.get('/feed', (request, response) => {
+  const query = feedQuerySchema.parse(request.query);
+  response.json(galleryService.getFeed(query.page, query.limit, query.mode, query.seed));
+});
+
+router.get('/feed/moments', (_request, response) => {
+  response.json({
+    items: galleryService.listMoments()
+  });
+});
+
+router.get('/feed/moments/:id', (request, response) => {
+  const params = momentIdSchema.parse(request.params);
   const query = paginationQuerySchema.parse(request.query);
-  response.json(galleryService.getFeed(query.page, query.limit));
+  const payload = galleryService.getMomentFeed(params.id, query.page, query.limit);
+
+  if (!payload) {
+    response.status(404).json({ message: 'Feed capsule not found' });
+    return;
+  }
+
+  response.json(payload);
 });
 
 router.get('/folders', (_request, response) => {

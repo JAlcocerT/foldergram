@@ -29,6 +29,7 @@ import {
   getStableSortTimestamp,
   isSupportedImageFile
 } from '../utils/image-utils.js';
+import { resolveTakenAt } from '../utils/exif-utils.js';
 import {
   getFolderDisplayInfo,
   getRelativeGalleryPath,
@@ -576,8 +577,10 @@ class ScannerService {
       }))
     );
     const storedFolderState = folderScanStates.get(sourceFolderPath);
+    const hasCompleteTakenAtMetadata = imageRepository.countMissingTimestampMetadataByFolder(folder.id) === 0;
     const hasMatchingIndexedFiles =
       discoveredFiles.length > 0 &&
+      hasCompleteTakenAtMetadata &&
       imageRepository.countByFolder(folder.id) === discoveredFiles.length &&
       discoveredFiles.every((file) => {
         const existingImage = imageRepository.getByRelativePath(file.relativePath);
@@ -1189,6 +1192,7 @@ class ScannerService {
     const extension = path.extname(file.absolutePath).toLowerCase();
     const absolutePathChanged = existing ? normalizePath(existing.absolute_path) !== normalizePath(file.absolutePath) : false;
     const derivativeRelativePath = getDerivativeRelativePath(file.relativePath);
+    const needsTakenAtBackfill = existing?.taken_at === null || existing?.taken_at_source === null;
 
     if (existing && existing.checksum_or_fingerprint === fingerprint) {
       const refreshedIndexedRow = shouldRefreshUnchangedImage({
@@ -1198,7 +1202,24 @@ class ScannerService {
         isDeleted: existing.is_deleted === 1
       });
 
-      if (refreshedIndexedRow) {
+      let metadataTakenAt = existing.taken_at;
+      if (needsTakenAtBackfill) {
+        metadataTakenAt = (await readImageMetadata(file.absolutePath)).takenAt;
+      }
+
+      if (refreshedIndexedRow || needsTakenAtBackfill) {
+        const resolvedTakenAt = resolveTakenAt({
+          exifTakenAt: metadataTakenAt,
+          existingTakenAt: existing.taken_at,
+          existingTakenAtSource: existing.taken_at_source,
+          existingSortTimestamp: existing.sort_timestamp,
+          existingFirstSeenAt: existing.first_seen_at,
+          existingMtimeMs: existing.mtime_ms,
+          fileMtimeMs: file.stats.mtimeMs,
+          firstSeenAt: existing.first_seen_at,
+          stableFallbackTimestamp: existing.sort_timestamp
+        });
+
         imageRepository.refreshIndexed({
           folderId: folder.id,
           filename: path.basename(file.absolutePath),
@@ -1209,6 +1230,8 @@ class ScannerService {
           mimeType: getMimeTypeFromExtension(extension),
           fingerprint,
           mtimeMs: file.stats.mtimeMs,
+          takenAt: resolvedTakenAt.takenAt,
+          takenAtSource: resolvedTakenAt.source,
           thumbnailPath: existing.thumbnail_path || derivativeRelativePath,
           previewPath: existing.preview_path || derivativeRelativePath
         });
@@ -1239,6 +1262,17 @@ class ScannerService {
       file.stats.mtimeMs
     );
     const firstSeenAt = existing?.first_seen_at ?? new Date().toISOString();
+    const resolvedTakenAt = resolveTakenAt({
+      exifTakenAt: metadata.takenAt,
+      existingTakenAt: existing?.taken_at,
+      existingTakenAtSource: existing?.taken_at_source,
+      existingSortTimestamp: existing?.sort_timestamp,
+      existingFirstSeenAt: existing?.first_seen_at,
+      existingMtimeMs: existing?.mtime_ms,
+      fileMtimeMs: file.stats.mtimeMs,
+      firstSeenAt,
+      stableFallbackTimestamp: sortTimestamp
+    });
 
     imageRepository.upsert({
       folderId: folder.id,
@@ -1254,6 +1288,8 @@ class ScannerService {
       mtimeMs: file.stats.mtimeMs,
       firstSeenAt,
       sortTimestamp,
+      takenAt: resolvedTakenAt.takenAt,
+      takenAtSource: resolvedTakenAt.source,
       thumbnailPath: derivativeRelativePath,
       previewPath: derivativeRelativePath
     });

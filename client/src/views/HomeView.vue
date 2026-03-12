@@ -30,20 +30,54 @@
         <p class="m-0 text-muted">{{ scanDescription }}</p>
       </section>
 
-      <!-- Stories bar -->
-      <section v-if="storyFolders.length" class="flex gap-4 overflow-x-auto pb-4 mb-5 [scrollbar-width:none]" aria-label="Folders">
-        <RouterLink
-          v-for="folder in storyFolders"
-          :key="folder.id"
-          class="flex flex-col items-center gap-[0.45rem] min-w-[4.55rem] text-muted text-[0.69rem] text-center"
-          :to="{ name: 'folder', params: { slug: folder.slug } }"
-          :title="folder.breadcrumb ? `${folder.breadcrumb} / ${folder.name}` : folder.name"
-        >
-          <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
-            <Avatar class="w-[3.95rem] h-[3.95rem] border-2 border-bg" :name="folder.name" :src="folder.avatarUrl" />
+      <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5">
+        <div class="grid gap-[0.75rem]">
+          <div class="grid gap-[0.2rem]">
+            <strong class="text-[1rem]">Home Feed</strong>
+            <p class="m-0 text-muted max-w-[42rem]">{{ activeModeDescription }}</p>
           </div>
-          <span class="max-w-full overflow-hidden text-ellipsis">{{ folder.name }}</span>
-        </RouterLink>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="mode in feedModes"
+              :key="mode.id"
+              class="min-h-10 px-4 rounded-full border text-[0.82rem] font-bold transition-[background-color,border-color,color,box-shadow] duration-180"
+              :class="feedStore.mode === mode.id ? 'border-[#1f2937] text-white shadow-[var(--shadow)]' : 'border-border text-text bg-surface hover:border-text/25 hover:bg-surface-alt'"
+              :style="
+                feedStore.mode === mode.id
+                  ? 'background: linear-gradient(135deg, #1f2937 0%, #111827 100%);'
+                  : undefined
+              "
+              type="button"
+              @click="selectMode(mode.id)"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
+        </div>
+
+        <section v-if="momentsStore.items.length" class="grid gap-[0.8rem]">
+          <div class="flex items-center justify-between gap-4">
+            <div class="grid gap-[0.15rem]">
+              <strong class="text-[0.98rem]">{{ momentsStore.railTitle }}</strong>
+              <p class="m-0 text-muted text-[0.82rem]">{{ momentsStore.railDescription }}</p>
+            </div>
+          </div>
+          <div class="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
+            <RouterLink
+              v-for="moment in momentsStore.items"
+              :key="moment.id"
+              class="flex flex-col items-center gap-[0.45rem] min-w-[5.5rem] text-muted text-[0.69rem] text-center"
+              :to="{ name: 'moment', params: { id: moment.id } }"
+              :title="`${moment.title} · ${moment.subtitle}`"
+            >
+              <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
+                <Avatar class="w-[4.2rem] h-[4.2rem] border-2 border-bg" :name="moment.title" :src="moment.coverImage.thumbnailUrl" />
+              </div>
+              <span class="max-w-full overflow-hidden text-ellipsis font-semibold text-text">{{ moment.title }}</span>
+              <span class="max-w-full overflow-hidden text-ellipsis">{{ moment.imageCount }} photos</span>
+            </RouterLink>
+          </div>
+        </section>
       </section>
 
       <!-- States -->
@@ -133,19 +167,41 @@ import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
+import { useMomentsStore } from '../stores/moments';
+import type { FeedMode } from '../types/api';
 import { buildLikedCountByFolder, selectHomeRecommendations } from '../utils/home-recommendations';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
-const storyFolders = computed(() => foldersStore.items.slice(0, 10));
+const momentsStore = useMomentsStore();
 const likedCountByFolder = computed(() => buildLikedCountByFolder(likesStore.items));
 const homeRecommendations = computed(() =>
   selectHomeRecommendations(foldersStore.items, likedCountByFolder.value, appStore.lastOpenedFolderSlug)
 );
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
+const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
+  {
+    id: 'recent',
+    label: 'Recent',
+    description: 'Newest photos first, with lighter runs from the same app folder.'
+  },
+  {
+    id: 'rediscover',
+    label: 'Rediscover',
+    description: 'Older photos resurface when they are worth another look.'
+  },
+  {
+    id: 'random',
+    label: 'Random',
+    description: 'A stable session shuffle for aimless browsing.'
+  }
+];
+const activeModeDescription = computed(
+  () => feedModes.find((mode) => mode.id === feedStore.mode)?.description ?? feedModes[0].description
+);
 const showInitialScanState = computed(
   () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
 );
@@ -163,12 +219,17 @@ const scanDescription = computed(() => {
   return `Indexing folders and images so the library can open immediately.${currentFolder}`;
 });
 
+async function selectMode(mode: FeedMode) {
+  await feedStore.setMode(mode);
+}
+
 onMounted(async () => {
   if (appStore.isLibraryUnavailable) {
     return;
   }
 
-  await feedStore.loadInitial();
+  feedStore.initializeMode();
+  await Promise.all([feedStore.loadInitial(), momentsStore.fetchMoments()]);
 });
 
 watch(
@@ -185,6 +246,26 @@ watch(
     if (indexedImages > 0 && feedStore.items.length === 0 && !feedStore.loading) {
       await feedStore.loadInitial(true);
     }
+
+    if (indexedImages > 0 && momentsStore.items.length === 0 && !momentsStore.loadingList) {
+      await momentsStore.fetchMoments(true);
+    }
+  }
+);
+
+watch(
+  () => appStore.stats?.scan.lastCompletedScan?.id ?? null,
+  async (lastCompletedScanId, previousScanId) => {
+    if (
+      appStore.isLibraryUnavailable ||
+      lastCompletedScanId === null ||
+      lastCompletedScanId === previousScanId ||
+      momentsStore.loadingList
+    ) {
+      return;
+    }
+
+    await momentsStore.fetchMoments(true);
   }
 );
 </script>

@@ -5,6 +5,7 @@ import ImageView from '../views/ImageView.vue';
 import LibraryView from '../views/LibraryView.vue';
 import LikesView from '../views/LikesView.vue';
 import FolderView from '../views/FolderView.vue';
+import MomentView from '../views/MomentView.vue';
 import SettingsView from '../views/SettingsView.vue';
 
 export const router = createRouter({
@@ -35,6 +36,12 @@ export const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView
+    },
+    {
+      path: '/moments/:id',
+      name: 'moment',
+      component: MomentView,
+      props: true
     },
     {
       path: '/:slug',

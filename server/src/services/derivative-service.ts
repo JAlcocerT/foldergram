@@ -4,6 +4,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 import { appConfig } from '../config/env.js';
+import { extractTakenAt } from '../utils/exif-utils.js';
 import { PREVIEW_MAX_WIDTH, THUMBNAIL_SIZE, getDerivativeRelativePath } from '../utils/image-utils.js';
 import { safeJoin } from '../utils/path-utils.js';
 
@@ -12,6 +13,7 @@ export interface DerivativeResult {
   previewPath: string;
   width: number;
   height: number;
+  takenAt: number | null;
   generatedThumbnail: boolean;
   generatedPreview: boolean;
 }
@@ -29,12 +31,16 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-export async function readImageMetadata(sourcePath: string): Promise<Pick<DerivativeResult, 'width' | 'height'>> {
-  const metadata = await sharp(sourcePath, { animated: false }).metadata();
+export async function readImageMetadata(sourcePath: string): Promise<Pick<DerivativeResult, 'width' | 'height' | 'takenAt'>> {
+  const [metadata, takenAt] = await Promise.all([
+    sharp(sourcePath, { animated: false }).metadata(),
+    extractTakenAt(sourcePath)
+  ]);
 
   return {
     width: metadata.width ?? THUMBNAIL_SIZE,
-    height: metadata.height ?? THUMBNAIL_SIZE
+    height: metadata.height ?? THUMBNAIL_SIZE,
+    takenAt
   };
 }
 
@@ -76,6 +82,7 @@ export async function generateDerivatives(sourcePath: string, relativePath: stri
     previewPath: derivativeRelativePath,
     width,
     height,
+    takenAt: null,
     generatedThumbnail: shouldWriteThumbnail,
     generatedPreview: shouldWritePreview
   };

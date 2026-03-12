@@ -179,6 +179,7 @@ import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
+import { useMomentsStore } from '../stores/moments';
 import type { FeedItem } from '../types/api';
 import Avatar from './Avatar.vue';
 
@@ -191,6 +192,7 @@ const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
+const momentsStore = useMomentsStore();
 const route = useRoute();
 const menuOpen = ref(false);
 const deleting = ref(false);
@@ -205,7 +207,7 @@ const caption = computed(() =>
 );
 
 const formattedDate = computed(() =>
-  new Date(props.item.sortTimestamp).toLocaleDateString(undefined, {
+  new Date(props.item.takenAt ?? props.item.sortTimestamp).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
@@ -244,6 +246,7 @@ async function confirmDelete() {
     feedStore.removeImage(deleted.id);
     likesStore.removeImage(deleted.id);
     const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug);
+    momentsStore.removeImage(deleted.id);
     appStore.removeIndexedImage(removedFolder ? 1 : 0);
     confirmDeleteOpen.value = false;
   } finally {

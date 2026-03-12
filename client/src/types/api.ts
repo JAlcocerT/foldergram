@@ -1,3 +1,6 @@
+export type FeedMode = 'recent' | 'rediscover' | 'random';
+export type FeedRailKind = 'moments' | 'highlights';
+
 export interface FeedItem {
   id: number;
   folderId: number;
@@ -11,6 +14,7 @@ export interface FeedItem {
   thumbnailUrl: string;
   previewUrl: string;
   sortTimestamp: number;
+  takenAt: number | null;
 }
 
 export interface FolderSummary {
@@ -25,11 +29,37 @@ export interface FolderSummary {
 }
 
 export interface PaginatedFeed {
+  mode?: FeedMode;
   items: FeedItem[];
   page: number;
   limit: number;
   total: number;
   hasMore: boolean;
+}
+
+export interface MomentCapsule {
+  id: string;
+  title: string;
+  subtitle: string;
+  dateContext: string;
+  imageCount: number;
+  coverImage: FeedItem;
+}
+
+export interface MomentsPayload {
+  railKind: FeedRailKind;
+  railTitle: string;
+  railDescription: string;
+  railSingularLabel: string;
+  items: MomentCapsule[];
+}
+
+export interface MomentFeedPayload extends PaginatedFeed {
+  railKind: FeedRailKind;
+  railTitle: string;
+  railDescription: string;
+  railSingularLabel: string;
+  moment: MomentCapsule;
 }
 
 export interface FolderImagesPayload extends PaginatedFeed {

@@ -10,9 +10,39 @@ import {
 import { appConfig } from '../config/env.js';
 import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
 import type { FeedImage, ImageDetail, FolderSummaryRecord } from '../types/models.js';
+import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBursts, listMonthDayKeysAroundDate } from '../utils/feed-utils.js';
+import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
+
+type FeedMode = 'recent' | 'rediscover' | 'random';
+
+interface FeedCapsuleDefinition {
+  id: string;
+  title: string;
+  subtitle: string;
+  dateContext: string;
+  minimumImageCount: number;
+  count: () => number;
+  list: (page: number, limit: number) => FeedImage[];
+}
+
+interface FeedRailDefinition {
+  kind: FeedRailKind;
+  title: string;
+  description: string;
+  singularLabel: string;
+  capsules: FeedCapsuleDefinition[];
+}
+
+const REDISCOVER_MIN_AGE_MS = 1000 * 60 * 60 * 24 * 180;
+const DIVERSIFIED_FETCH_BATCH_SIZE = 72;
+const MAX_DIVERSIFIED_CANDIDATES = 2400;
+const THIS_WEEK_RADIUS_DAYS = 7;
+const LAST_YEAR_RADIUS_DAYS = 45;
+const HIGHLIGHT_BATCH_CANDIDATE_LIMIT = 180;
+const HIGHLIGHT_BATCH_COUNT = 3;
 
 function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
   const encodedSegments = relativePath.split('/').map(encodeURIComponent).join('/');
@@ -99,10 +129,258 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
   };
 }
 
+function formatMonthDay(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, { month: 'long', day: 'numeric' }).format(date);
+}
+
+function formatShortRange(startDate: Date, endDate: Date): string {
+  const sameMonth = startDate.getMonth() === endDate.getMonth();
+  const sameYear = startDate.getFullYear() === endDate.getFullYear();
+
+  if (sameMonth && sameYear) {
+    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(startDate);
+    return `${month} ${startDate.getDate()}-${endDate.getDate()}, ${startDate.getFullYear()}`;
+  }
+
+  return `${new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(startDate)} to ${new Intl.DateTimeFormat(
+    undefined,
+    {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }
+  ).format(endDate)}`;
+}
+
+function formatMonthYear(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(date);
+}
+
+function mapFeedItems(items: FeedImage[]): FeedImage[] {
+  return items.map(mapFeedImage);
+}
+
+function buildPaginatedPayload(items: FeedImage[], page: number, limit: number, total: number) {
+  return {
+    items,
+    page,
+    limit,
+    total,
+    hasMore: page * limit < total
+  };
+}
+
+function sliceItemsForPage(items: FeedImage[], page: number, limit: number): FeedImage[] {
+  const offset = (page - 1) * limit;
+  return items.slice(offset, offset + limit);
+}
+
+function listDiversifiedModeItems(
+  total: number,
+  page: number,
+  limit: number,
+  loadBatch: (offset: number, limit: number) => FeedImage[]
+): FeedImage[] {
+  if (total === 0) {
+    return [];
+  }
+
+  const targetCount = Math.min(total, page * limit);
+  const candidateLimit = Math.min(total, Math.max(targetCount * 12, 720), MAX_DIVERSIFIED_CANDIDATES);
+  const candidates: FeedImage[] = [];
+  let offset = 0;
+
+  while (offset < candidateLimit) {
+    const batch = loadBatch(offset, Math.min(DIVERSIFIED_FETCH_BATCH_SIZE, candidateLimit - offset));
+    if (batch.length === 0) {
+      break;
+    }
+
+    candidates.push(...batch);
+    offset += batch.length;
+
+    if (countFeedBursts(candidates) >= targetCount || batch.length < DIVERSIFIED_FETCH_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  const diversified = diversifyFeedCandidates(candidates);
+  return diversified.slice((page - 1) * limit, page * limit);
+}
+
+function createDailySeed(now = new Date()): number {
+  return Number(`${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`);
+}
+
+function getRecentBatchHighlightItems(): FeedImage[] {
+  const candidates = imageRepository.listRecentCandidates(0, HIGHLIGHT_BATCH_CANDIDATE_LIMIT);
+  const bursts = groupFeedBursts(candidates)
+    .filter((burst) => burst.items.length >= 2)
+    .slice(0, HIGHLIGHT_BATCH_COUNT);
+
+  return bursts.flatMap((burst) => burst.items);
+}
+
+function buildMomentRailDefinition(now = new Date()): FeedRailDefinition {
+  const currentYear = now.getFullYear();
+  const onThisDayKeys = [buildMonthDayKey(now)];
+  const weekKeys = listMonthDayKeysAroundDate(now, THIS_WEEK_RADIUS_DAYS, THIS_WEEK_RADIUS_DAYS);
+  const lastYearReference = new Date(now);
+  lastYearReference.setFullYear(lastYearReference.getFullYear() - 1);
+  const lastYearStart = new Date(lastYearReference);
+  lastYearStart.setDate(lastYearStart.getDate() - LAST_YEAR_RADIUS_DAYS);
+  lastYearStart.setHours(0, 0, 0, 0);
+  const lastYearEnd = new Date(lastYearReference);
+  lastYearEnd.setDate(lastYearEnd.getDate() + LAST_YEAR_RADIUS_DAYS);
+  lastYearEnd.setHours(23, 59, 59, 999);
+  const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - THIS_WEEK_RADIUS_DAYS);
+  const thisWeekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + THIS_WEEK_RADIUS_DAYS);
+
+  return {
+    kind: 'moments',
+    title: 'Moments',
+    description: 'Memory capsules shaped by real capture dates from your library.',
+    singularLabel: 'Moment',
+    capsules: [
+      {
+        id: 'on-this-day',
+        title: 'On This Day',
+        subtitle: `${formatMonthDay(now)} across previous years`,
+        dateContext: formatMonthDay(now),
+        minimumImageCount: 1,
+        count: () => imageRepository.countByMonthDayKeys(onThisDayKeys, currentYear),
+        list: (page, limit) => imageRepository.listByMonthDayKeys(onThisDayKeys, currentYear, page, limit)
+      },
+      {
+        id: 'this-week-previous-years',
+        title: 'This Week',
+        subtitle: `${formatShortRange(thisWeekStart, thisWeekEnd)} from previous years`,
+        dateContext: formatShortRange(thisWeekStart, thisWeekEnd),
+        minimumImageCount: 2,
+        count: () => imageRepository.countByMonthDayKeys(weekKeys, currentYear),
+        list: (page, limit) => imageRepository.listByMonthDayKeys(weekKeys, currentYear, page, limit)
+      },
+      {
+        id: 'from-last-year',
+        title: 'Last Year Around Now',
+        subtitle: `A revisit to ${formatMonthYear(lastYearReference)}`,
+        dateContext: formatShortRange(lastYearStart, lastYearEnd),
+        minimumImageCount: 1,
+        count: () => imageRepository.countByEffectiveTimeRange(lastYearStart.getTime(), lastYearEnd.getTime()),
+        list: (page, limit) => imageRepository.listByEffectiveTimeRange(lastYearStart.getTime(), lastYearEnd.getTime(), page, limit)
+      }
+    ]
+  };
+}
+
+function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
+  const recentBatchItems = getRecentBatchHighlightItems();
+  const rediscoverCutoff = now.getTime() - REDISCOVER_MIN_AGE_MS;
+  const dailySeed = createDailySeed(now);
+  const recentBatchCount = groupFeedBursts(recentBatchItems).length;
+
+  return {
+    kind: 'highlights',
+    title: 'Highlights',
+    description: 'Curated sets from your library when capture dates are sparse or synthetic.',
+    singularLabel: 'Highlight',
+    capsules: [
+      {
+        id: 'highlight-recent-batches',
+        title: 'Recent Batches',
+        subtitle: 'Latest runs gathered into one set',
+        dateContext: `${recentBatchCount} batch${recentBatchCount === 1 ? '' : 'es'}`,
+        minimumImageCount: 2,
+        count: () => recentBatchItems.length,
+        list: (page, limit) => sliceItemsForPage(recentBatchItems, page, limit)
+      },
+      {
+        id: 'highlight-forgotten-favorites',
+        title: 'Forgotten Favorites',
+        subtitle: 'Older liked images worth another look',
+        dateContext: 'Liked and older than 6 months',
+        minimumImageCount: 1,
+        count: () => likeRepository.countLikedOlderThan(rediscoverCutoff),
+        list: (page, limit) => likeRepository.listLikedOlderThan(page, limit, rediscoverCutoff)
+      },
+      {
+        id: 'highlight-deep-cuts',
+        title: 'Deep Cuts',
+        subtitle: 'Older images resurfaced from the archive',
+        dateContext: 'Older than 6 months',
+        minimumImageCount: 1,
+        count: () => imageRepository.countRediscover(rediscoverCutoff),
+        list: (page, limit) => {
+          const total = imageRepository.countRediscover(rediscoverCutoff);
+          return listDiversifiedModeItems(total, page, limit, (offset, batchLimit) =>
+            imageRepository.listRediscoverCandidates(offset, batchLimit, rediscoverCutoff)
+          );
+        }
+      },
+      {
+        id: 'highlight-lucky-dip',
+        title: 'Lucky Dip',
+        subtitle: 'A playful mix from across the library',
+        dateContext: 'Stable for today',
+        minimumImageCount: 1,
+        count: () => imageRepository.countFeed(),
+        list: (page, limit) => imageRepository.listRandom(page, limit, dailySeed)
+      }
+    ]
+  };
+}
+
+function materializeRailDefinition(definition: FeedRailDefinition) {
+  return {
+    ...definition,
+    capsules: definition.capsules
+      .map((capsule) => {
+        const imageCount = capsule.count();
+        if (imageCount < capsule.minimumImageCount) {
+          return null;
+        }
+
+        const coverImage = capsule.list(1, 1)[0];
+        if (!coverImage) {
+          return null;
+        }
+
+        return {
+          id: capsule.id,
+          title: capsule.title,
+          subtitle: capsule.subtitle,
+          dateContext: capsule.dateContext,
+          imageCount,
+          coverImage: mapFeedImage(coverImage)
+        };
+      })
+      .filter((capsule): capsule is NonNullable<typeof capsule> => capsule !== null)
+  };
+}
+
+function getSelectedFeedRail(now = new Date()) {
+  const totalImages = imageRepository.countFeed();
+  const exifImages = imageRepository.countByTakenAtSource('exif');
+  const preferMoments = shouldPreferMomentRail(totalImages, exifImages);
+  const momentRail = materializeRailDefinition(buildMomentRailDefinition(now));
+  const highlightRail = materializeRailDefinition(buildHighlightRailDefinition(now));
+
+  if (preferMoments && momentRail.capsules.length > 0) {
+    return momentRail;
+  }
+
+  if (highlightRail.capsules.length > 0) {
+    return highlightRail;
+  }
+
+  return momentRail.capsules.length > 0 ? momentRail : highlightRail;
+}
+
 export const galleryService = {
-  getFeed(page: number, limit: number) {
+  getFeed(page: number, limit: number, mode: FeedMode = 'recent', randomSeed?: number) {
     if (!storageService.getState().libraryAvailable) {
       return {
+        mode,
         items: [],
         page,
         limit,
@@ -111,15 +389,92 @@ export const galleryService = {
       };
     }
 
+    if (mode === 'random') {
+      const total = imageRepository.countFeed();
+      const seed = Number.isFinite(randomSeed)
+        ? Number(randomSeed)
+        : Number(new Date().toISOString().slice(0, 10).replaceAll('-', ''));
+
+      return {
+        mode,
+        ...buildPaginatedPayload(mapFeedItems(imageRepository.listRandom(page, limit, seed)), page, limit, total)
+      };
+    }
+
+    if (mode === 'rediscover') {
+      const cutoffTimestamp = Date.now() - REDISCOVER_MIN_AGE_MS;
+      const total = imageRepository.countRediscover(cutoffTimestamp);
+      const items = listDiversifiedModeItems(total, page, limit, (offset, batchLimit) =>
+        imageRepository.listRediscoverCandidates(offset, batchLimit, cutoffTimestamp)
+      );
+
+      return {
+        mode,
+        ...buildPaginatedPayload(mapFeedItems(items), page, limit, total)
+      };
+    }
+
     const total = imageRepository.countFeed();
-    const items = imageRepository.listFeed(page, limit).map(mapFeedImage);
+    const items = listDiversifiedModeItems(total, page, limit, (offset, batchLimit) =>
+      imageRepository.listRecentCandidates(offset, batchLimit)
+    );
 
     return {
-      items,
-      page,
-      limit,
-      total,
-      hasMore: page * limit < total
+      mode,
+      ...buildPaginatedPayload(mapFeedItems(items), page, limit, total)
+    };
+  },
+
+  listMoments() {
+    if (!storageService.getState().libraryAvailable) {
+      return {
+        railKind: 'moments' as FeedRailKind,
+        railTitle: 'Moments',
+        railDescription: 'Memory capsules shaped by real capture dates from your library.',
+        railSingularLabel: 'Moment',
+        items: []
+      };
+    }
+
+    const rail = getSelectedFeedRail(new Date());
+    return {
+      railKind: rail.kind,
+      railTitle: rail.title,
+      railDescription: rail.description,
+      railSingularLabel: rail.singularLabel,
+      items: rail.capsules
+    };
+  },
+
+  getMomentFeed(id: string, page: number, limit: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
+    const now = new Date();
+    const rail = getSelectedFeedRail(now);
+    const capsule = rail.capsules.find((entry) => entry.id === id);
+
+    if (!capsule) {
+      return null;
+    }
+
+    const definition = (rail.kind === 'moments' ? buildMomentRailDefinition(now) : buildHighlightRailDefinition(now)).capsules.find(
+      (entry) => entry.id === id
+    );
+    if (!definition) {
+      return null;
+    }
+
+    const total = definition.count();
+
+    return {
+      railKind: rail.kind,
+      railTitle: rail.title,
+      railDescription: rail.description,
+      railSingularLabel: rail.singularLabel,
+      moment: capsule,
+      ...buildPaginatedPayload(mapFeedItems(definition.list(page, limit)), page, limit, total)
     };
   },
 

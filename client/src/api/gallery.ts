@@ -2,10 +2,13 @@ import type {
   AppStats,
   DeleteImageResult,
   DeleteFolderResult,
+  FeedMode,
   ImageDetail,
   LikeMutationResult,
   LikesPayload,
   ManualScanResult,
+  MomentFeedPayload,
+  MomentsPayload,
   PaginatedFeed,
   FolderImagesPayload,
   RebuildLibraryResult,
@@ -13,8 +16,26 @@ import type {
 } from '../types/api';
 import { requestJson } from './http';
 
-export function fetchFeed(page = 1, limit = 24) {
-  return requestJson<PaginatedFeed>(`/api/feed?page=${page}&limit=${limit}`);
+export function fetchFeed(page = 1, limit = 24, mode: FeedMode = 'recent', seed?: number) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    mode
+  });
+
+  if (typeof seed === 'number') {
+    params.set('seed', String(seed));
+  }
+
+  return requestJson<PaginatedFeed>(`/api/feed?${params.toString()}`);
+}
+
+export function fetchMoments() {
+  return requestJson<MomentsPayload>('/api/feed/moments');
+}
+
+export function fetchMomentFeed(id: string, page = 1, limit = 24) {
+  return requestJson<MomentFeedPayload>(`/api/feed/moments/${encodeURIComponent(id)}?page=${page}&limit=${limit}`);
 }
 
 export async function fetchFolders() {

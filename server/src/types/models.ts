@@ -1,3 +1,5 @@
+export type TakenAtSource = 'exif' | 'mtime' | 'first_seen' | 'sort_timestamp';
+
 export interface FolderRecord {
   id: number;
   slug: string;
@@ -28,6 +30,8 @@ export interface ImageRecord {
   mtime_ms: number;
   first_seen_at: string;
   sort_timestamp: number;
+  taken_at: number | null;
+  taken_at_source: TakenAtSource | null;
   thumbnail_path: string;
   preview_path: string;
   is_deleted: number;
@@ -79,6 +83,7 @@ export interface FeedImage {
   thumbnailUrl: string;
   previewUrl: string;
   sortTimestamp: number;
+  takenAt: number | null;
 }
 
 export interface ImageDetail extends FeedImage {

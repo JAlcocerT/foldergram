@@ -35,6 +35,7 @@ import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
+import { useMomentsStore } from '../stores/moments';
 import { useViewerStore } from '../stores/viewer';
 
 const props = defineProps<{
@@ -51,6 +52,7 @@ const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const viewerStore = useViewerStore();
 const foldersStore = useFoldersStore();
+const momentsStore = useMomentsStore();
 const router = useRouter();
 const confirmDeleteOpen = ref(false);
 
@@ -80,6 +82,7 @@ async function handleDelete() {
   feedStore.removeImage(deleted.id);
   likesStore.removeImage(deleted.id);
   const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug);
+  momentsStore.removeImage(deleted.id);
   appStore.removeIndexedImage(removedFolder ? 1 : 0);
 
   if (props.modal) {
