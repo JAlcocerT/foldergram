@@ -11,51 +11,6 @@
     <section class="grid grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.95fr)] gap-6 items-start max-md:grid-cols-1">
       <!-- Left: Scan controls -->
       <div class="flex flex-col gap-[1.15rem]">
-        <section
-          class="card grid gap-[1rem] p-8"
-          :class="highlightRebuildAction ? 'ring-2 ring-[color-mix(in_srgb,var(--accent)_45%,transparent_55%)]' : ''"
-          :style="rebuildCardStyle"
-        >
-          <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
-            <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library Index</h2>
-              <p class="m-0 text-muted">
-                Reset the indexed database tables and rebuild the current library from the active gallery location.
-              </p>
-            </div>
-            <span
-              class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
-              :class="appStore.isLibraryRebuildRequired ? 'text-[#9f6a00] bg-[rgba(210,161,51,0.14)]' : 'text-muted bg-surface-alt'"
-            >
-              {{ appStore.isLibraryRebuildRequired ? 'Recommended' : 'Optional' }}
-            </span>
-          </div>
-
-          <p class="m-0 text-muted">
-            This clears the indexed folder and image tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
-          </p>
-
-          <dl class="grid gap-[0.8rem] m-0">
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, var(--accent) 8%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Current gallery root</dt>
-              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats?.libraryIndex.currentGalleryRoot ?? 'Unavailable' }}</dd>
-            </div>
-            <div v-if="appStore.stats?.libraryIndex.previousGalleryRoot" class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, #d2a133 8%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previous gallery root</dt>
-              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats.libraryIndex.previousGalleryRoot }}</dd>
-            </div>
-          </dl>
-
-          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
-            <button class="btn-primary min-w-[13rem]" type="button" :disabled="rebuildActionDisabled" @click="confirmRebuildOpen = true">
-              {{ rebuildButtonLabel }}
-            </button>
-            <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
-          </div>
-
-          <p v-if="rebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ rebuildError }}</p>
-        </section>
-
         <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(0,149,246,0.15), transparent 40%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);">
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
@@ -124,6 +79,51 @@
           </dl>
 
           <p v-if="scanError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ scanError }}</p>
+        </section>
+
+        <section
+          class="card grid gap-[1rem] p-8"
+          :class="highlightRebuildAction ? 'ring-2 ring-[color-mix(in_srgb,var(--accent)_45%,transparent_55%)]' : ''"
+          :style="rebuildCardStyle"
+        >
+          <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
+            <div>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library Index</h2>
+              <p class="m-0 text-muted">
+                Reset the indexed database tables and rebuild the current library from the active gallery location.
+              </p>
+            </div>
+            <span
+              class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
+              :class="appStore.isLibraryRebuildRequired ? 'text-[#9f6a00] bg-[rgba(210,161,51,0.14)]' : 'text-muted bg-surface-alt'"
+            >
+              {{ appStore.isLibraryRebuildRequired ? 'Recommended' : 'Optional' }}
+            </span>
+          </div>
+
+          <p class="m-0 text-muted">
+            This clears the indexed folder and image tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
+          </p>
+
+          <dl class="grid gap-[0.8rem] m-0">
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, var(--accent) 8%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Current gallery root</dt>
+              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats?.libraryIndex.currentGalleryRoot ?? 'Unavailable' }}</dd>
+            </div>
+            <div v-if="appStore.stats?.libraryIndex.previousGalleryRoot" class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, #d2a133 8%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previous gallery root</dt>
+              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats.libraryIndex.previousGalleryRoot }}</dd>
+            </div>
+          </dl>
+
+          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+            <button class="btn-primary min-w-[13rem]" type="button" :disabled="rebuildActionDisabled" @click="confirmRebuildOpen = true">
+              {{ rebuildButtonLabel }}
+            </button>
+            <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
+          </div>
+
+          <p v-if="rebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ rebuildError }}</p>
         </section>
       </div>
 

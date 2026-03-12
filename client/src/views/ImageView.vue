@@ -79,11 +79,16 @@ async function handleDelete() {
 
   feedStore.removeImage(deleted.id);
   likesStore.removeImage(deleted.id);
-  foldersStore.removeImage(deleted.id, deleted.folderSlug);
-  appStore.removeIndexedImage();
+  const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug);
+  appStore.removeIndexedImage(removedFolder ? 1 : 0);
 
   if (props.modal) {
     emit('close');
+    return;
+  }
+
+  if (removedFolder) {
+    await router.replace({ name: 'library' });
     return;
   }
 

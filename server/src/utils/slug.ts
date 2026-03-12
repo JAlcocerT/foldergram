@@ -1,7 +1,10 @@
-export function slugifyFolderName(name: string): string {
-  const normalized = name
+import { normalizePath } from './path-utils.js';
+
+function slugifyValue(value: string): string {
+  const normalized = value
     .normalize('NFKD')
-    .replace(/[^\w\s-]/g, '')
+    .replace(/[/\\]+/g, ' ')
+    .replace(/[^\w\s-]/g, ' ')
     .trim()
     .toLowerCase()
     .replace(/[\s_-]+/g, '-')
@@ -10,8 +13,20 @@ export function slugifyFolderName(name: string): string {
   return normalized || 'folder';
 }
 
-export function resolveUniqueSlug(name: string, existing: Set<string>): string {
-  const base = slugifyFolderName(name);
+export function slugifyFolderName(name: string): string {
+  return slugifyValue(name);
+}
+
+export function slugifyFolderPath(folderPath: string): string {
+  return slugifyValue(normalizePath(folderPath));
+}
+
+export function resolveUniqueSlug(
+  value: string,
+  existing: Set<string>,
+  slugify: (value: string) => string = slugifyFolderName
+): string {
+  const base = slugify(value);
   if (!existing.has(base)) {
     existing.add(base);
     return base;

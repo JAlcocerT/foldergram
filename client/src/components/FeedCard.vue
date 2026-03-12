@@ -4,9 +4,9 @@
     <div class="flex items-center justify-between gap-4 px-4 min-h-[3.65rem]">
       <RouterLink class="feed-card__folder flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'folder', params: { slug: item.folderSlug } }">
         <Avatar :name="item.folderName" :src="avatarUrl" />
-        <div>
-          <h3 class="m-0 text-[0.9rem] font-semibold">{{ item.folderSlug }}</h3>
-          <p class="m-0 text-muted text-[0.85rem]">{{ item.folderName }}</p>
+        <div class="min-w-0">
+          <h3 class="m-0 text-[0.9rem] font-semibold truncate">{{ item.folderName }}</h3>
+          <p class="m-0 text-muted text-[0.85rem] truncate">{{ item.folderBreadcrumb ?? 'Top-level source folder' }}</p>
         </div>
       </RouterLink>
       <button class="inline-flex items-center justify-center w-8 h-8 p-0 border-0 text-muted bg-transparent cursor-pointer" type="button" aria-label="More options" @click="menuOpen = true">
@@ -104,7 +104,7 @@
 
       <!-- Caption -->
       <p class="m-0 text-[0.88rem]">
-        <strong class="mr-[0.35rem]">{{ item.folderSlug }}</strong>
+        <strong class="mr-[0.35rem]">{{ item.folderName }}</strong>
         {{ caption }}
       </p>
       <!-- Date -->
@@ -243,8 +243,8 @@ async function confirmDelete() {
     const deleted = await deleteImage(props.item.id);
     feedStore.removeImage(deleted.id);
     likesStore.removeImage(deleted.id);
-    foldersStore.removeImage(deleted.id, deleted.folderSlug);
-    appStore.removeIndexedImage();
+    const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug);
+    appStore.removeIndexedImage(removedFolder ? 1 : 0);
     confirmDeleteOpen.value = false;
   } finally {
     deleting.value = false;

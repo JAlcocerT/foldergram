@@ -59,6 +59,7 @@ describe('folder shortcut decisions', () => {
         currentSignature: 'abc',
         galleryRootChanged: false,
         hasStoredGalleryRoot: true,
+        hasMatchingIndexedFiles: true,
         repairUnchangedDerivatives: false,
         storedSignature: 'abc'
       })
@@ -69,6 +70,7 @@ describe('folder shortcut decisions', () => {
         currentSignature: 'abc',
         galleryRootChanged: true,
         hasStoredGalleryRoot: true,
+        hasMatchingIndexedFiles: true,
         repairUnchangedDerivatives: false,
         storedSignature: 'abc'
       })
@@ -79,7 +81,21 @@ describe('folder shortcut decisions', () => {
         currentSignature: 'abc',
         galleryRootChanged: false,
         hasStoredGalleryRoot: true,
+        hasMatchingIndexedFiles: true,
         repairUnchangedDerivatives: true,
+        storedSignature: 'abc'
+      })
+    ).toBe(false);
+  });
+
+  it('does not shortcut when the active indexed rows are missing or stale', () => {
+    expect(
+      shouldSkipFolderBySignature({
+        currentSignature: 'abc',
+        galleryRootChanged: false,
+        hasStoredGalleryRoot: true,
+        hasMatchingIndexedFiles: false,
+        repairUnchangedDerivatives: false,
         storedSignature: 'abc'
       })
     ).toBe(false);

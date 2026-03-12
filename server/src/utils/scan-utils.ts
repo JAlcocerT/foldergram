@@ -25,6 +25,7 @@ export interface FolderShortcutDecisionInput {
   currentSignature: string;
   galleryRootChanged: boolean;
   hasStoredGalleryRoot: boolean;
+  hasMatchingIndexedFiles: boolean;
   repairUnchangedDerivatives: boolean;
   storedSignature: string | null;
 }
@@ -83,6 +84,10 @@ export function shouldSkipFolderBySignature(input: FolderShortcutDecisionInput):
   }
 
   if (!input.hasStoredGalleryRoot || input.galleryRootChanged) {
+    return false;
+  }
+
+  if (!input.hasMatchingIndexedFiles) {
     return false;
   }
 

@@ -10,6 +10,7 @@ import {
 import { appConfig } from '../config/env.js';
 import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
 import type { FeedImage, ImageDetail, FolderSummaryRecord } from '../types/models.js';
+import { getPathBreadcrumb } from '../utils/path-utils.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
 
@@ -48,9 +49,25 @@ async function removeFileIfPresent(targetPath: string | null): Promise<void> {
   }
 }
 
+async function removeDirectoryIfEmpty(targetPath: string | null): Promise<void> {
+  if (!targetPath) {
+    return;
+  }
+
+  try {
+    await fsPromises.rm(targetPath, { recursive: false });
+  } catch (error) {
+    const directoryError = error as NodeJS.ErrnoException;
+    if (directoryError.code !== 'ENOENT' && directoryError.code !== 'ENOTEMPTY') {
+      throw error;
+    }
+  }
+}
+
 function mapFeedImage(image: FeedImage): FeedImage {
   return {
     ...image,
+    folderBreadcrumb: getPathBreadcrumb(image.folderPath),
     thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl),
     previewUrl: toPublicMediaUrl('/previews', image.previewUrl)
   };
@@ -59,6 +76,7 @@ function mapFeedImage(image: FeedImage): FeedImage {
 function mapImageDetail(image: ImageDetail): ImageDetail {
   return {
     ...image,
+    folderBreadcrumb: getPathBreadcrumb(image.folderPath),
     thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl),
     previewUrl: toPublicMediaUrl('/previews', image.previewUrl),
     originalUrl: buildOriginalUrl(image.id)
@@ -74,6 +92,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
     slug: folder.slug,
     name: folder.name,
     folderPath: folder.folder_path,
+    breadcrumb: getPathBreadcrumb(folder.folder_path),
     imageCount: folder.image_count,
     latestImageMtimeMs: folder.latest_image_mtime_ms,
     avatarUrl: avatar ? mapImageDetail(avatar).thumbnailUrl : null
@@ -306,47 +325,53 @@ export const galleryService = {
       return null;
     }
 
-    const folder = folderRepository.getBySlug(slug);
+    const folder = folderRepository.getSummaryBySlug(slug);
     if (!folder) {
       return null;
     }
 
-    const imageCount = imageRepository.countByFolder(folder.id);
+    const images = imageRepository.listActiveByFolder(folder.id);
 
-    // Resolve and validate the folder path before deleting
-    const folderPath = resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, folder.folder_path));
-    if (!folderPath) {
-      throw new Error('Stored folder path is outside the gallery root');
-    }
+    await Promise.all(
+      images.map(async (imageRecord) => {
+        const originalPath = resolveWithinRoot(appConfig.galleryRoot, imageRecord.absolute_path);
+        const thumbnailPath = resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, imageRecord.thumbnail_path));
+        const previewPath = resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, imageRecord.preview_path));
 
-    // Delete the entire folder from disk (originals, everything inside)
-    await fsPromises.rm(folderPath, { recursive: true, force: true });
+        if (!originalPath) {
+          throw new Error('Stored image path is outside the gallery root');
+        }
 
-    // Delete thumbnail and preview directories for this folder.
-    const thumbnailFolderPath = resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, folder.folder_path));
-    const previewFolderPath = resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, folder.folder_path));
+        if (!thumbnailPath && imageRecord.thumbnail_path) {
+          throw new Error('Stored thumbnail path is outside the thumbnails root');
+        }
 
-    if (thumbnailFolderPath) {
-      await fsPromises.rm(thumbnailFolderPath, { recursive: true, force: true });
-    }
+        if (!previewPath && imageRecord.preview_path) {
+          throw new Error('Stored preview path is outside the previews root');
+        }
 
-    if (previewFolderPath) {
-      await fsPromises.rm(previewFolderPath, { recursive: true, force: true });
-    }
+        await Promise.all([
+          removeFileIfPresent(originalPath),
+          removeFileIfPresent(thumbnailPath),
+          removeFileIfPresent(previewPath)
+        ]);
+      })
+    );
 
-    // DB cleanup
     likeRepository.removeByFolder(folder.id);
     imageRepository.markAllDeletedByFolder(folder.id);
-    folderScanStateRepository.deleteMissing(
-      folderScanStateRepository.getAll()
-        .map((s) => s.folder_path)
-        .filter((fp) => fp !== folder.folder_path)
-    );
-    folderRepository.delete(folder.id);
+    folderRepository.setAvatar(folder.id, null);
+    folderScanStateRepository.delete(folder.folder_path);
+
+    await Promise.all([
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, folder.folder_path))),
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, folder.folder_path))),
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, folder.folder_path)))
+    ]);
 
     return {
       slug: folder.slug,
-      deletedImageCount: imageCount
+      deletedImageCount: images.length
     };
   }
 };

@@ -21,11 +21,16 @@
         <InfiniteLoader :loading="foldersStore.loadingFolder" :has-more="foldersStore.currentHasMore" @load-more="loadMore" />
       </template>
     </template>
+    <EmptyState
+      v-else-if="hasLoadedOnce && !foldersStore.loadingFolder"
+      title="No direct images in this app folder"
+      description="This source folder no longer has direct images. Browse the library to continue."
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
@@ -41,13 +46,16 @@ const props = defineProps<{
 
 const appStore = useAppStore();
 const foldersStore = useFoldersStore();
+const hasLoadedOnce = ref(false);
 
 async function loadFolder() {
   if (appStore.isLibraryUnavailable) {
+    hasLoadedOnce.value = true;
     return;
   }
 
   await foldersStore.loadFolder(props.slug, true);
+  hasLoadedOnce.value = true;
 }
 
 async function loadMore() {
@@ -57,5 +65,8 @@ async function loadMore() {
 }
 
 onMounted(loadFolder);
-watch(() => props.slug, loadFolder);
+watch(() => props.slug, async () => {
+  hasLoadedOnce.value = false;
+  await loadFolder();
+});
 </script>

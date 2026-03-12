@@ -77,9 +77,9 @@
         <div class="flex items-center justify-between gap-4 border-b border-border px-5 pt-[1.1rem] pb-4">
           <RouterLink class="flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'folder', params: { slug: image.folderSlug } }" aria-label="Open folder">
             <Avatar :name="image.folderName" :src="folderAvatar" />
-            <div>
-              <h2 class="m-0 text-[0.9rem] font-semibold">{{ image.folderSlug }}</h2>
-              <p class="m-0 text-muted">{{ image.folderName }}</p>
+            <div class="min-w-0">
+              <h2 class="m-0 text-[0.9rem] font-semibold truncate">{{ image.folderName }}</h2>
+              <p class="m-0 text-muted truncate">{{ folder?.breadcrumb ?? image.folderBreadcrumb ?? 'Top-level source folder' }}</p>
             </div>
           </RouterLink>
           <span class="text-muted text-[0.78rem] whitespace-nowrap">{{ formattedDate }}</span>
@@ -88,7 +88,7 @@
         <!-- Description -->
         <div class="grid gap-[0.3rem] px-5 pt-[1.1rem]">
           <p class="m-0 text-text">
-            <strong class="mr-[0.35rem]">{{ image.folderSlug }}</strong>
+            <strong class="mr-[0.35rem]">{{ image.folderName }}</strong>
             {{ readableFilename }}
           </p>
           <p class="m-0 text-muted">{{ image.relativePath }}</p>

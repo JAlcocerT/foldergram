@@ -26,8 +26,7 @@ class WatcherService {
     }
 
     this.watcher = chokidar.watch(appConfig.galleryRoot, {
-      ignoreInitial: true,
-      depth: 2
+      ignoreInitial: true
     });
 
     this.watcher.on('all', async (eventName: string, absolutePath: string) => {
@@ -36,8 +35,7 @@ class WatcherService {
         return;
       }
 
-      const segments = relativePath.split('/');
-      if (eventName === 'addDir' || eventName === 'unlinkDir' || segments.length !== 2) {
+      if (eventName === 'addDir' || eventName === 'unlinkDir') {
         this.fullRescanRequested = true;
       } else {
         this.pendingPaths.add(relativePath);

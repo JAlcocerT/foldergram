@@ -71,6 +71,8 @@ export interface FeedImage {
   folderId: number;
   folderSlug: string;
   folderName: string;
+  folderPath: string;
+  folderBreadcrumb?: string | null;
   filename: string;
   width: number;
   height: number;

@@ -14,7 +14,7 @@ const paginationQuerySchema = z.object({
 });
 
 const slugSchema = z.object({
-  slug: z.string().min(1).max(120)
+  slug: z.string().min(1).max(240)
 });
 
 const imageIdSchema = z.object({

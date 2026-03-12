@@ -33,22 +33,44 @@ export const useFoldersStore = defineStore('folders', {
   }),
   actions: {
     removeImage(imageId: number, folderSlug: string) {
-      this.items = this.items.map((folder) =>
-        folder.slug === folderSlug
-          ? {
-              ...folder,
-              imageCount: Math.max(0, folder.imageCount - 1)
-            }
-          : folder
-      );
+      let removedFolder = false;
+
+      this.items = this.items.flatMap((folder) => {
+        if (folder.slug !== folderSlug) {
+          return [folder];
+        }
+
+        const nextImageCount = Math.max(0, folder.imageCount - 1);
+        if (nextImageCount === 0) {
+          removedFolder = true;
+          return [];
+        }
+
+        return [
+          {
+            ...folder,
+            imageCount: nextImageCount
+          }
+        ];
+      });
 
       if (this.currentFolder?.slug === folderSlug) {
-        this.currentFolder = {
-          ...this.currentFolder,
-          imageCount: Math.max(0, this.currentFolder.imageCount - 1)
-        };
         this.currentImages = this.currentImages.filter((item) => item.id !== imageId);
+
+        const nextImageCount = Math.max(0, this.currentFolder.imageCount - 1);
+        if (nextImageCount === 0) {
+          this.currentFolder = null;
+          this.currentPage = 1;
+          this.currentHasMore = false;
+        } else {
+          this.currentFolder = {
+            ...this.currentFolder,
+            imageCount: nextImageCount
+          };
+        }
       }
+
+      return removedFolder;
     },
 
     removeFolder(slug: string) {
@@ -57,6 +79,8 @@ export const useFoldersStore = defineStore('folders', {
       if (this.currentFolder?.slug === slug) {
         this.currentFolder = null;
         this.currentImages = [];
+        this.currentPage = 1;
+        this.currentHasMore = false;
       }
     },
 

@@ -5,9 +5,8 @@
       <div>
         <span class="eyebrow">Library</span>
         <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">All folders</h1>
-        <p class="m-0 mt-1 text-muted">Browse and search every indexed folder.</p>
+        <p class="m-0 mt-1 text-muted">Browse and search every indexed app folder.</p>
       </div>
-      <!-- Quick stats strip -->
       <div class="flex items-center gap-[1.4rem] shrink-0 max-sm:w-full max-sm:justify-between">
         <div class="text-center">
           <p class="m-0 text-[1.35rem] font-bold tracking-tight">{{ formatCount(foldersStore.items.length) }}</p>
@@ -18,11 +17,6 @@
           <p class="m-0 text-[1.35rem] font-bold tracking-tight">{{ formatCount(totalIndexedImages) }}</p>
           <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">Images</p>
         </div>
-        <div class="w-px h-8 bg-border"></div>
-        <div class="text-center">
-          <p class="m-0 text-[1.35rem] font-bold tracking-tight">{{ formatCount(activeFolderCount) }}</p>
-          <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">Active</p>
-        </div>
       </div>
     </header>
 
@@ -30,9 +24,7 @@
     <ErrorState v-else-if="foldersStore.listError && foldersStore.items.length === 0" title="Could not load folders" :message="foldersStore.listError" />
     <template v-else>
 
-      <!-- Toolbar -->
       <div class="flex flex-wrap items-center gap-3 p-[0.85rem] pl-4 bg-surface border border-border rounded-[1.1rem] shadow-[var(--shadow)]">
-        <!-- Search -->
         <div class="relative flex-1 min-w-[12rem]">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
@@ -42,56 +34,39 @@
             v-model.trim="searchQuery"
             class="w-full h-10 pl-9 pr-4 border border-border rounded-[0.75rem] text-text text-[0.88rem] bg-surface-alt transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-accent/40 focus:shadow-[0_0_0_3px_var(--accent-soft)]"
             type="search"
-            placeholder="Search folders…"
+            placeholder="Search names or path segments…"
           />
         </div>
 
-        <!-- Filter pills -->
-        <div class="flex items-center gap-[0.4rem]">
-          <button
-            v-for="option in filterOptions"
-            :key="option.value"
-            class="h-10 px-4 border rounded-[0.75rem] text-[0.82rem] font-semibold cursor-pointer transition-all duration-150"
-            :class="statusFilter === option.value
-              ? 'border-accent/40 text-accent-strong bg-[var(--accent-soft)]'
-              : 'border-border text-muted bg-transparent hover:bg-surface-hover hover:text-text'"
-            type="button"
-            @click="statusFilter = option.value"
-          >{{ option.label }}</button>
-        </div>
-
-        <!-- Sort -->
         <div class="relative">
           <select
             v-model="sortMode"
             class="h-10 pl-3 pr-9 border border-border rounded-[0.75rem] text-text text-[0.82rem] bg-surface-alt cursor-pointer appearance-none focus:outline-none focus:border-accent/40"
           >
+            <option value="recent-desc">Recently updated</option>
             <option value="images-desc">Most images</option>
             <option value="name-asc">Name A–Z</option>
             <option value="name-desc">Name Z–A</option>
-            <option value="slug-asc">Handle A–Z</option>
+            <option value="path-asc">Path A–Z</option>
           </select>
           <svg class="pointer-events-none absolute right-[0.65rem] top-1/2 -translate-y-1/2 w-[0.85rem] h-[0.85rem] text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="m6 9 6 6 6-6"/>
           </svg>
         </div>
 
-        <!-- Result count -->
         <span class="ml-auto text-muted text-[0.8rem] shrink-0">{{ formatCount(filteredFolders.length) }} result{{ filteredFolders.length !== 1 ? 's' : '' }}</span>
       </div>
 
-      <!-- Loading -->
       <section v-if="foldersStore.loadingList && foldersStore.items.length === 0" class="card p-12 text-center">
         <p class="text-muted">Loading folders…</p>
       </section>
 
-      <EmptyState v-else-if="foldersStore.items.length === 0" title="No folders indexed yet" description="Add folders to the gallery root and run a scan." />
+      <EmptyState v-else-if="foldersStore.items.length === 0" title="No folders indexed yet" description="Add media-containing source folders under the gallery root and run a scan." />
 
       <section v-else-if="filteredFolders.length === 0" class="card p-12 text-center">
         <p class="m-0 text-muted">No folders match. Try a different search or filter.</p>
       </section>
 
-      <!-- Folder list -->
       <section v-else class="bg-surface border border-border rounded-[1.1rem] shadow-[var(--shadow)] overflow-hidden" aria-label="All folders">
         <div
           v-for="(folder, i) in filteredFolders"
@@ -100,19 +75,20 @@
           :class="i > 0 ? 'border-t border-border' : ''"
         >
           <RouterLink class="flex items-center gap-4 flex-1 min-w-0" :to="{ name: 'folder', params: { slug: folder.slug } }">
-            <!-- Avatar -->
             <Avatar class="w-10 h-10 shrink-0" :name="folder.name" :src="folder.avatarUrl" />
 
-            <!-- Name + path -->
             <div class="flex-1 min-w-0">
-              <p class="m-0 text-[0.9rem] font-semibold truncate">{{ folder.slug }}</p>
-              <p class="m-0 text-muted text-[0.76rem] truncate font-mono opacity-70">{{ folder.folderPath }}</p>
+              <p class="m-0 text-[0.9rem] font-semibold truncate">{{ folder.name }}</p>
+              <p class="m-0 text-muted text-[0.76rem] truncate">{{ folder.breadcrumb ?? 'Top-level source folder' }}</p>
+              <p class="m-0 text-muted text-[0.74rem] truncate font-mono opacity-70">{{ folder.folderPath }}</p>
             </div>
           </RouterLink>
 
-          <!-- Count + status -->
           <div class="flex items-center gap-3 shrink-0 text-right">
-            <span class="text-[0.82rem] font-semibold text-text tabular-nums">{{ formatCount(folder.imageCount) }}</span>
+            <div class="grid gap-[0.15rem] justify-items-end">
+              <span class="text-[0.82rem] font-semibold text-text tabular-nums">{{ formatCount(folder.imageCount) }}</span>
+              <span class="text-[0.72rem] text-muted">{{ formatLatestDate(folder.latestImageMtimeMs) }}</span>
+            </div>
             <span
               class="w-[7px] h-[7px] rounded-full shrink-0"
               :class="folder.imageCount > 0 ? 'bg-[#1ca44e]' : 'bg-border'"
@@ -120,7 +96,6 @@
             ></span>
           </div>
 
-          <!-- 3-dot menu -->
           <button
             class="inline-flex items-center justify-center w-8 h-8 p-0 border-0 text-muted bg-transparent cursor-pointer rounded-full hover:bg-surface-alt transition-colors duration-150 shrink-0"
             type="button"
@@ -185,9 +160,9 @@
     <!-- Delete confirmation dialog -->
     <ConfirmDialog
       v-if="confirmDeleteFolder"
-      title="Delete this folder?"
-      :message="`This folder and all ${formatCount(confirmDeleteFolder.imageCount)} image${confirmDeleteFolder.imageCount !== 1 ? 's' : ''} in it will be permanently deleted from the hard drive. This action cannot be undone.`"
-      confirm-label="Delete folder"
+      title="Delete this app folder?"
+      :message="`This app folder's ${formatCount(confirmDeleteFolder.imageCount)} direct image${confirmDeleteFolder.imageCount !== 1 ? 's' : ''} will be permanently deleted from the hard drive. Child source folders are not touched.`"
+      confirm-label="Delete app folder"
       loading-label="Deleting…"
       :loading="deleting"
       @cancel="confirmDeleteFolder = null"
@@ -211,14 +186,7 @@ import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
 import type { FolderSummary } from '../types/api';
 
-type LibraryFilter = 'all' | 'active' | 'empty';
-type LibrarySort = 'images-desc' | 'name-asc' | 'name-desc' | 'slug-asc';
-
-const filterOptions: Array<{ label: string; value: LibraryFilter }> = [
-  { label: 'All folders', value: 'all' },
-  { label: 'With images', value: 'active' },
-  { label: 'Empty', value: 'empty' }
-];
+type LibrarySort = 'recent-desc' | 'images-desc' | 'name-asc' | 'name-desc' | 'path-asc';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
@@ -226,8 +194,7 @@ const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
 const router = useRouter();
 const searchQuery = ref('');
-const statusFilter = ref<LibraryFilter>('all');
-const sortMode = ref<LibrarySort>('images-desc');
+const sortMode = ref<LibrarySort>('recent-desc');
 const menuFolder = ref<FolderSummary | null>(null);
 const confirmDeleteFolder = ref<FolderSummary | null>(null);
 const deleting = ref(false);
@@ -236,9 +203,19 @@ function formatCount(value: number) {
   return new Intl.NumberFormat().format(value);
 }
 
+function formatLatestDate(value: number | null) {
+  if (!value) {
+    return 'No recent media';
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
-const activeFolderCount = computed(() => foldersStore.items.filter((folder) => folder.imageCount > 0).length);
-const emptyFolderCount = computed(() => foldersStore.items.filter((folder) => folder.imageCount === 0).length);
 const totalIndexedImages = computed(() => foldersStore.items.reduce((total, folder) => total + folder.imageCount, 0));
 
 function matchesSearch(folder: FolderSummary, query: string) {
@@ -246,17 +223,19 @@ function matchesSearch(folder: FolderSummary, query: string) {
     return true;
   }
 
-  return [folder.slug, folder.name, folder.folderPath].some((value) => value.toLowerCase().includes(query));
+  return [folder.slug, folder.name, folder.breadcrumb ?? '', folder.folderPath].some((value) => value.toLowerCase().includes(query));
 }
 
 function sortFolders(left: FolderSummary, right: FolderSummary) {
   switch (sortMode.value) {
+    case 'recent-desc':
+      return (right.latestImageMtimeMs ?? 0) - (left.latestImageMtimeMs ?? 0) || left.folderPath.localeCompare(right.folderPath);
     case 'name-asc':
       return left.name.localeCompare(right.name);
     case 'name-desc':
       return right.name.localeCompare(left.name);
-    case 'slug-asc':
-      return left.slug.localeCompare(right.slug);
+    case 'path-asc':
+      return left.folderPath.localeCompare(right.folderPath);
     case 'images-desc':
     default:
       return right.imageCount - left.imageCount || left.name.localeCompare(right.name);
@@ -265,17 +244,6 @@ function sortFolders(left: FolderSummary, right: FolderSummary) {
 
 const filteredFolders = computed(() =>
   foldersStore.items
-    .filter((folder) => {
-      if (statusFilter.value === 'active') {
-        return folder.imageCount > 0;
-      }
-
-      if (statusFilter.value === 'empty') {
-        return folder.imageCount === 0;
-      }
-
-      return true;
-    })
     .filter((folder) => matchesSearch(folder, normalizedQuery.value))
     .slice()
     .sort(sortFolders)

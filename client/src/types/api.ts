@@ -3,6 +3,8 @@ export interface FeedItem {
   folderId: number;
   folderSlug: string;
   folderName: string;
+  folderPath: string;
+  folderBreadcrumb: string | null;
   filename: string;
   width: number;
   height: number;
@@ -16,6 +18,7 @@ export interface FolderSummary {
   slug: string;
   name: string;
   folderPath: string;
+  breadcrumb: string | null;
   imageCount: number;
   latestImageMtimeMs: number | null;
   avatarUrl: string | null;

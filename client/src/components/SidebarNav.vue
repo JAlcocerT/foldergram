@@ -98,6 +98,7 @@
         :key="folder.id"
         class="sidebar__folder sidebar-item"
         :to="{ name: 'folder', params: { slug: folder.slug } }"
+        :title="folder.breadcrumb ? `${folder.breadcrumb} / ${folder.name}` : folder.name"
       >
         <Avatar
           :name="folder.name"
@@ -107,9 +108,9 @@
         <span
           class="sidebar__folder-copy sidebar__meta flex flex-col min-w-0 gap-[0.05rem]"
         >
-          <strong class="text-[0.82rem]">{{ folder.slug }}</strong>
-          <small class="text-white/55 text-[0.68rem]"
-            >{{ folder.imageCount }} posts</small
+          <strong class="text-[0.82rem] truncate">{{ folder.name }}</strong>
+          <small class="text-white/55 text-[0.68rem] truncate"
+            >{{ folder.breadcrumb ?? `${folder.imageCount} posts` }}</small
           >
         </span>
       </RouterLink>

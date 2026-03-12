@@ -11,6 +11,7 @@ const baseFolders = [
     slug: 'alpha',
     name: 'Alpha',
     folderPath: 'gallery/alpha',
+    breadcrumb: 'gallery',
     imageCount: 12,
     latestImageMtimeMs: Date.parse('2026-03-01T09:00:00.000Z'),
     avatarUrl: null
@@ -20,6 +21,7 @@ const baseFolders = [
     slug: 'beta',
     name: 'Beta',
     folderPath: 'gallery/beta',
+    breadcrumb: 'gallery',
     imageCount: 7,
     latestImageMtimeMs: Date.parse('2026-03-10T09:00:00.000Z'),
     avatarUrl: null
@@ -29,6 +31,7 @@ const baseFolders = [
     slug: 'gamma',
     name: 'Gamma',
     folderPath: 'gallery/gamma',
+    breadcrumb: 'gallery',
     imageCount: 23,
     latestImageMtimeMs: Date.parse('2026-02-26T09:00:00.000Z'),
     avatarUrl: null
@@ -38,6 +41,7 @@ const baseFolders = [
     slug: 'delta',
     name: 'Delta',
     folderPath: 'gallery/delta',
+    breadcrumb: 'gallery',
     imageCount: 0,
     latestImageMtimeMs: null,
     avatarUrl: null
@@ -47,6 +51,7 @@ const baseFolders = [
     slug: 'epsilon',
     name: 'Epsilon',
     folderPath: 'gallery/epsilon',
+    breadcrumb: 'gallery',
     imageCount: 18,
     latestImageMtimeMs: Date.parse('2026-02-20T09:00:00.000Z'),
     avatarUrl: null
@@ -56,6 +61,7 @@ const baseFolders = [
     slug: 'zeta',
     name: 'Zeta',
     folderPath: 'gallery/zeta',
+    breadcrumb: 'gallery',
     imageCount: 5,
     latestImageMtimeMs: Date.parse('2026-03-08T09:00:00.000Z'),
     avatarUrl: null
@@ -65,6 +71,7 @@ const baseFolders = [
     slug: 'eta',
     name: 'Eta',
     folderPath: 'gallery/eta',
+    breadcrumb: 'gallery',
     imageCount: 14,
     latestImageMtimeMs: Date.parse('2026-02-28T09:00:00.000Z'),
     avatarUrl: null
@@ -72,10 +79,10 @@ const baseFolders = [
 ];
 
 const likedCountByFolder = buildLikedCountByFolder([
-  { id: 101, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1 },
-  { id: 102, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2 },
-  { id: 103, folderId: 5, folderSlug: 'epsilon', folderName: 'Epsilon', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3 },
-  { id: 104, folderId: 6, folderSlug: 'zeta', folderName: 'Zeta', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4 }
+  { id: 101, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '1.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 1 },
+  { id: 102, folderId: 1, folderSlug: 'alpha', folderName: 'Alpha', folderPath: 'gallery/alpha', folderBreadcrumb: 'gallery', filename: '2.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 2 },
+  { id: 103, folderId: 5, folderSlug: 'epsilon', folderName: 'Epsilon', folderPath: 'gallery/epsilon', folderBreadcrumb: 'gallery', filename: '3.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 3 },
+  { id: 104, folderId: 6, folderSlug: 'zeta', folderName: 'Zeta', folderPath: 'gallery/zeta', folderBreadcrumb: 'gallery', filename: '4.jpg', width: 1, height: 1, thumbnailUrl: '', previewUrl: '', sortTimestamp: 4 }
 ]);
 
 describe('home recommendations', () => {

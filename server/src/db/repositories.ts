@@ -71,7 +71,7 @@ export interface UpsertFolderScanStateInput {
 
 export const folderRepository = {
   getAll(): FolderRecord[] {
-    return database.prepare('SELECT * FROM folders ORDER BY name COLLATE NOCASE ASC').all() as unknown as FolderRecord[];
+    return database.prepare('SELECT * FROM folders ORDER BY folder_path COLLATE NOCASE ASC').all() as unknown as FolderRecord[];
   },
 
   getAllSummaries(): FolderSummaryRecord[] {
@@ -83,9 +83,9 @@ export const folderRepository = {
           COUNT(images.id) AS image_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
-        LEFT JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
         GROUP BY folders.id
-        ORDER BY folders.name COLLATE NOCASE ASC
+        ORDER BY latest_image_mtime_ms DESC, folders.name COLLATE NOCASE ASC, folders.folder_path COLLATE NOCASE ASC
         `
       )
       .all() as unknown as FolderSummaryRecord[];
@@ -93,6 +93,12 @@ export const folderRepository = {
 
   getBySlug(slug: string): FolderRecord | undefined {
     return database.prepare('SELECT * FROM folders WHERE slug = ?').get(slug) as FolderRecord | undefined;
+  },
+
+  getByFolderPath(folderPath: string): FolderRecord | undefined {
+    return database
+      .prepare('SELECT * FROM folders WHERE folder_path = ?')
+      .get(normalizePath(folderPath)) as FolderRecord | undefined;
   },
 
   getSummaryBySlug(slug: string): FolderSummaryRecord | undefined {
@@ -104,7 +110,7 @@ export const folderRepository = {
           COUNT(images.id) AS image_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
-        LEFT JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
         WHERE folders.slug = ?
         GROUP BY folders.id
         `
@@ -113,23 +119,25 @@ export const folderRepository = {
   },
 
   upsert(input: UpsertFolderInput): FolderRecord {
+    const normalizedFolderPath = normalizePath(input.folderPath);
     database.prepare(
       `
       INSERT INTO folders (slug, name, folder_path, updated_at)
       VALUES (?, ?, ?, ?)
-      ON CONFLICT(slug) DO UPDATE SET
+      ON CONFLICT(folder_path) DO UPDATE SET
+        slug = excluded.slug,
         name = excluded.name,
-        folder_path = excluded.folder_path,
         updated_at = excluded.updated_at
       `
-    ).run(input.slug, input.name, input.folderPath, nowIso());
+    ).run(input.slug, input.name, normalizedFolderPath, nowIso());
 
-    return this.getBySlug(input.slug) as FolderRecord;
+    return this.getByFolderPath(normalizedFolderPath) as FolderRecord;
   },
 
   save(input: UpsertFolderInput): SaveFolderResult {
-    const existing = this.getBySlug(input.slug);
-    if (existing && existing.name === input.name && normalizePath(existing.folder_path) === normalizePath(input.folderPath)) {
+    const normalizedFolderPath = normalizePath(input.folderPath);
+    const existing = this.getByFolderPath(normalizedFolderPath);
+    if (existing && existing.slug === input.slug && existing.name === input.name) {
       return {
         folder: existing,
         wrote: false
@@ -137,13 +145,32 @@ export const folderRepository = {
     }
 
     return {
-      folder: this.upsert(input),
+      folder: this.upsert({
+        ...input,
+        folderPath: normalizedFolderPath
+      }),
       wrote: true
     };
   },
 
   count(): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM folders').get() as { count: number }).count);
+    return Number(
+      (
+        database
+          .prepare(
+            `
+            SELECT COUNT(*) AS count
+            FROM folders
+            WHERE EXISTS (
+              SELECT 1
+              FROM images
+              WHERE images.folder_id = folders.id AND images.is_deleted = 0
+            )
+            `
+          )
+          .get() as { count: number }
+      ).count
+    );
   },
 
   setAvatar(folderId: number, imageId: number | null): void {
@@ -290,6 +317,7 @@ export const imageRepository = {
         images.folder_id AS folderId,
         folders.slug AS folderSlug,
         folders.name AS folderName,
+        folders.folder_path AS folderPath,
         images.filename,
         images.width,
         images.height,
@@ -318,6 +346,7 @@ export const imageRepository = {
         images.folder_id AS folderId,
         folders.slug AS folderSlug,
         folders.name AS folderName,
+        folders.folder_path AS folderPath,
         images.filename,
         images.width,
         images.height,
@@ -337,6 +366,12 @@ export const imageRepository = {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0').get(folderId) as { count: number }).count);
   },
 
+  listActiveByFolder(folderId: number): ImageRecord[] {
+    return database
+      .prepare('SELECT * FROM images WHERE folder_id = ? AND is_deleted = 0 ORDER BY id ASC')
+      .all(folderId) as unknown as ImageRecord[];
+  },
+
   getLatestFolderImageId(folderId: number): number | null {
     const row = database.prepare(
       'SELECT id FROM images WHERE folder_id = ? AND is_deleted = 0 ORDER BY sort_timestamp DESC, id DESC LIMIT 1'
@@ -352,6 +387,7 @@ export const imageRepository = {
         images.folder_id AS folderId,
         folders.slug AS folderSlug,
         folders.name AS folderName,
+        folders.folder_path AS folderPath,
         images.filename,
         images.width,
         images.height,
@@ -427,6 +463,7 @@ export const likeRepository = {
         images.folder_id AS folderId,
         folders.slug AS folderSlug,
         folders.name AS folderName,
+        folders.folder_path AS folderPath,
         images.filename,
         images.width,
         images.height,
@@ -513,6 +550,7 @@ export const folderScanStateRepository = {
   },
 
   upsert(input: UpsertFolderScanStateInput): void {
+    const normalizedFolderPath = normalizePath(input.folderPath);
     database
       .prepare(
         `
@@ -526,7 +564,12 @@ export const folderScanStateRepository = {
           updated_at = excluded.updated_at
         `
       )
-      .run(input.folderPath, input.signature, input.fileCount, input.maxMtimeMs, input.totalSize, nowIso());
+      .run(normalizedFolderPath, input.signature, input.fileCount, input.maxMtimeMs, input.totalSize, nowIso());
+  },
+
+  delete(folderPath: string): number {
+    const result = database.prepare('DELETE FROM folder_scan_state WHERE folder_path = ?').run(normalizePath(folderPath));
+    return Number(result.changes ?? 0);
   },
 
   deleteMissing(activeFolderPaths: string[]): number {
@@ -535,9 +578,10 @@ export const folderScanStateRepository = {
       return Number(result.changes ?? 0);
     }
 
-    const placeholders = activeFolderPaths.map(() => '?').join(', ');
+    const normalizedFolderPaths = activeFolderPaths.map((folderPath) => normalizePath(folderPath));
+    const placeholders = normalizedFolderPaths.map(() => '?').join(', ');
     const statement = database.prepare(`DELETE FROM folder_scan_state WHERE folder_path NOT IN (${placeholders})`);
-    const result = statement.run(...activeFolderPaths);
+    const result = statement.run(...normalizedFolderPaths);
     return Number(result.changes ?? 0);
   }
 };

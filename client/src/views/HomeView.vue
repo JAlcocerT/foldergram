@@ -37,11 +37,12 @@
           :key="folder.id"
           class="flex flex-col items-center gap-[0.45rem] min-w-[4.55rem] text-muted text-[0.69rem] text-center"
           :to="{ name: 'folder', params: { slug: folder.slug } }"
+          :title="folder.breadcrumb ? `${folder.breadcrumb} / ${folder.name}` : folder.name"
         >
           <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
             <Avatar class="w-[3.95rem] h-[3.95rem] border-2 border-bg" :name="folder.name" :src="folder.avatarUrl" />
           </div>
-          <span class="max-w-full overflow-hidden text-ellipsis">{{ folder.slug }}</span>
+          <span class="max-w-full overflow-hidden text-ellipsis">{{ folder.name }}</span>
         </RouterLink>
       </section>
 
@@ -89,8 +90,8 @@
       <div class="flex items-center gap-[0.8rem]">
         <Avatar class="w-11 h-11" :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
         <div class="flex-1 min-w-0">
-          <strong class="block text-text text-[0.87rem] font-bold">{{ homeSummaryFolder.slug }}</strong>
-          <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ homeSummaryFolder.name }}</p>
+          <strong class="block text-text text-[0.87rem] font-bold">{{ homeSummaryFolder.name }}</strong>
+          <p class="m-0 mt-[0.12rem] text-[0.79rem] truncate">{{ homeSummaryFolder.breadcrumb ?? 'Top-level source folder' }}</p>
         </div>
         <RouterLink class="ml-auto text-accent-strong text-[0.76rem] font-bold" :to="{ name: 'folder', params: { slug: homeSummaryFolder.slug } }">Open</RouterLink>
       </div>
@@ -109,8 +110,8 @@
         >
           <Avatar class="w-11 h-11" :name="folder.name" :src="folder.avatarUrl" />
           <div class="flex-1 min-w-0">
-            <strong class="block text-text text-[0.87rem] font-bold">{{ folder.slug }}</strong>
-            <p class="m-0 mt-[0.12rem] text-[0.79rem]">{{ folder.imageCount }} posts</p>
+            <strong class="block text-text text-[0.87rem] font-bold">{{ folder.name }}</strong>
+            <p class="m-0 mt-[0.12rem] text-[0.79rem] truncate">{{ folder.breadcrumb ?? 'Top-level source folder' }}</p>
           </div>
           <span class="ml-auto text-accent-strong text-[0.76rem] font-bold">Open</span>
         </RouterLink>

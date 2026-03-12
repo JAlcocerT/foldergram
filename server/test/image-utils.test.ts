@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { createFingerprint, getDerivativeRelativePath, getStableSortTimestamp } from '../src/utils/image-utils.js';
-import { normalizePath } from '../src/utils/path-utils.js';
-import { resolveUniqueSlug, slugifyFolderName } from '../src/utils/slug.js';
+import { getPathBreadcrumb, getSourceFolderPathFromRelativePath, normalizePath } from '../src/utils/path-utils.js';
+import { resolveUniqueSlug, slugifyFolderName, slugifyFolderPath } from '../src/utils/slug.js';
 
 describe('scanner utilities', () => {
   it('creates stable normalized fingerprints', () => {
@@ -26,6 +26,11 @@ describe('folder slug resolution', () => {
     expect(slugifyFolderName('***')).toBe('folder');
   });
 
+  it('slugifies full source folder paths safely', () => {
+    expect(slugifyFolderPath('galaxy/S24/Downloads')).toBe('galaxy-s24-downloads');
+    expect(slugifyFolderPath('summer\\2026\\Camera Roll')).toBe('summer-2026-camera-roll');
+  });
+
   it('resolves duplicate slugs with numeric suffixes', () => {
     const existing = new Set<string>();
     expect(resolveUniqueSlug('Weekend', existing)).toBe('weekend');
@@ -36,5 +41,15 @@ describe('folder slug resolution', () => {
 describe('path normalization', () => {
   it('normalizes windows separators for mirrored storage', () => {
     expect(normalizePath('alpha\\beta\\photo.png')).toBe('alpha/beta/photo.png');
+  });
+
+  it('resolves deep source folders from file paths', () => {
+    expect(getSourceFolderPathFromRelativePath('galaxy/S24/Downloads/photo.png')).toBe('galaxy/S24/Downloads');
+    expect(getSourceFolderPathFromRelativePath('photo.png')).toBeNull();
+  });
+
+  it('builds breadcrumb text from relative folder paths', () => {
+    expect(getPathBreadcrumb('galaxy/S24/Downloads')).toBe('galaxy / S24');
+    expect(getPathBreadcrumb('Downloads')).toBeNull();
   });
 });

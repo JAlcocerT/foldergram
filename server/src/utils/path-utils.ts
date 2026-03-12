@@ -1,9 +1,17 @@
 import path from 'node:path';
 
 const HIDDEN_SEGMENT_PATTERN = /^\./;
+const PATH_EDGE_SLASH_PATTERN = /^\/+|\/+$/g;
 
 export function normalizePath(value: string): string {
   return value.replace(/\\/g, '/');
+}
+
+export function splitPathSegments(value: string): string[] {
+  return normalizePath(value)
+    .replace(PATH_EDGE_SLASH_PATTERN, '')
+    .split('/')
+    .filter(Boolean);
 }
 
 export function toOsPath(value: string): string {
@@ -11,9 +19,7 @@ export function toOsPath(value: string): string {
 }
 
 export function isHiddenPath(value: string): boolean {
-  return normalizePath(value)
-    .split('/')
-    .some((segment) => HIDDEN_SEGMENT_PATTERN.test(segment));
+  return splitPathSegments(value).some((segment) => HIDDEN_SEGMENT_PATTERN.test(segment));
 }
 
 export function ensureWithinRoot(root: string, target: string): boolean {
@@ -34,7 +40,33 @@ export function getRelativeGalleryPath(galleryRoot: string, absolutePath: string
   return normalizePath(path.relative(galleryRoot, absolutePath));
 }
 
-export function getFolderSlugFromRelativePath(relativePath: string): string | null {
-  const [folderSlug] = normalizePath(relativePath).split('/');
-  return folderSlug || null;
+export function getSourceFolderPathFromRelativePath(relativePath: string): string | null {
+  const normalized = normalizePath(relativePath).replace(PATH_EDGE_SLASH_PATTERN, '');
+  if (!normalized) {
+    return null;
+  }
+
+  const sourceFolderPath = path.posix.dirname(normalized);
+  return sourceFolderPath === '.' ? null : sourceFolderPath;
+}
+
+export function getLeafPathName(relativePath: string): string {
+  const segments = splitPathSegments(relativePath);
+  return segments.at(-1) ?? 'folder';
+}
+
+export function getPathBreadcrumb(relativePath: string): string | null {
+  const segments = splitPathSegments(relativePath);
+  if (segments.length <= 1) {
+    return null;
+  }
+
+  return segments.slice(0, -1).join(' / ');
+}
+
+export function getFolderDisplayInfo(relativePath: string): { name: string; breadcrumb: string | null } {
+  return {
+    name: getLeafPathName(relativePath),
+    breadcrumb: getPathBreadcrumb(relativePath)
+  };
 }
