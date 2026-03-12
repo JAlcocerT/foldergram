@@ -2,8 +2,13 @@ import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY,
+  LIBRARY_REBUILD_REQUIRED_SETTING_KEY,
+  PREVIOUS_GALLERY_ROOT_SETTING_KEY
+} from '../constants/app-setting-keys.js';
 import { appConfig } from '../config/env.js';
-import { folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
+import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
 import type { FeedImage, ImageDetail, FolderSummaryRecord } from '../types/models.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
@@ -206,6 +211,10 @@ export const galleryService = {
   getStats() {
     const lastScan = scanRunRepository.latest();
     const storageState = storageService.getState();
+    const currentGalleryRoot = appConfig.galleryRoot;
+    const previousGalleryRoot = appSettingsRepository.get(PREVIOUS_GALLERY_ROOT_SETTING_KEY);
+    const rebuildRequired = appSettingsRepository.get(LIBRARY_REBUILD_REQUIRED_SETTING_KEY) === '1';
+    const lastSuccessfulGalleryRoot = appSettingsRepository.get(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
 
     return {
       folders: storageState.libraryAvailable ? folderRepository.count() : 0,
@@ -219,6 +228,13 @@ export const galleryService = {
         available: storageState.libraryAvailable,
         reason: storageState.reason,
         usingInMemoryDatabase: storageState.usingInMemoryDatabase
+      },
+      libraryIndex: {
+        rebuildRequired,
+        reason: rebuildRequired ? 'gallery_root_changed' : null,
+        currentGalleryRoot,
+        previousGalleryRoot,
+        lastSuccessfulGalleryRoot
       }
     };
   },
@@ -277,7 +293,7 @@ export const galleryService = {
 
     likeRepository.remove(imageRecord.id);
     imageRepository.markDeleted(imageRecord.relative_path);
-    folderRepository.setAvatar(imageRecord.profile_id, imageRepository.getLatestFolderImageId(imageRecord.profile_id));
+    folderRepository.setAvatar(imageRecord.folder_id, imageRepository.getLatestFolderImageId(imageRecord.folder_id));
 
     return {
       id: imageRecord.id,

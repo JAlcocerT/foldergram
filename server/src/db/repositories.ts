@@ -71,7 +71,7 @@ export interface UpsertFolderScanStateInput {
 
 export const folderRepository = {
   getAll(): FolderRecord[] {
-    return database.prepare('SELECT * FROM profiles ORDER BY name COLLATE NOCASE ASC').all() as unknown as FolderRecord[];
+    return database.prepare('SELECT * FROM folders ORDER BY name COLLATE NOCASE ASC').all() as unknown as FolderRecord[];
   },
 
   getAllSummaries(): FolderSummaryRecord[] {
@@ -79,20 +79,20 @@ export const folderRepository = {
       .prepare(
         `
         SELECT
-          profiles.*,
+          folders.*,
           COUNT(images.id) AS image_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
-        FROM profiles
-        LEFT JOIN images ON images.profile_id = profiles.id AND images.is_deleted = 0
-        GROUP BY profiles.id
-        ORDER BY profiles.name COLLATE NOCASE ASC
+        FROM folders
+        LEFT JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        GROUP BY folders.id
+        ORDER BY folders.name COLLATE NOCASE ASC
         `
       )
       .all() as unknown as FolderSummaryRecord[];
   },
 
   getBySlug(slug: string): FolderRecord | undefined {
-    return database.prepare('SELECT * FROM profiles WHERE slug = ?').get(slug) as FolderRecord | undefined;
+    return database.prepare('SELECT * FROM folders WHERE slug = ?').get(slug) as FolderRecord | undefined;
   },
 
   getSummaryBySlug(slug: string): FolderSummaryRecord | undefined {
@@ -100,13 +100,13 @@ export const folderRepository = {
       .prepare(
         `
         SELECT
-          profiles.*,
+          folders.*,
           COUNT(images.id) AS image_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
-        FROM profiles
-        LEFT JOIN images ON images.profile_id = profiles.id AND images.is_deleted = 0
-        WHERE profiles.slug = ?
-        GROUP BY profiles.id
+        FROM folders
+        LEFT JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        WHERE folders.slug = ?
+        GROUP BY folders.id
         `
       )
       .get(slug) as FolderSummaryRecord | undefined;
@@ -115,7 +115,7 @@ export const folderRepository = {
   upsert(input: UpsertFolderInput): FolderRecord {
     database.prepare(
       `
-      INSERT INTO profiles (slug, name, folder_path, updated_at)
+      INSERT INTO folders (slug, name, folder_path, updated_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(slug) DO UPDATE SET
         name = excluded.name,
@@ -143,11 +143,11 @@ export const folderRepository = {
   },
 
   count(): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number }).count);
+    return Number((database.prepare('SELECT COUNT(*) AS count FROM folders').get() as { count: number }).count);
   },
 
   setAvatar(folderId: number, imageId: number | null): void {
-    database.prepare('UPDATE profiles SET avatar_image_id = ?, updated_at = ? WHERE id = ? AND avatar_image_id IS NOT ?').run(
+    database.prepare('UPDATE folders SET avatar_image_id = ?, updated_at = ? WHERE id = ? AND avatar_image_id IS NOT ?').run(
       imageId,
       nowIso(),
       folderId,
@@ -156,7 +156,7 @@ export const folderRepository = {
   },
 
   delete(id: number): void {
-    database.prepare('DELETE FROM profiles WHERE id = ?').run(id);
+    database.prepare('DELETE FROM folders WHERE id = ?').run(id);
   }
 };
 
@@ -173,13 +173,13 @@ export const imageRepository = {
     database.prepare(
       `
       INSERT INTO images (
-        profile_id, filename, extension, relative_path, absolute_path, file_size, width, height,
+        folder_id, filename, extension, relative_path, absolute_path, file_size, width, height,
         mime_type, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp,
         thumbnail_path, preview_path, is_deleted, updated_at
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
       ON CONFLICT(relative_path) DO UPDATE SET
-        profile_id = excluded.profile_id,
+        folder_id = excluded.folder_id,
         filename = excluded.filename,
         extension = excluded.extension,
         absolute_path = excluded.absolute_path,
@@ -221,7 +221,7 @@ export const imageRepository = {
       `
       UPDATE images
       SET
-        profile_id = ?,
+        folder_id = ?,
         filename = ?,
         extension = ?,
         absolute_path = ?,
@@ -258,7 +258,7 @@ export const imageRepository = {
   },
 
   markFolderImagesDeleted(folderId: number, activeRelativePaths: string[]): number {
-    const rows = database.prepare('SELECT relative_path FROM images WHERE profile_id = ? AND is_deleted = 0').all(folderId) as Array<{ relative_path: string }>;
+    const rows = database.prepare('SELECT relative_path FROM images WHERE folder_id = ? AND is_deleted = 0').all(folderId) as Array<{ relative_path: string }>;
     const active = new Set(activeRelativePaths);
     let removedCount = 0;
 
@@ -273,7 +273,7 @@ export const imageRepository = {
   },
 
   markAllDeletedByFolder(folderId: number): number {
-    const result = database.prepare('UPDATE images SET is_deleted = 1, updated_at = ? WHERE profile_id = ? AND is_deleted = 0').run(nowIso(), folderId);
+    const result = database.prepare('UPDATE images SET is_deleted = 1, updated_at = ? WHERE folder_id = ? AND is_deleted = 0').run(nowIso(), folderId);
     return Number(result.changes ?? 0);
   },
 
@@ -287,9 +287,9 @@ export const imageRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS folderId,
-        profiles.slug AS folderSlug,
-        profiles.name AS folderName,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -297,7 +297,7 @@ export const imageRepository = {
         images.preview_path AS previewUrl,
         images.sort_timestamp AS sortTimestamp
       FROM images
-      INNER JOIN profiles ON profiles.id = images.profile_id
+      INNER JOIN folders ON folders.id = images.folder_id
       WHERE images.is_deleted = 0
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
@@ -315,9 +315,9 @@ export const imageRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS folderId,
-        profiles.slug AS folderSlug,
-        profiles.name AS folderName,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -325,8 +325,8 @@ export const imageRepository = {
         images.preview_path AS previewUrl,
         images.sort_timestamp AS sortTimestamp
       FROM images
-      INNER JOIN profiles ON profiles.id = images.profile_id
-      WHERE images.profile_id = ? AND images.is_deleted = 0
+      INNER JOIN folders ON folders.id = images.folder_id
+      WHERE images.folder_id = ? AND images.is_deleted = 0
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
@@ -334,12 +334,12 @@ export const imageRepository = {
   },
 
   countByFolder(folderId: number): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE profile_id = ? AND is_deleted = 0').get(folderId) as { count: number }).count);
+    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0').get(folderId) as { count: number }).count);
   },
 
   getLatestFolderImageId(folderId: number): number | null {
     const row = database.prepare(
-      'SELECT id FROM images WHERE profile_id = ? AND is_deleted = 0 ORDER BY sort_timestamp DESC, id DESC LIMIT 1'
+      'SELECT id FROM images WHERE folder_id = ? AND is_deleted = 0 ORDER BY sort_timestamp DESC, id DESC LIMIT 1'
     ).get(folderId) as { id: number } | undefined;
     return row?.id ?? null;
   },
@@ -349,9 +349,9 @@ export const imageRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS folderId,
-        profiles.slug AS folderSlug,
-        profiles.name AS folderName,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -363,7 +363,7 @@ export const imageRepository = {
         images.absolute_path AS originalUrl,
         images.sort_timestamp AS sortTimestamp
       FROM images
-      INNER JOIN profiles ON profiles.id = images.profile_id
+      INNER JOIN folders ON folders.id = images.folder_id
       WHERE images.id = ? AND images.is_deleted = 0
       `
     ).get(id) as (Omit<ImageDetail, 'nextImageId' | 'previousImageId'> & { originalUrl: string }) | undefined;
@@ -376,7 +376,7 @@ export const imageRepository = {
       `
       SELECT id
       FROM images
-      WHERE profile_id = ? AND is_deleted = 0
+      WHERE folder_id = ? AND is_deleted = 0
         AND (sort_timestamp < ? OR (sort_timestamp = ? AND id < ?))
       ORDER BY sort_timestamp DESC, id DESC
       LIMIT 1
@@ -387,7 +387,7 @@ export const imageRepository = {
       `
       SELECT id
       FROM images
-      WHERE profile_id = ? AND is_deleted = 0
+      WHERE folder_id = ? AND is_deleted = 0
         AND (sort_timestamp > ? OR (sort_timestamp = ? AND id > ?))
       ORDER BY sort_timestamp ASC, id ASC
       LIMIT 1
@@ -424,9 +424,9 @@ export const likeRepository = {
       `
       SELECT
         images.id,
-        images.profile_id AS folderId,
-        profiles.slug AS folderSlug,
-        profiles.name AS folderName,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
         images.filename,
         images.width,
         images.height,
@@ -435,7 +435,7 @@ export const likeRepository = {
         images.sort_timestamp AS sortTimestamp
       FROM likes
       INNER JOIN images ON images.id = likes.image_id
-      INNER JOIN profiles ON profiles.id = images.profile_id
+      INNER JOIN folders ON folders.id = images.folder_id
       WHERE images.is_deleted = 0
       ORDER BY likes.created_at DESC, likes.image_id DESC
       `
@@ -462,7 +462,7 @@ export const likeRepository = {
 
   removeByFolder(folderId: number): number {
     const result = database.prepare(
-      'DELETE FROM likes WHERE image_id IN (SELECT id FROM images WHERE profile_id = ?)'
+      'DELETE FROM likes WHERE image_id IN (SELECT id FROM images WHERE folder_id = ?)'
     ).run(folderId);
     return Number(result.changes ?? 0);
   }
@@ -484,6 +484,26 @@ export const appSettingsRepository = {
         `
       )
       .run(key, value);
+  },
+
+  remove(key: string): void {
+    database.prepare('DELETE FROM app_settings WHERE key = ?').run(key);
+  }
+};
+
+export const maintenanceRepository = {
+  resetLibraryIndex(): void {
+    database.exec(`
+      BEGIN;
+      UPDATE folders SET avatar_image_id = NULL;
+      DELETE FROM likes;
+      DELETE FROM images;
+      DELETE FROM folders;
+      DELETE FROM folder_scan_state;
+      DELETE FROM scan_runs;
+      DELETE FROM sqlite_sequence WHERE name IN ('folders', 'images', 'scan_runs');
+      COMMIT;
+    `);
   }
 };
 

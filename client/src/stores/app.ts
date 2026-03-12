@@ -28,6 +28,7 @@ export const useAppStore = defineStore('app', {
   getters: {
     isLibraryUnavailable: (state) => state.stats?.storage.available === false,
     libraryUnavailableReason: (state) => state.stats?.storage.reason ?? 'Configured library storage is unavailable.',
+    isLibraryRebuildRequired: (state) => state.stats?.libraryIndex.rebuildRequired === true,
     isScanning: (state) => state.stats?.scan.isScanning === true,
     hasCompletedScan: (state) => state.stats?.scan.lastCompletedScan !== null,
     isInitialScan: (state) => state.stats?.scan.isScanning === true && state.stats?.scan.lastCompletedScan === null
@@ -46,9 +47,7 @@ export const useAppStore = defineStore('app', {
     },
 
     initializeLastOpenedFolder() {
-      const savedSlug =
-        window.localStorage.getItem('insta-local-last-opened-folder') ??
-        window.localStorage.getItem('insta-local-last-opened-profile');
+      const savedSlug = window.localStorage.getItem('insta-local-last-opened-folder');
       this.lastOpenedFolderSlug = savedSlug && savedSlug.length > 0 ? savedSlug : null;
     },
 

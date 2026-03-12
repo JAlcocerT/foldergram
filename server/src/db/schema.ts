@@ -1,7 +1,7 @@
 export const schemaSql = `
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS folders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   slug TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 CREATE TABLE IF NOT EXISTS images (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  profile_id INTEGER NOT NULL,
+  folder_id INTEGER NOT NULL,
   filename TEXT NOT NULL,
   extension TEXT NOT NULL,
   relative_path TEXT NOT NULL UNIQUE,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS images (
   is_deleted INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS scan_runs (
@@ -67,10 +67,10 @@ CREATE TABLE IF NOT EXISTS likes (
   FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_profiles_slug ON profiles(slug);
-CREATE INDEX IF NOT EXISTS idx_images_profile_id ON images(profile_id);
+CREATE INDEX IF NOT EXISTS idx_folders_slug ON folders(slug);
+CREATE INDEX IF NOT EXISTS idx_images_folder_id ON images(folder_id);
 CREATE INDEX IF NOT EXISTS idx_images_sort_timestamp ON images(sort_timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_images_profile_sort ON images(profile_id, is_deleted, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_folder_sort ON images(folder_id, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);
 CREATE INDEX IF NOT EXISTS idx_folder_scan_state_updated_at ON folder_scan_state(updated_at DESC);

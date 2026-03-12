@@ -5,8 +5,20 @@ import path from 'node:path';
 
 import pLimit from 'p-limit';
 
+import {
+  LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY,
+  LIBRARY_REBUILD_REQUIRED_SETTING_KEY,
+  PREVIOUS_GALLERY_ROOT_SETTING_KEY
+} from '../constants/app-setting-keys.js';
 import { appConfig } from '../config/env.js';
-import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, scanRunRepository } from '../db/repositories.js';
+import {
+  appSettingsRepository,
+  folderRepository,
+  folderScanStateRepository,
+  imageRepository,
+  maintenanceRepository,
+  scanRunRepository
+} from '../db/repositories.js';
 import { generateDerivatives, readImageMetadata } from './derivative-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
@@ -114,7 +126,6 @@ export interface ScanProgressSnapshot {
 const discoveryLimit = pLimit(appConfig.scanDiscoveryConcurrency);
 const derivativeLimit = pLimit(appConfig.scanDerivativeConcurrency);
 const HEARTBEAT_INTERVAL_MS = 5000;
-const LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY = 'scanner.last_successful_gallery_root';
 
 function createEmptySummary(): ScanSummary {
   return {
@@ -169,6 +180,22 @@ function elapsedMilliseconds(startedAt: number): number {
   return Math.round(performance.now() - startedAt);
 }
 
+function formatStep(label: string, value: string | number): string {
+  return `${label} ${value}`;
+}
+
+function formatDuration(durationMs: number): string {
+  return `${durationMs}ms`;
+}
+
+function formatToggle(value: boolean): string {
+  return value ? 'yes' : 'no';
+}
+
+function joinLogParts(parts: Array<string | null | undefined>): string {
+  return parts.filter((part): part is string => Boolean(part)).join(' | ');
+}
+
 async function directoryExists(targetPath: string): Promise<boolean> {
   try {
     const stats = await fs.stat(targetPath);
@@ -193,7 +220,13 @@ class ScannerService {
   startStartupScan(reason = 'startup'): void {
     const options = resolveFullScanOptions({ repairUnchangedDerivatives: false });
 
-    log.info('Startup scan queued', options);
+    log.info(
+      joinLogParts([
+        'Startup scan queued',
+        formatStep('reason', reason),
+        formatStep('repair-derivatives', formatToggle(options.repairUnchangedDerivatives))
+      ])
+    );
     void this.scanAll(reason, options).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       log.error(`Startup scan failed (${reason})`, message);
@@ -204,6 +237,13 @@ class ScannerService {
     const resolvedOptions = resolveFullScanOptions(options);
 
     await this.enqueue(async () => this.performFullScan(reason, resolvedOptions));
+    return scanRunRepository.latest();
+  }
+
+  async rebuildLibraryIndex(reason = 'rebuild'): Promise<ScanRunRecord | undefined> {
+    const resolvedOptions = resolveFullScanOptions({ repairUnchangedDerivatives: false });
+
+    await this.enqueue(async () => this.performLibraryRebuild(reason, resolvedOptions));
     return scanRunRepository.latest();
   }
 
@@ -261,21 +301,46 @@ class ScannerService {
       return;
     }
 
-    log.info('Scan progress', {
-      kind,
-      reason: this.progress.scanReason,
-      phase: this.progress.phase,
-      discoveredFolders: this.progress.discoveredFolders,
-      processedFolders: this.progress.processedFolders,
-      discoveredImages: this.progress.discoveredImages,
-      processedImages: this.progress.processedImages,
-      queuedDerivativeJobs: this.progress.queuedDerivativeJobs,
-      processedDerivativeJobs: this.progress.processedDerivativeJobs,
-      generatedThumbnails: this.progress.generatedThumbnails,
-      generatedPreviews: this.progress.generatedPreviews,
-      currentFolder: this.progress.currentFolder,
-      elapsed: formatElapsed(this.progress.startedAt)
-    });
+    if (kind === 'folder' || kind === 'phase') {
+      return;
+    }
+
+    const elapsed = formatElapsed(this.progress.startedAt);
+    if (kind === 'started') {
+      log.info(
+        joinLogParts([
+          'Scan started',
+          formatStep('reason', this.progress.scanReason ?? 'unknown'),
+          formatStep('phase', this.progress.phase),
+          formatStep('elapsed', elapsed)
+        ])
+      );
+      return;
+    }
+
+    if (this.progress.phase === 'derivatives') {
+      log.info(
+        joinLogParts([
+          'Derivatives',
+          formatStep('jobs', `${this.progress.processedDerivativeJobs}/${this.progress.queuedDerivativeJobs}`),
+          formatStep('thumbnails', this.progress.generatedThumbnails),
+          formatStep('previews', this.progress.generatedPreviews),
+          this.progress.currentFolder ? formatStep('current', this.progress.currentFolder) : null,
+          formatStep('elapsed', elapsed)
+        ])
+      );
+      return;
+    }
+
+    log.info(
+      joinLogParts([
+        'Discovery',
+        formatStep('folders', `${this.progress.processedFolders}/${this.progress.discoveredFolders}`),
+        formatStep('images', `${this.progress.processedImages}/${this.progress.discoveredImages}`),
+        this.progress.currentFolder ? formatStep('current', this.progress.currentFolder) : null,
+        formatStep('elapsed', elapsed)
+      ])
+    );
   }
 
   private finishProgress(): void {
@@ -301,9 +366,60 @@ class ScannerService {
     this.finishRun(runId, summary);
     this.finishProgress();
 
-    log.info(`Skipped scan (${reason}) because configured storage is unavailable`, {
-      reason: storageState.reason
-    });
+    log.info(
+      joinLogParts([
+        `Skipped scan (${reason})`,
+        'storage unavailable',
+        storageState.reason
+      ])
+    );
+
+    return summary;
+  }
+
+  private markLibraryRebuildRequired(previousGalleryRoot: string): void {
+    appSettingsRepository.set(LIBRARY_REBUILD_REQUIRED_SETTING_KEY, '1');
+    appSettingsRepository.set(PREVIOUS_GALLERY_ROOT_SETTING_KEY, previousGalleryRoot);
+  }
+
+  private clearLibraryRebuildRequirement(): void {
+    appSettingsRepository.remove(LIBRARY_REBUILD_REQUIRED_SETTING_KEY);
+    appSettingsRepository.remove(PREVIOUS_GALLERY_ROOT_SETTING_KEY);
+  }
+
+  private async clearDerivedMediaCache(): Promise<void> {
+    await Promise.all([
+      fs.rm(appConfig.thumbnailsDir, { recursive: true, force: true }),
+      fs.rm(appConfig.previewsDir, { recursive: true, force: true })
+    ]);
+    await Promise.all([
+      fs.mkdir(appConfig.thumbnailsDir, { recursive: true }),
+      fs.mkdir(appConfig.previewsDir, { recursive: true })
+    ]);
+  }
+
+  private async performLibraryRebuild(reason: string, options: FullScanOptions): Promise<ScanSummary> {
+    const storageState = storageService.refreshAvailability();
+    if (!storageState.libraryAvailable) {
+      throw new Error(storageState.reason ?? 'Configured library storage is unavailable');
+    }
+
+    log.info(
+      joinLogParts([
+        'Rebuild library index',
+        formatStep('reason', reason),
+        formatStep('root', normalizePath(appConfig.galleryRoot))
+      ])
+    );
+
+    maintenanceRepository.resetLibraryIndex();
+    appSettingsRepository.remove(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
+    await this.clearDerivedMediaCache();
+
+    const summary = await this.performFullScan(reason, options);
+    if (summary.status !== 'failed' && summary.status !== 'skipped_unavailable') {
+      this.clearLibraryRebuildRequirement();
+    }
 
     return summary;
   }
@@ -350,18 +466,29 @@ class ScannerService {
     }
 
     this.beginProgress(reason, runId);
-    log.info(`Starting full scan (${reason})`, {
-      options,
-      hasStoredGalleryRoot,
-      galleryRootChanged,
-      concurrency: {
-        discovery: appConfig.scanDiscoveryConcurrency,
-        derivatives: appConfig.scanDerivativeConcurrency
-      }
-    });
+    log.info(
+      joinLogParts([
+        `Starting full scan (${reason})`,
+        formatStep('repair-derivatives', formatToggle(options.repairUnchangedDerivatives)),
+        formatStep('root-changed', formatToggle(galleryRootChanged)),
+        formatStep('stored-root', formatToggle(hasStoredGalleryRoot)),
+        formatStep('discovery-concurrency', appConfig.scanDiscoveryConcurrency),
+        formatStep('derivative-concurrency', appConfig.scanDerivativeConcurrency)
+      ])
+    );
 
     try {
       const existingFolders = folderRepository.getAll();
+      if (galleryRootChanged && normalizedStoredGalleryRoot && existingFolders.length > 0) {
+        this.markLibraryRebuildRequired(normalizedStoredGalleryRoot);
+        log.info(
+          joinLogParts([
+            'Gallery root changed',
+            formatStep('previous', normalizedStoredGalleryRoot),
+            formatStep('current', currentGalleryRoot)
+          ])
+        );
+      }
       const folderScanStates = new Map(
         folderScanStateRepository.getAll().map((state) => [normalizePath(state.folder_path), state])
       );
@@ -428,7 +555,7 @@ class ScannerService {
                 this.setProgress({
                   processedImages: this.progress.processedImages + 1
                 });
-                log.error('Failed to stat image during discovery', { file: entry.name, error: message });
+                log.error(joinLogParts(['Failed to stat image during discovery', formatStep('file', entry.name), message]));
               }
             })
           )
@@ -465,12 +592,14 @@ class ScannerService {
             processedFolders: this.progress.processedFolders + 1
           });
           this.logProgress('folder');
-          log.info('Full scan folder shortcut hit', {
-            folder: directory.name,
-            durationMs: elapsedMilliseconds(folderStartedAt),
-            fileCount: discoveredFiles.length,
-            storedSignatureMatched: true
-          });
+          log.info(
+            joinLogParts([
+              'Folder shortcut',
+              directory.name,
+              formatStep('files', discoveredFiles.length),
+              formatStep('duration', formatDuration(elapsedMilliseconds(folderStartedAt)))
+            ])
+          );
 
           continue;
         }
@@ -518,7 +647,7 @@ class ScannerService {
                 folderHadErrors = true;
                 const message = error instanceof Error ? error.message : String(error);
                 errors.push(`${directory.name}/${path.basename(file.relativePath)}: ${message}`);
-                log.error('Failed to index image', { file: file.relativePath, error: message });
+                log.error(joinLogParts(['Failed to index image', formatStep('file', file.relativePath), message]));
               } finally {
                 this.setProgress({
                   processedImages: this.progress.processedImages + 1
@@ -554,18 +683,18 @@ class ScannerService {
           processedFolders: this.progress.processedFolders + 1
         });
         this.logProgress('folder');
-        log.info('Full scan folder processed', {
-          folder: directory.name,
-          durationMs: elapsedMilliseconds(folderStartedAt),
-          scannedFiles: imageFiles.length,
-          unchangedFiles,
-          newFiles,
-          updatedFiles,
-          removedFiles,
-          refreshedUnchangedRows,
-          skippedUnchangedRows,
-          usedFolderShortcut
-        });
+        log.info(
+          joinLogParts([
+            'Folder indexed',
+            directory.name,
+            formatStep('scanned', imageFiles.length),
+            formatStep('new', newFiles),
+            formatStep('updated', updatedFiles),
+            formatStep('removed', removedFiles),
+            formatStep('unchanged', unchangedFiles),
+            formatStep('duration', formatDuration(elapsedMilliseconds(folderStartedAt)))
+          ])
+        );
       }
 
       for (const folder of existingFolders) {
@@ -580,28 +709,16 @@ class ScannerService {
       metrics.discoveryDurationMs = elapsedMilliseconds(discoveryStartedAt);
       metrics.derivativeJobsQueued = derivativeJobs.size;
 
-      log.info('Full scan discovery completed', {
-        reason,
-        durationMs: metrics.discoveryDurationMs,
-        galleryRootChanged,
-        hasStoredGalleryRoot,
-        scannedFiles: summary.scanned_files,
-        folderShortcutHits: metrics.folderShortcutHits,
-        folderShortcutMisses: metrics.folderShortcutMisses,
-        folderShortcutImagesSkipped: metrics.folderShortcutImagesSkipped,
-        folderWritesCommitted: metrics.folderWritesCommitted,
-        folderWritesSkipped: metrics.folderWritesSkipped,
-        unchangedFiles: metrics.unchangedFiles,
-        newFiles: summary.new_files,
-        updatedFiles: summary.updated_files,
-        removedFiles: summary.removed_files,
-        unchangedRowsRefreshed: metrics.unchangedRowsRefreshed,
-        unchangedRowsSkippedRefresh: metrics.unchangedRowsSkippedRefresh,
-        derivativeJobsQueued: metrics.derivativeJobsQueued,
-        unchangedFilesQueuedForDerivativeVerification: metrics.unchangedFilesQueuedForDerivativeVerification,
-        unchangedFilesSkippedDerivativeVerification: metrics.unchangedFilesSkippedDerivativeVerification,
-        removedFolderStateRows: metrics.removedFolderStateRows
-      });
+      log.table('Discovery complete', [
+        ['Folders', folderDirectories.length],
+        ['Files', summary.scanned_files],
+        ['New', summary.new_files],
+        ['Updated', summary.updated_files],
+        ['Removed', summary.removed_files],
+        ['Shortcuts', metrics.folderShortcutHits],
+        ['Queued derivatives', metrics.derivativeJobsQueued],
+        ['Duration', formatDuration(metrics.discoveryDurationMs)]
+      ]);
 
       derivativeSummary = await this.processDerivativeJobs([...derivativeJobs.values()], errors);
     } catch (error) {
@@ -622,47 +739,16 @@ class ScannerService {
     }
 
     this.finishRun(runId, summary);
-    log.info(`Finished full scan (${reason})`, {
-      summary,
-      options,
-      galleryRoot: {
-        current: currentGalleryRoot,
-        previous: normalizedStoredGalleryRoot,
-        changed: galleryRootChanged,
-        hadStoredValue: hasStoredGalleryRoot
-      },
-      concurrency: {
-        discovery: appConfig.scanDiscoveryConcurrency,
-        derivatives: appConfig.scanDerivativeConcurrency
-      },
-      timings: {
-        totalDurationMs: elapsedMilliseconds(scanStartedAt),
-        discoveryDurationMs: metrics.discoveryDurationMs,
-        derivativeDurationMs: derivativeSummary.durationMs
-      },
-      folderShortcuts: {
-        hits: metrics.folderShortcutHits,
-        misses: metrics.folderShortcutMisses,
-        imagesSkipped: metrics.folderShortcutImagesSkipped,
-        removedStateRows: metrics.removedFolderStateRows
-      },
-      folderWrites: {
-        committed: metrics.folderWritesCommitted,
-        skipped: metrics.folderWritesSkipped
-      },
-      derivatives: {
-        queuedJobs: derivativeSummary.queuedJobs,
-        generatedThumbnails: derivativeSummary.generatedThumbnails,
-        generatedPreviews: derivativeSummary.generatedPreviews
-      },
-      unchangedFiles: {
-        total: metrics.unchangedFiles,
-        queuedForDerivativeVerification: metrics.unchangedFilesQueuedForDerivativeVerification,
-        skippedDerivativeVerification: metrics.unchangedFilesSkippedDerivativeVerification,
-        refreshedRows: metrics.unchangedRowsRefreshed,
-        skippedRefreshRows: metrics.unchangedRowsSkippedRefresh
-      }
-    });
+    log.table(`Finished full scan (${reason})`, [
+      ['Status', summary.status],
+      ['Files', summary.scanned_files],
+      ['New', summary.new_files],
+      ['Updated', summary.updated_files],
+      ['Removed', summary.removed_files],
+      ['Thumbnails', derivativeSummary.generatedThumbnails],
+      ['Previews', derivativeSummary.generatedPreviews],
+      ['Duration', formatDuration(elapsedMilliseconds(scanStartedAt))]
+    ], summary.status === 'completed' ? 'success' : summary.status === 'completed_with_errors' ? 'warning' : 'error');
     this.finishProgress();
 
     return summary;
@@ -689,7 +775,13 @@ class ScannerService {
       discoveredImages: normalizedPaths.length
     });
 
-    log.info(`Starting incremental scan (${reason})`, { count: normalizedPaths.length });
+    log.info(
+      joinLogParts([
+        `Starting incremental scan (${reason})`,
+        formatStep('files', normalizedPaths.length),
+        formatStep('folders', impactedFolders.size)
+      ])
+    );
 
     try {
       const existingFolders = folderRepository.getAll();
@@ -755,7 +847,7 @@ class ScannerService {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           errors.push(`${relativePath}: ${message}`);
-          log.error('Incremental image indexing failed', { relativePath, error: message });
+          log.error(joinLogParts(['Incremental image indexing failed', formatStep('file', relativePath), message]));
         } finally {
           this.setProgress({
             processedImages: this.progress.processedImages + 1
@@ -787,7 +879,13 @@ class ScannerService {
     }
 
     this.finishRun(runId, summary);
-    log.info(`Finished incremental scan (${reason})`, summary);
+    log.table(`Finished incremental scan (${reason})`, [
+      ['Status', summary.status],
+      ['Files', summary.scanned_files],
+      ['New', summary.new_files],
+      ['Updated', summary.updated_files],
+      ['Removed', summary.removed_files]
+    ], summary.status === 'completed' ? 'success' : summary.status === 'completed_with_errors' ? 'warning' : 'error');
     this.finishProgress();
 
     if (fallbackReason) {
@@ -837,10 +935,13 @@ class ScannerService {
       currentFolder: jobs[0] ? getFolderSlugFromRelativePath(jobs[0].relativePath) : null
     });
     this.logProgress('phase');
-    log.info('Starting derivative phase', {
-      queuedJobs: jobs.length,
-      concurrency: appConfig.scanDerivativeConcurrency
-    });
+    log.info(
+      joinLogParts([
+        'Starting derivative phase',
+        formatStep('jobs', jobs.length),
+        formatStep('concurrency', appConfig.scanDerivativeConcurrency)
+      ])
+    );
 
     await Promise.all(
       jobs.map((job) =>
@@ -868,7 +969,7 @@ class ScannerService {
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             errors.push(`${job.relativePath}: ${message}`);
-            log.error('Derivative generation failed', { relativePath: job.relativePath, error: message });
+            log.error(joinLogParts(['Derivative generation failed', formatStep('file', job.relativePath), message]));
           } finally {
             this.setProgress({
               processedDerivativeJobs: this.progress.processedDerivativeJobs + 1
@@ -885,7 +986,12 @@ class ScannerService {
       queuedJobs: jobs.length
     };
 
-    log.info('Finished derivative phase', summary);
+    log.table('Finished derivative phase', [
+      ['Jobs', summary.queuedJobs],
+      ['Thumbnails', summary.generatedThumbnails],
+      ['Previews', summary.generatedPreviews],
+      ['Duration', formatDuration(summary.durationMs)]
+    ]);
 
     return summary;
   }

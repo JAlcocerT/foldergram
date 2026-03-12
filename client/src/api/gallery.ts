@@ -8,6 +8,7 @@ import type {
   ManualScanResult,
   PaginatedFeed,
   FolderImagesPayload,
+  RebuildLibraryResult,
   FolderSummary
 } from '../types/api';
 import { requestJson } from './http';
@@ -67,6 +68,12 @@ export function fetchStats() {
 
 export function triggerManualScan() {
   return requestJson<ManualScanResult>('/api/admin/rescan', {
+    method: 'POST'
+  });
+}
+
+export function triggerLibraryRebuild() {
+  return requestJson<RebuildLibraryResult>('/api/admin/rebuild-index', {
     method: 'POST'
   });
 }

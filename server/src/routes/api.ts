@@ -167,6 +167,20 @@ router.post('/admin/rescan', async (_request, response) => {
   });
 });
 
+router.post('/admin/rebuild-index', async (_request, response) => {
+  await watcherService.stop();
+
+  try {
+    const lastScan = await scannerService.rebuildLibraryIndex('rebuild');
+    response.json({
+      ok: true,
+      lastScan
+    });
+  } finally {
+    await watcherService.start();
+  }
+});
+
 router.get('/admin/stats', (_request, response) => {
   response.json(galleryService.getStats());
 });

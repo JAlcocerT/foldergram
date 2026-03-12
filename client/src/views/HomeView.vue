@@ -6,6 +6,24 @@
         <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders</p>
       </header>
 
+      <section
+        v-if="appStore.isLibraryRebuildRequired && appStore.stats"
+        class="grid gap-[0.55rem] px-5 py-[1rem] mb-[1.1rem] border rounded-[1rem] shadow-[var(--shadow)]"
+        style="background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, #fff4d1 12%) 0%, color-mix(in srgb, var(--surface) 82%, #ffe49a 18%) 100%); border-color: color-mix(in srgb, var(--border) 72%, #d2a133 28%);"
+      >
+        <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
+          <div class="grid gap-[0.2rem]">
+            <strong>Library location changed</strong>
+            <p class="m-0 text-muted">
+              The current index may still contain folders and cached media from a previous gallery location. Review the rebuild steps to reset the index and regenerate thumbnails and previews for the current library.
+            </p>
+          </div>
+          <RouterLink class="inline-flex items-center justify-center min-h-10 px-4 rounded-[0.8rem] text-[0.84rem] font-bold text-white bg-[#9f6a00] whitespace-nowrap" :to="{ name: 'settings', query: { action: 'rebuild' } }">
+            Review Rebuild
+          </RouterLink>
+        </div>
+      </section>
+
       <!-- Inline scan state (while feed already loaded) -->
       <section v-if="appStore.isScanning && appStore.stats" class="grid gap-[0.3rem] px-4 py-[0.95rem] mb-[1.1rem] border border-border rounded-[1rem] bg-surface shadow-[var(--shadow)]" aria-live="polite">
         <strong>Scanning library</strong>

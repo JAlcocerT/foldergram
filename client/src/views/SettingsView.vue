@@ -11,6 +11,51 @@
     <section class="grid grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.95fr)] gap-6 items-start max-md:grid-cols-1">
       <!-- Left: Scan controls -->
       <div class="flex flex-col gap-[1.15rem]">
+        <section
+          class="card grid gap-[1rem] p-8"
+          :class="highlightRebuildAction ? 'ring-2 ring-[color-mix(in_srgb,var(--accent)_45%,transparent_55%)]' : ''"
+          :style="rebuildCardStyle"
+        >
+          <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
+            <div>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library Index</h2>
+              <p class="m-0 text-muted">
+                Reset the indexed database tables and rebuild the current library from the active gallery location.
+              </p>
+            </div>
+            <span
+              class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
+              :class="appStore.isLibraryRebuildRequired ? 'text-[#9f6a00] bg-[rgba(210,161,51,0.14)]' : 'text-muted bg-surface-alt'"
+            >
+              {{ appStore.isLibraryRebuildRequired ? 'Recommended' : 'Optional' }}
+            </span>
+          </div>
+
+          <p class="m-0 text-muted">
+            This clears the indexed folder and image tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
+          </p>
+
+          <dl class="grid gap-[0.8rem] m-0">
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, var(--accent) 8%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Current gallery root</dt>
+              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats?.libraryIndex.currentGalleryRoot ?? 'Unavailable' }}</dd>
+            </div>
+            <div v-if="appStore.stats?.libraryIndex.previousGalleryRoot" class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, #d2a133 8%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previous gallery root</dt>
+              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats.libraryIndex.previousGalleryRoot }}</dd>
+            </div>
+          </dl>
+
+          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+            <button class="btn-primary min-w-[13rem]" type="button" :disabled="rebuildActionDisabled" @click="confirmRebuildOpen = true">
+              {{ rebuildButtonLabel }}
+            </button>
+            <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
+          </div>
+
+          <p v-if="rebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ rebuildError }}</p>
+        </section>
+
         <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(0,149,246,0.15), transparent 40%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);">
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
@@ -139,22 +184,41 @@
         </section>
       </aside>
     </section>
+
+    <ConfirmDialog
+      v-if="confirmRebuildOpen"
+      title="Rebuild the current library index?"
+      message="This will clear the indexed database tables for folders, images, likes, and scan history, remove generated thumbnails and previews, then rescan the active gallery root. Original files in the gallery will not be deleted."
+      confirm-label="Rebuild library index"
+      loading-label="Rebuilding..."
+      :loading="rebuilding"
+      @cancel="confirmRebuildOpen = false"
+      @confirm="runLibraryRebuild"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
-import { triggerManualScan } from '../api/gallery';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
+import { triggerLibraryRebuild, triggerManualScan } from '../api/gallery';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
+import { useLikesStore } from '../stores/likes';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const foldersStore = useFoldersStore();
+const likesStore = useLikesStore();
+const route = useRoute();
 const scanError = ref<string | null>(null);
+const rebuildError = ref<string | null>(null);
 const requestingScan = ref(false);
+const rebuilding = ref(false);
+const confirmRebuildOpen = ref(false);
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -177,7 +241,14 @@ function formatDateTime(value: string | null | undefined) {
 
 const scan = computed(() => appStore.stats?.scan ?? null);
 const lastCompletedScan = computed(() => scan.value?.lastCompletedScan ?? appStore.stats?.lastScan ?? null);
-const scanActionDisabled = computed(() => appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value);
+const highlightRebuildAction = computed(() => route.query.action === 'rebuild');
+const scanActionDisabled = computed(() => appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value);
+const rebuildActionDisabled = computed(() => appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value);
+const rebuildCardStyle = computed(() =>
+  appStore.isLibraryRebuildRequired
+    ? 'background: radial-gradient(circle at top right, rgba(210,161,51,0.2), transparent 42%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 88%, #fff3c3 12%) 100%);'
+    : 'background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, var(--accent) 4%) 0%, var(--surface) 100%);'
+);
 const statusTone = computed(() => {
   if (appStore.isLibraryUnavailable) {
     return 'danger';
@@ -220,11 +291,37 @@ const scanActionNote = computed(() => {
     return appStore.libraryUnavailableReason;
   }
 
+  if (rebuilding.value) {
+    return 'The current library is being rebuilt.';
+  }
+
   if (appStore.isScanning) {
     return 'Live progress updates below while the current scan runs.';
   }
 
   return 'Manual scans recheck the library and repair missing thumbnails or previews when needed.';
+});
+const rebuildButtonLabel = computed(() => {
+  if (rebuilding.value) {
+    return 'Rebuilding now...';
+  }
+
+  return 'Rebuild Library Index';
+});
+const rebuildActionNote = computed(() => {
+  if (appStore.isLibraryUnavailable) {
+    return appStore.libraryUnavailableReason;
+  }
+
+  if (rebuilding.value) {
+    return 'Clearing cached derivatives and rebuilding the current library index.';
+  }
+
+  if (appStore.isLibraryRebuildRequired) {
+    return 'Recommended because the configured gallery location changed.';
+  }
+
+  return 'Use this when you want a clean rebuild of cache and indexed library state.';
 });
 const phaseLabel = computed(() => {
   if (appStore.isScanning || requestingScan.value) {
@@ -333,6 +430,32 @@ async function runManualScan() {
     scanError.value = error instanceof Error ? error.message : 'Unable to start a manual scan.';
   } finally {
     requestingScan.value = false;
+  }
+}
+
+async function runLibraryRebuild() {
+  if (rebuildActionDisabled.value) {
+    return;
+  }
+
+  rebuilding.value = true;
+  rebuildError.value = null;
+
+  try {
+    const request = triggerLibraryRebuild();
+    await warmScanStatus();
+    await request;
+    confirmRebuildOpen.value = false;
+    await appStore.fetchStats({ background: true });
+    await Promise.all([
+      foldersStore.fetchFolders(true),
+      feedStore.loadInitial(true),
+      likesStore.initialize(true)
+    ]);
+  } catch (error) {
+    rebuildError.value = error instanceof Error ? error.message : 'Unable to rebuild the current library index.';
+  } finally {
+    rebuilding.value = false;
   }
 }
 

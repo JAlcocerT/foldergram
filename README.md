@@ -145,6 +145,7 @@ WSL note:
 - `DELETE /api/images/:id`
 - `GET /api/admin/stats`
 - `POST /api/admin/rescan`
+- `POST /api/admin/rebuild-index`
 - `GET /api/originals/:id`
 
 ## Architecture summary

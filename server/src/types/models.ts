@@ -15,7 +15,7 @@ export interface FolderSummaryRecord extends FolderRecord {
 
 export interface ImageRecord {
   id: number;
-  profile_id: number;
+  folder_id: number;
   filename: string;
   extension: string;
   relative_path: string;

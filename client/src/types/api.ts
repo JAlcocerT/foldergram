@@ -97,6 +97,11 @@ export interface ManualScanResult {
   lastScan: ScanRunSummary | null;
 }
 
+export interface RebuildLibraryResult {
+  ok: boolean;
+  lastScan: ScanRunSummary | null;
+}
+
 export interface AppStats {
   folders: number;
   indexedImages: number;
@@ -108,6 +113,13 @@ export interface AppStats {
     available: boolean;
     reason: string | null;
     usingInMemoryDatabase: boolean;
+  };
+  libraryIndex: {
+    rebuildRequired: boolean;
+    reason: 'gallery_root_changed' | null;
+    currentGalleryRoot: string;
+    previousGalleryRoot: string | null;
+    lastSuccessfulGalleryRoot: string | null;
   };
   lastScan: ScanRunSummary | null;
 }

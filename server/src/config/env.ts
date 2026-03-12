@@ -17,6 +17,7 @@ const envSchema = z.object({
   DB_DIR: z.string().optional(),
   THUMBNAILS_DIR: z.string().optional(),
   PREVIEWS_DIR: z.string().optional(),
+  LOG_VERBOSE: z.string().optional(),
   SCAN_DISCOVERY_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   SCAN_DERIVATIVE_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
@@ -41,6 +42,7 @@ const galleryRoot = resolveConfiguredPath(parsed.GALLERY_ROOT, path.join(dataRoo
 const dbDir = resolveConfiguredPath(parsed.DB_DIR, path.join(dataRoot, 'db'));
 const thumbnailsDir = resolveConfiguredPath(parsed.THUMBNAILS_DIR, path.join(dataRoot, 'thumbnails'));
 const previewsDir = resolveConfiguredPath(parsed.PREVIEWS_DIR, path.join(dataRoot, 'previews'));
+const logVerbose = typeof parsed.LOG_VERBOSE === 'string' && /^(1|true|yes|on)$/i.test(parsed.LOG_VERBOSE);
 
 export const appConfig = {
   port: parsed.PORT,
@@ -51,6 +53,7 @@ export const appConfig = {
   dbDir,
   thumbnailsDir,
   previewsDir,
+  logVerbose,
   scanDiscoveryConcurrency: parsed.SCAN_DISCOVERY_CONCURRENCY,
   scanDerivativeConcurrency: parsed.SCAN_DERIVATIVE_CONCURRENCY,
   databasePath: path.join(dbDir, 'gallery.sqlite')
