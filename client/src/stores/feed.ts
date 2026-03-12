@@ -82,6 +82,15 @@ export const useFeedStore = defineStore('feed', {
       this.items = this.items.filter((item) => item.folderSlug !== folderSlug);
     },
 
+    resetForRebuild() {
+      this.items = [];
+      this.page = 1;
+      this.hasMore = true;
+      this.loading = false;
+      this.error = null;
+      this.initialized = false;
+    },
+
     async loadInitial(force = false) {
       if (this.loading) {
         return;

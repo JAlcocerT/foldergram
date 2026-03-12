@@ -31,6 +31,15 @@ export const useLikesStore = defineStore('likes', {
       this.likedIds = items.map((item) => item.id);
     },
 
+    resetForRebuild() {
+      this.items = [];
+      this.likedIds = [];
+      this.pendingIds = [];
+      this.loading = false;
+      this.error = null;
+      this.initialized = false;
+    },
+
     async initialize(force = false) {
       if ((this.initialized && !force) || this.loading) {
         return;

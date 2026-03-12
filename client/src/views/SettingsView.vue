@@ -178,7 +178,7 @@
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
               <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Changes</dt>
-              <dd class="m-0 text-base font-bold">{{ lastScanChangeSummary }}</dd>
+              <dd class="m-0 text-base font-bold whitespace-pre-line">{{ lastScanChangeSummary }}</dd>
             </div>
           </dl>
         </section>
@@ -208,11 +208,15 @@ import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
+import { useMomentsStore } from '../stores/moments';
+import { useViewerStore } from '../stores/viewer';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const foldersStore = useFoldersStore();
 const likesStore = useLikesStore();
+const momentsStore = useMomentsStore();
+const viewerStore = useViewerStore();
 const route = useRoute();
 const scanError = ref<string | null>(null);
 const rebuildError = ref<string | null>(null);
@@ -242,8 +246,19 @@ function formatDateTime(value: string | null | undefined) {
 const scan = computed(() => appStore.stats?.scan ?? null);
 const lastCompletedScan = computed(() => scan.value?.lastCompletedScan ?? appStore.stats?.lastScan ?? null);
 const highlightRebuildAction = computed(() => route.query.action === 'rebuild');
-const scanActionDisabled = computed(() => appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value);
-const rebuildActionDisabled = computed(() => appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value);
+const waitingForInitialStatus = computed(() => !appStore.stats || appStore.loadingStats);
+const scanActionDisabled = computed(
+  () =>
+    waitingForInitialStatus.value ||
+    appStore.isLibraryUnavailable ||
+    appStore.isLibraryRebuildRequired ||
+    appStore.isScanning ||
+    requestingScan.value ||
+    rebuilding.value
+);
+const rebuildActionDisabled = computed(
+  () => waitingForInitialStatus.value || appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value
+);
 const rebuildCardStyle = computed(() =>
   appStore.isLibraryRebuildRequired
     ? 'background: radial-gradient(circle at top right, rgba(210,161,51,0.2), transparent 42%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 88%, #fff3c3 12%) 100%);'
@@ -287,8 +302,16 @@ const scanButtonLabel = computed(() => {
   return 'Run Manual Scan';
 });
 const scanActionNote = computed(() => {
+  if (waitingForInitialStatus.value) {
+    return 'Loading current library status...';
+  }
+
   if (appStore.isLibraryUnavailable) {
     return appStore.libraryUnavailableReason;
+  }
+
+  if (appStore.isLibraryRebuildRequired) {
+    return 'Rebuild the library index first because the configured gallery location changed.';
   }
 
   if (rebuilding.value) {
@@ -309,6 +332,10 @@ const rebuildButtonLabel = computed(() => {
   return 'Rebuild Library Index';
 });
 const rebuildActionNote = computed(() => {
+  if (waitingForInitialStatus.value) {
+    return 'Loading current library status...';
+  }
+
   if (appStore.isLibraryUnavailable) {
     return appStore.libraryUnavailableReason;
   }
@@ -371,6 +398,10 @@ const progressDescription = computed(() => {
   }
 
   const currentFolder = scan.value.currentFolder ? ` Current folder: ${scan.value.currentFolder}.` : '';
+  if (scan.value.phase === 'discovery' && scan.value.discoveredFolders === 0 && scan.value.discoveredImages === 0) {
+    return `Walking the library tree to find image folders before indexing starts.${currentFolder}`;
+  }
+
   if (scan.value.phase === 'derivatives') {
     return scan.value.queuedDerivativeJobs > 0
       ? `Generating thumbnails and previews for queued changes.${currentFolder}`
@@ -390,10 +421,10 @@ const lastScanStatus = computed(() => {
 const lastScanFinishedAt = computed(() => formatDateTime(lastCompletedScan.value?.finished_at));
 const lastScanChangeSummary = computed(() => {
   if (!lastCompletedScan.value) {
-    return '0 new · 0 updated · 0 removed';
+    return '0 new\n0 updated\n0 removed';
   }
 
-  return `${lastCompletedScan.value.new_files} new · ${lastCompletedScan.value.updated_files} updated · ${lastCompletedScan.value.removed_files} removed`;
+  return `${lastCompletedScan.value.new_files} new\n${lastCompletedScan.value.updated_files} updated\n${lastCompletedScan.value.removed_files} removed`;
 });
 
 async function warmScanStatus() {
@@ -422,7 +453,7 @@ async function runManualScan() {
 
   try {
     const request = triggerManualScan();
-    await warmScanStatus();
+    void warmScanStatus();
     await request;
     await appStore.fetchStats({ background: true });
     await Promise.all([foldersStore.fetchFolders(true), feedStore.loadInitial(true)]);
@@ -440,20 +471,28 @@ async function runLibraryRebuild() {
 
   rebuilding.value = true;
   rebuildError.value = null;
+  confirmRebuildOpen.value = false;
+  appStore.markLibraryRebuildStarted();
+  feedStore.resetForRebuild();
+  foldersStore.resetForRebuild();
+  likesStore.resetForRebuild();
+  momentsStore.resetForRebuild();
+  viewerStore.reset();
 
   try {
     const request = triggerLibraryRebuild();
-    await warmScanStatus();
+    void warmScanStatus();
     await request;
-    confirmRebuildOpen.value = false;
     await appStore.fetchStats({ background: true });
     await Promise.all([
       foldersStore.fetchFolders(true),
       feedStore.loadInitial(true),
-      likesStore.initialize(true)
+      likesStore.initialize(true),
+      momentsStore.fetchMoments(true)
     ]);
   } catch (error) {
     rebuildError.value = error instanceof Error ? error.message : 'Unable to rebuild the current library index.';
+    await appStore.fetchStats({ background: true });
   } finally {
     rebuilding.value = false;
   }

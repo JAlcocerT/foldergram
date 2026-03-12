@@ -51,6 +51,22 @@ export const useMomentsStore = defineStore('moments', {
       }
     },
 
+    resetForRebuild() {
+      this.railKind = 'moments';
+      this.railTitle = 'Moments';
+      this.railDescription = 'Memory capsules from your library.';
+      this.railSingularLabel = 'Moment';
+      this.items = [];
+      this.loadingList = false;
+      this.listError = null;
+      this.currentMoment = null;
+      this.currentImages = [];
+      this.currentPage = 1;
+      this.currentHasMore = true;
+      this.loadingMoment = false;
+      this.momentError = null;
+    },
+
     async fetchMoments(force = false) {
       if (this.loadingList) {
         return;

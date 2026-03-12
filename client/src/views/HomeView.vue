@@ -7,7 +7,7 @@
       </header>
 
       <section
-        v-if="appStore.isLibraryRebuildRequired && appStore.stats"
+        v-if="appStore.isLibraryRebuildRequired && appStore.stats && !appStore.isRebuilding"
         class="grid gap-[0.55rem] px-5 py-[1rem] mb-[1.1rem] border rounded-[1rem] shadow-[var(--shadow)]"
         style="background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, #fff4d1 12%) 0%, color-mix(in srgb, var(--surface) 82%, #ffe49a 18%) 100%); border-color: color-mix(in srgb, var(--border) 72%, #d2a133 28%);"
       >
@@ -212,6 +212,10 @@ const scanDescription = computed(() => {
   }
 
   const currentFolder = scan.currentFolder ? ` Current folder: ${scan.currentFolder}.` : '';
+  if (scan.phase === 'discovery' && scan.discoveredFolders === 0 && scan.discoveredImages === 0) {
+    return `Walking the library tree to find image folders before indexing begins.${currentFolder}`;
+  }
+
   if (scan.phase === 'derivatives') {
     return `Generating thumbnails and previews in the background.${currentFolder}`;
   }

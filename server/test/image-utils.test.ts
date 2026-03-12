@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { createFingerprint, getDerivativeRelativePath, getStableSortTimestamp } from '../src/utils/image-utils.js';
-import { getPathBreadcrumb, getSourceFolderPathFromRelativePath, normalizePath } from '../src/utils/path-utils.js';
+import {
+  getPathBreadcrumb,
+  getRelativePathWithinRoot,
+  getSourceFolderPathFromRelativePath,
+  isSameOrWithinPath,
+  matchesRelativeRoot,
+  normalizePath
+} from '../src/utils/path-utils.js';
 import { resolveUniqueSlug, slugifyFolderName, slugifyFolderPath } from '../src/utils/slug.js';
 
 describe('scanner utilities', () => {
@@ -51,5 +58,23 @@ describe('path normalization', () => {
   it('builds breadcrumb text from relative folder paths', () => {
     expect(getPathBreadcrumb('galaxy/S24/Downloads')).toBe('galaxy / S24');
     expect(getPathBreadcrumb('Downloads')).toBeNull();
+  });
+
+  it('resolves nested managed paths under a configured root', () => {
+    expect(getRelativePathWithinRoot('/gallery', '/gallery/thumbnails')).toBe('thumbnails');
+    expect(getRelativePathWithinRoot('/gallery', '/gallery/cache/previews')).toBe('cache/previews');
+    expect(getRelativePathWithinRoot('/gallery', '/outside/previews')).toBeNull();
+  });
+
+  it('detects overlapping managed directories', () => {
+    expect(isSameOrWithinPath('/gallery/cache', '/gallery/cache/previews')).toBe(true);
+    expect(isSameOrWithinPath('/gallery/cache', '/gallery/cache')).toBe(true);
+    expect(isSameOrWithinPath('/gallery/cache', '/gallery/previews')).toBe(false);
+  });
+
+  it('matches ignored relative roots for managed output folders', () => {
+    expect(matchesRelativeRoot('thumbnails/folder-a/post.webp', ['thumbnails', 'previews'])).toBe(true);
+    expect(matchesRelativeRoot('previews/folder-a/post.webp', ['thumbnails', 'previews'])).toBe(true);
+    expect(matchesRelativeRoot('folder-a/post.webp', ['thumbnails', 'previews'])).toBe(false);
   });
 });

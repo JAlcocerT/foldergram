@@ -12,6 +12,23 @@ const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(60).default(24)
 });
+const deleteFolderQuerySchema = z.object({
+  deleteSourceFolder: z.preprocess((value) => {
+    if (value === undefined) {
+      return false;
+    }
+
+    if (value === true || value === 'true') {
+      return true;
+    }
+
+    if (value === false || value === 'false') {
+      return false;
+    }
+
+    return value;
+  }, z.boolean())
+});
 const feedQuerySchema = paginationQuerySchema.extend({
   mode: z.enum(['recent', 'rediscover', 'random']).default('recent'),
   seed: z.coerce.number().int().nonnegative().optional()
@@ -47,9 +64,7 @@ router.get('/feed', (request, response) => {
 });
 
 router.get('/feed/moments', (_request, response) => {
-  response.json({
-    items: galleryService.listMoments()
-  });
+  response.json(galleryService.listMoments());
 });
 
 router.get('/feed/moments/:id', (request, response) => {
@@ -85,7 +100,10 @@ router.get('/folders/:slug', (request, response) => {
 
 router.delete('/folders/:slug', async (request, response) => {
   const params = slugSchema.parse(request.params);
-  const deleted = await galleryService.deleteFolder(params.slug);
+  const query = deleteFolderQuerySchema.parse(request.query);
+  const deleted = await galleryService.deleteFolder(params.slug, {
+    deleteSourceFolder: query.deleteSourceFolder
+  });
 
   if (!deleted) {
     response.status(404).json({ message: 'Folder not found' });
@@ -185,12 +203,25 @@ router.get('/originals/:id', (request, response) => {
 });
 
 router.post('/admin/rescan', async (_request, response) => {
-  const lastScan = await scannerService.scanAll('manual');
-  await watcherService.start();
-  response.json({
-    ok: true,
-    lastScan
-  });
+  try {
+    if (scannerService.isLibraryRebuildRequired()) {
+      response.status(409).json({
+        message: 'Library rebuild required before scanning because the configured gallery root changed.'
+      });
+      return;
+    }
+
+    const lastScan = await scannerService.scanAll('manual');
+    await watcherService.start();
+    response.json({
+      ok: true,
+      lastScan
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to run a manual scan.';
+    const status = /rebuild required/i.test(message) ? 409 : 500;
+    response.status(status).json({ message });
+  }
 });
 
 router.post('/admin/rebuild-index', async (_request, response) => {

@@ -18,6 +18,7 @@
       <div class="grid gap-[0.45rem]">
         <h2 :id="titleId" class="m-0 text-[1.15rem]">{{ title }}</h2>
         <p class="m-0 text-muted">{{ message }}</p>
+        <slot name="details" />
       </div>
       <!-- Actions -->
       <div class="flex justify-end gap-3 mt-[1.4rem]">

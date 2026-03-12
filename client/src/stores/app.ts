@@ -30,6 +30,7 @@ export const useAppStore = defineStore('app', {
     libraryUnavailableReason: (state) => state.stats?.storage.reason ?? 'Configured library storage is unavailable.',
     isLibraryRebuildRequired: (state) => state.stats?.libraryIndex.rebuildRequired === true,
     isScanning: (state) => state.stats?.scan.isScanning === true,
+    isRebuilding: (state) => state.stats?.scan.isScanning === true && state.stats?.scan.scanReason === 'rebuild',
     hasCompletedScan: (state) => state.stats?.scan.lastCompletedScan !== null,
     isInitialScan: (state) => state.stats?.scan.isScanning === true && state.stats?.scan.lastCompletedScan === null
   },
@@ -72,6 +73,40 @@ export const useAppStore = defineStore('app', {
 
     clearImageModalBackground() {
       this.imageModalBackgroundPath = null;
+    },
+
+    markLibraryRebuildStarted() {
+      if (!this.stats) {
+        return;
+      }
+
+      this.error = null;
+      this.stats = {
+        ...this.stats,
+        folders: 0,
+        indexedImages: 0,
+        deletedImages: 0,
+        thumbnailCount: 0,
+        previewCount: 0,
+        scan: {
+          ...this.stats.scan,
+          isScanning: true,
+          scanReason: 'rebuild',
+          phase: 'discovery',
+          startedAt: new Date().toISOString(),
+          runId: null,
+          discoveredFolders: 0,
+          processedFolders: 0,
+          discoveredImages: 0,
+          processedImages: 0,
+          queuedDerivativeJobs: 0,
+          processedDerivativeJobs: 0,
+          generatedThumbnails: 0,
+          generatedPreviews: 0,
+          currentFolder: null
+        }
+      };
+      this.startStatsPolling();
     },
 
     markScanStatusUnavailable() {

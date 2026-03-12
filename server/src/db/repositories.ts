@@ -769,6 +769,14 @@ export const folderScanStateRepository = {
     return Number(result.changes ?? 0);
   },
 
+  deleteTree(folderPath: string): number {
+    const normalizedFolderPath = normalizePath(folderPath);
+    const result = database
+      .prepare('DELETE FROM folder_scan_state WHERE folder_path = ? OR folder_path LIKE ?')
+      .run(normalizedFolderPath, `${normalizedFolderPath}/%`);
+    return Number(result.changes ?? 0);
+  },
+
   deleteMissing(activeFolderPaths: string[]): number {
     if (activeFolderPaths.length === 0) {
       const result = database.prepare('DELETE FROM folder_scan_state').run();

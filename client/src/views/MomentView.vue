@@ -5,6 +5,9 @@
       title="Library storage unavailable"
       :description="appStore.libraryUnavailableReason"
     />
+    <section v-else-if="appStore.isRebuilding && !momentsStore.currentMoment" class="card p-8 text-center">
+      <p class="m-0 text-muted">Rebuilding the library index. This view will repopulate when the refreshed home rail is ready.</p>
+    </section>
     <ErrorState
       v-else-if="momentsStore.momentError"
       :title="`Could not load ${momentsStore.railSingularLabel.toLowerCase()}`"

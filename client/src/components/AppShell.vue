@@ -15,9 +15,14 @@
       >
         <strong class="text-[0.88rem]">Scanning library</strong>
         <span class="text-muted text-[0.83rem]">
-          {{ appStore.stats.scan.processedImages }}/{{ appStore.stats.scan.discoveredImages || '?' }} indexed
-          | {{ appStore.stats.scan.generatedThumbnails }} thumbnails
-          | {{ appStore.stats.scan.generatedPreviews }} previews
+          <template v-if="appStore.stats.scan.phase === 'discovery' && appStore.stats.scan.discoveredFolders === 0 && appStore.stats.scan.discoveredImages === 0">
+            Walking the library tree
+          </template>
+          <template v-else>
+            {{ appStore.stats.scan.processedImages }}/{{ appStore.stats.scan.discoveredImages || '?' }} indexed
+            | {{ appStore.stats.scan.generatedThumbnails }} thumbnails
+            | {{ appStore.stats.scan.generatedPreviews }} previews
+          </template>
         </span>
         <span v-if="appStore.stats.scan.currentFolder" class="text-muted text-[0.83rem]">Current: {{ appStore.stats.scan.currentFolder }}</span>
       </div>

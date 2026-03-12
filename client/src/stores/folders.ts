@@ -84,6 +84,19 @@ export const useFoldersStore = defineStore('folders', {
       }
     },
 
+    resetForRebuild() {
+      this.items = [];
+      this.loadingList = false;
+      this.pendingListRefresh = false;
+      this.listError = null;
+      this.currentFolder = null;
+      this.currentImages = [];
+      this.currentPage = 1;
+      this.currentHasMore = true;
+      this.loadingFolder = false;
+      this.folderError = null;
+    },
+
     async fetchFolders(force = false) {
       if (this.loadingList) {
         this.pendingListRefresh = this.pendingListRefresh || force;

@@ -77,8 +77,14 @@ export function deleteImage(id: number) {
   });
 }
 
-export function deleteFolder(slug: string) {
-  return requestJson<DeleteFolderResult>(`/api/folders/${encodeURIComponent(slug)}`, {
+export function deleteFolder(slug: string, options: { deleteSourceFolder?: boolean } = {}) {
+  const params = new URLSearchParams();
+  if (options.deleteSourceFolder) {
+    params.set('deleteSourceFolder', 'true');
+  }
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : '';
+  return requestJson<DeleteFolderResult>(`/api/folders/${encodeURIComponent(slug)}${suffix}`, {
     method: 'DELETE'
   });
 }

@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
+import { getRelativePathWithinRoot, isSameOrWithinPath, normalizePath } from '../utils/path-utils.js';
+
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const repositoryRoot = path.resolve(moduleDirectory, '../../..');
 
@@ -37,12 +39,38 @@ function resolveConfiguredPath(value: string | null | undefined, fallbackAbsolut
   return fallbackAbsolutePath;
 }
 
+function uniq(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
 const dataRoot = resolveConfiguredPath(parsed.DATA_ROOT ?? parsed.DATA_DIR, resolveFromRoot('./data'));
 const galleryRoot = resolveConfiguredPath(parsed.GALLERY_ROOT, path.join(dataRoot, 'gallery'));
 const dbDir = resolveConfiguredPath(parsed.DB_DIR, path.join(dataRoot, 'db'));
 const thumbnailsDir = resolveConfiguredPath(parsed.THUMBNAILS_DIR, path.join(dataRoot, 'thumbnails'));
 const previewsDir = resolveConfiguredPath(parsed.PREVIEWS_DIR, path.join(dataRoot, 'previews'));
 const logVerbose = typeof parsed.LOG_VERBOSE === 'string' && /^(1|true|yes|on)$/i.test(parsed.LOG_VERBOSE);
+
+const derivativeDirectoriesOverlap =
+  isSameOrWithinPath(thumbnailsDir, previewsDir) || isSameOrWithinPath(previewsDir, thumbnailsDir);
+
+if (derivativeDirectoriesOverlap) {
+  throw new Error('Invalid storage configuration: THUMBNAILS_DIR and PREVIEWS_DIR must point to separate non-overlapping directories.');
+}
+
+if (isSameOrWithinPath(thumbnailsDir, galleryRoot)) {
+  throw new Error('Invalid storage configuration: THUMBNAILS_DIR cannot contain GALLERY_ROOT.');
+}
+
+if (isSameOrWithinPath(previewsDir, galleryRoot)) {
+  throw new Error('Invalid storage configuration: PREVIEWS_DIR cannot contain GALLERY_ROOT.');
+}
+
+const managedGalleryRelativeIgnores = uniq(
+  [dbDir, thumbnailsDir, previewsDir]
+    .map((directoryPath) => getRelativePathWithinRoot(galleryRoot, directoryPath))
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .map((value) => normalizePath(value))
+);
 
 export const appConfig = {
   port: parsed.PORT,
@@ -53,6 +81,7 @@ export const appConfig = {
   dbDir,
   thumbnailsDir,
   previewsDir,
+  managedGalleryRelativeIgnores,
   logVerbose,
   scanDiscoveryConcurrency: parsed.SCAN_DISCOVERY_CONCURRENCY,
   scanDerivativeConcurrency: parsed.SCAN_DERIVATIVE_CONCURRENCY,

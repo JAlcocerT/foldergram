@@ -36,6 +36,10 @@ interface FeedRailDefinition {
   capsules: FeedCapsuleDefinition[];
 }
 
+interface DeleteFolderOptions {
+  deleteSourceFolder?: boolean;
+}
+
 const REDISCOVER_MIN_AGE_MS = 1000 * 60 * 60 * 24 * 180;
 const DIVERSIFIED_FETCH_BATCH_SIZE = 72;
 const MAX_DIVERSIFIED_CANDIDATES = 2400;
@@ -85,13 +89,32 @@ async function removeDirectoryIfEmpty(targetPath: string | null): Promise<void> 
   }
 
   try {
-    await fsPromises.rm(targetPath, { recursive: false });
+    await fsPromises.rmdir(targetPath);
   } catch (error) {
     const directoryError = error as NodeJS.ErrnoException;
-    if (directoryError.code !== 'ENOENT' && directoryError.code !== 'ENOTEMPTY') {
+    if (directoryError.code !== 'ENOENT' && directoryError.code !== 'ENOTEMPTY' && directoryError.code !== 'EEXIST') {
       throw error;
     }
   }
+}
+
+async function removeDirectoryTree(targetPath: string | null): Promise<void> {
+  if (!targetPath) {
+    return;
+  }
+
+  try {
+    await fsPromises.rm(targetPath, { recursive: true, force: true });
+  } catch (error) {
+    const directoryError = error as NodeJS.ErrnoException;
+    if (directoryError.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
+function isSameOrDescendantFolderPath(rootFolderPath: string, candidateFolderPath: string): boolean {
+  return candidateFolderPath === rootFolderPath || candidateFolderPath.startsWith(`${rootFolderPath}/`);
 }
 
 function mapFeedImage(image: FeedImage): FeedImage {
@@ -675,7 +698,7 @@ export const galleryService = {
     };
   },
 
-  async deleteFolder(slug: string) {
+  async deleteFolder(slug: string, options: DeleteFolderOptions = {}) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
@@ -685,7 +708,36 @@ export const galleryService = {
       return null;
     }
 
+    const deleteSourceFolder = options.deleteSourceFolder === true;
+    const normalizedFolderPath = folder.folder_path;
     const images = imageRepository.listActiveByFolder(folder.id);
+
+    if (deleteSourceFolder) {
+      const affectedFolders = folderRepository
+        .getAll()
+        .filter((entry) => isSameOrDescendantFolderPath(normalizedFolderPath, entry.folder_path));
+      const deletedImageCount = affectedFolders.reduce((total, entry) => total + imageRepository.listActiveByFolder(entry.id).length, 0);
+
+      await Promise.all([
+        removeDirectoryTree(resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, normalizedFolderPath))),
+        removeDirectoryTree(resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, normalizedFolderPath))),
+        removeDirectoryTree(resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, normalizedFolderPath)))
+      ]);
+
+      folderScanStateRepository.deleteTree(normalizedFolderPath);
+
+      for (const affectedFolder of affectedFolders) {
+        folderRepository.setAvatar(affectedFolder.id, null);
+        folderRepository.delete(affectedFolder.id);
+      }
+
+      return {
+        slug: folder.slug,
+        deletedImageCount,
+        deletedFolderCount: affectedFolders.length,
+        deletedSourceFolder: true
+      };
+    }
 
     await Promise.all(
       images.map(async (imageRecord) => {
@@ -713,20 +765,21 @@ export const galleryService = {
       })
     );
 
-    likeRepository.removeByFolder(folder.id);
-    imageRepository.markAllDeletedByFolder(folder.id);
     folderRepository.setAvatar(folder.id, null);
-    folderScanStateRepository.delete(folder.folder_path);
+    folderScanStateRepository.delete(normalizedFolderPath);
+    folderRepository.delete(folder.id);
 
     await Promise.all([
-      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, folder.folder_path))),
-      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, folder.folder_path))),
-      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, folder.folder_path)))
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.galleryRoot, path.join(appConfig.galleryRoot, normalizedFolderPath))),
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.thumbnailsDir, path.join(appConfig.thumbnailsDir, normalizedFolderPath))),
+      removeDirectoryIfEmpty(resolveWithinRoot(appConfig.previewsDir, path.join(appConfig.previewsDir, normalizedFolderPath)))
     ]);
 
     return {
       slug: folder.slug,
-      deletedImageCount: images.length
+      deletedImageCount: images.length,
+      deletedFolderCount: 1,
+      deletedSourceFolder: false
     };
   }
 };

@@ -87,6 +87,8 @@ export interface DeleteImageResult {
 export interface DeleteFolderResult {
   slug: string;
   deletedImageCount: number;
+  deletedFolderCount: number;
+  deletedSourceFolder: boolean;
 }
 
 export interface LikeMutationResult {

@@ -12,11 +12,16 @@ async function bootstrap(): Promise<void> {
 
   server.listen(appConfig.port, () => {
     log.info(`HTTP server listening on http://localhost:${appConfig.port}`);
-    void watcherService.start().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      log.error('Failed to start gallery watcher', message);
-    });
-    scannerService.startStartupScan('startup');
+    const startupScanQueued = scannerService.startStartupScan('startup');
+    if (startupScanQueued) {
+      void watcherService.start().catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log.error('Failed to start gallery watcher', message);
+      });
+      return;
+    }
+
+    log.info('Gallery watcher deferred until the library rebuild completes');
   });
 
   async function shutdown(signal: string): Promise<void> {

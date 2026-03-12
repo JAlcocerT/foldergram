@@ -5,6 +5,9 @@
       title="Library storage unavailable"
       :description="appStore.libraryUnavailableReason"
     />
+    <section v-else-if="appStore.isRebuilding && likesStore.items.length === 0" class="card p-8 text-center">
+      <p class="m-0 text-muted">Rebuilding the library index. Likes will return after the refreshed library finishes loading.</p>
+    </section>
     <ErrorState v-else-if="likesStore.error" title="Could not load likes" :message="likesStore.error" />
     <template v-else>
       <div class="flex justify-center py-[0.95rem] mb-[0.45rem] border-t border-border" aria-label="Likes sections">

@@ -7,9 +7,12 @@ export function normalizePath(value: string): string {
   return value.replace(/\\/g, '/');
 }
 
+function trimEdgeSlashes(value: string): string {
+  return normalizePath(value).replace(PATH_EDGE_SLASH_PATTERN, '');
+}
+
 export function splitPathSegments(value: string): string[] {
-  return normalizePath(value)
-    .replace(PATH_EDGE_SLASH_PATTERN, '')
+  return trimEdgeSlashes(value)
     .split('/')
     .filter(Boolean);
 }
@@ -27,6 +30,38 @@ export function ensureWithinRoot(root: string, target: string): boolean {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+export function isSameOrWithinPath(root: string, target: string): boolean {
+  return ensureWithinRoot(root, target);
+}
+
+export function getRelativePathWithinRoot(root: string, target: string): string | null {
+  const relative = normalizePath(path.relative(root, target));
+  if (relative === '') {
+    return '';
+  }
+
+  if (relative.startsWith('../') || relative === '..' || path.isAbsolute(relative)) {
+    return null;
+  }
+
+  return trimEdgeSlashes(relative);
+}
+
+export function isWithinRelativeRoot(relativePath: string, rootRelativePath: string): boolean {
+  const normalizedRelativePath = trimEdgeSlashes(relativePath);
+  const normalizedRoot = trimEdgeSlashes(rootRelativePath);
+
+  if (!normalizedRelativePath || !normalizedRoot) {
+    return false;
+  }
+
+  return normalizedRelativePath === normalizedRoot || normalizedRelativePath.startsWith(`${normalizedRoot}/`);
+}
+
+export function matchesRelativeRoot(relativePath: string, relativeRoots: string[]): boolean {
+  return relativeRoots.some((root) => isWithinRelativeRoot(relativePath, root));
+}
+
 export function safeJoin(root: string, relativePath: string): string {
   const targetPath = path.resolve(root, relativePath);
   if (!ensureWithinRoot(root, targetPath)) {
@@ -41,7 +76,7 @@ export function getRelativeGalleryPath(galleryRoot: string, absolutePath: string
 }
 
 export function getSourceFolderPathFromRelativePath(relativePath: string): string | null {
-  const normalized = normalizePath(relativePath).replace(PATH_EDGE_SLASH_PATTERN, '');
+  const normalized = trimEdgeSlashes(relativePath);
   if (!normalized) {
     return null;
   }

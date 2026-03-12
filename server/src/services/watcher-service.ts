@@ -4,7 +4,7 @@ import { appConfig } from '../config/env.js';
 import { scannerService } from './scanner-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
-import { getRelativeGalleryPath, isHiddenPath } from '../utils/path-utils.js';
+import { getRelativeGalleryPath, isHiddenPath, matchesRelativeRoot } from '../utils/path-utils.js';
 
 class WatcherService {
   private watcher: FSWatcher | null = null;
@@ -32,6 +32,10 @@ class WatcherService {
     this.watcher.on('all', async (eventName: string, absolutePath: string) => {
       const relativePath = getRelativeGalleryPath(appConfig.galleryRoot, absolutePath);
       if (!relativePath || isHiddenPath(relativePath)) {
+        return;
+      }
+
+      if (matchesRelativeRoot(relativePath, appConfig.managedGalleryRelativeIgnores)) {
         return;
       }
 

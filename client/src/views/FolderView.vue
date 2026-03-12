@@ -5,6 +5,9 @@
       title="Library storage unavailable"
       :description="appStore.libraryUnavailableReason"
     />
+    <section v-else-if="appStore.isRebuilding && !foldersStore.currentFolder" class="card p-8 text-center">
+      <p class="m-0 text-muted">Rebuilding the library index. Folder content will return as soon as this scan reaches it.</p>
+    </section>
     <ErrorState v-else-if="foldersStore.folderError" title="Could not load folder" :message="foldersStore.folderError" />
     <template v-else-if="foldersStore.currentFolder">
       <FolderHeader :folder="foldersStore.currentFolder" />

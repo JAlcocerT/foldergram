@@ -33,6 +33,7 @@ import { resolveTakenAt } from '../utils/exif-utils.js';
 import {
   getFolderDisplayInfo,
   getRelativeGalleryPath,
+  matchesRelativeRoot,
   getSourceFolderPathFromRelativePath,
   isHiddenPath,
   normalizePath
@@ -154,6 +155,7 @@ const discoveryLimit = pLimit(appConfig.scanDiscoveryConcurrency);
 const derivativeLimit = pLimit(appConfig.scanDerivativeConcurrency);
 const HEARTBEAT_INTERVAL_MS = 5000;
 const DERIVATIVE_CACHE_KEEP_FILE = '.gitkeep';
+const ROOT_DISCOVERY_LABEL = '(root)';
 
 function createEmptySummary(): ScanSummary {
   return {
@@ -236,8 +238,35 @@ class ScannerService {
     };
   }
 
-  startStartupScan(reason = 'startup'): void {
+  isLibraryRebuildRequired(): boolean {
+    return appSettingsRepository.get(LIBRARY_REBUILD_REQUIRED_SETTING_KEY) === '1';
+  }
+
+  startStartupScan(reason = 'startup'): boolean {
     const options = resolveFullScanOptions({ repairUnchangedDerivatives: false });
+    const currentGalleryRoot = normalizePath(appConfig.galleryRoot);
+    const storedGalleryRoot = appSettingsRepository.get(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
+    const normalizedStoredGalleryRoot = storedGalleryRoot ? normalizePath(storedGalleryRoot) : null;
+    const hasStoredGalleryRoot = normalizedStoredGalleryRoot !== null;
+    const galleryRootChanged = normalizedStoredGalleryRoot !== currentGalleryRoot;
+    const hasIndexedFolders = folderRepository.getAll().length > 0;
+
+    if (galleryRootChanged && normalizedStoredGalleryRoot && hasIndexedFolders) {
+      this.markLibraryRebuildRequired(normalizedStoredGalleryRoot);
+      log.info(
+        joinLogParts([
+          'Startup scan deferred',
+          'rebuild required',
+          formatStep('previous', normalizedStoredGalleryRoot),
+          formatStep('current', currentGalleryRoot)
+        ])
+      );
+      return false;
+    }
+
+    if (!galleryRootChanged || !hasStoredGalleryRoot || !hasIndexedFolders) {
+      this.clearLibraryRebuildRequirement();
+    }
 
     log.info(
       joinLogParts([
@@ -250,6 +279,7 @@ class ScannerService {
       const message = error instanceof Error ? error.message : String(error);
       log.error(`Startup scan failed (${reason})`, message);
     });
+    return true;
   }
 
   async scanAll(reason = 'manual', options: Partial<FullScanOptions> = {}): Promise<ScanRunRecord | undefined> {
@@ -421,12 +451,35 @@ class ScannerService {
     ]);
   }
 
-  private async discoverMediaSourceFolders(
+  private isManagedGalleryPath(relativePath: string): boolean {
+    return matchesRelativeRoot(relativePath, appConfig.managedGalleryRelativeIgnores);
+  }
+
+  private async walkMediaSourceFolders(
     currentAbsolutePath: string,
+    onSourceFolder: (sourceFolder: SourceFolderCandidate) => Promise<void>,
     currentRelativePath: string | null = null
-  ): Promise<SourceFolderCandidate[]> {
-    const entries = await fs.readdir(currentAbsolutePath, { withFileTypes: true });
-    const childDiscoveryJobs: Array<Promise<SourceFolderCandidate[]>> = [];
+  ): Promise<void> {
+    this.setProgress({
+      currentFolder: currentRelativePath ? normalizePath(currentRelativePath) : ROOT_DISCOVERY_LABEL
+    });
+
+    const entries = await fs
+      .readdir(currentAbsolutePath, { withFileTypes: true })
+      .catch((error: unknown) => {
+        const filesystemError = error as NodeJS.ErrnoException;
+        if (filesystemError.code === 'ENOENT') {
+          return null;
+        }
+
+        throw error;
+      });
+
+    if (!entries) {
+      return;
+    }
+
+    const childDirectories: Array<{ absolutePath: string; relativePath: string }> = [];
     let hasDirectImages = false;
 
     for (const entry of entries) {
@@ -436,9 +489,14 @@ class ScannerService {
       }
 
       if (entry.isDirectory()) {
-        childDiscoveryJobs.push(
-          discoveryLimit(() => this.discoverMediaSourceFolders(path.join(currentAbsolutePath, entry.name), relativeEntryPath))
-        );
+        if (this.isManagedGalleryPath(relativeEntryPath)) {
+          continue;
+        }
+
+        childDirectories.push({
+          absolutePath: path.join(currentAbsolutePath, entry.name),
+          relativePath: relativeEntryPath
+        });
         continue;
       }
 
@@ -447,18 +505,21 @@ class ScannerService {
       }
     }
 
-    const discoveredChildren = (await Promise.all(childDiscoveryJobs)).flat();
-    if (!currentRelativePath || !hasDirectImages) {
-      return discoveredChildren;
+    if (currentRelativePath && hasDirectImages) {
+      const normalizedRelativePath = normalizePath(currentRelativePath);
+      this.setProgress({
+        discoveredFolders: this.progress.discoveredFolders + 1,
+        currentFolder: normalizedRelativePath
+      });
+      await onSourceFolder({
+        absolutePath: currentAbsolutePath,
+        relativePath: normalizedRelativePath
+      });
     }
 
-    return [
-      {
-        absolutePath: currentAbsolutePath,
-        relativePath: normalizePath(currentRelativePath)
-      },
-      ...discoveredChildren
-    ];
+    for (const childDirectory of childDirectories) {
+      await this.walkMediaSourceFolders(childDirectory.absolutePath, onSourceFolder, childDirectory.relativePath);
+    }
   }
 
   private clearIndexedSourceFolder(sourceFolderPath: string, existingFolders: FolderRecord[]): SourceFolderScanResult {
@@ -783,6 +844,9 @@ class ScannerService {
         formatStep('repair-derivatives', formatToggle(options.repairUnchangedDerivatives)),
         formatStep('root-changed', formatToggle(galleryRootChanged)),
         formatStep('stored-root', formatToggle(hasStoredGalleryRoot)),
+        appConfig.managedGalleryRelativeIgnores.length > 0
+          ? formatStep('ignored-managed-paths', appConfig.managedGalleryRelativeIgnores.join(','))
+          : null,
         formatStep('discovery-concurrency', appConfig.scanDiscoveryConcurrency),
         formatStep('derivative-concurrency', appConfig.scanDerivativeConcurrency)
       ])
@@ -804,14 +868,13 @@ class ScannerService {
         folderScanStateRepository.getAll().map((state) => [normalizePath(state.folder_path), state])
       );
       const usedSlugs = new Set(existingFolders.map((folder) => folder.slug));
-      const sourceFolders = await this.discoverMediaSourceFolders(appConfig.galleryRoot);
       const activeFolderPaths = new Set<string>();
       const discoveredFolderIds = new Set<number>();
       const discoveryStartedAt = performance.now();
+      let discoveredSourceFolders = 0;
 
-      this.setProgress({ discoveredFolders: sourceFolders.length });
-
-      for (const sourceFolder of sourceFolders) {
+      await this.walkMediaSourceFolders(appConfig.galleryRoot, async (sourceFolder) => {
+        discoveredSourceFolders += 1;
         const result = await this.scanSourceFolder(
           sourceFolder,
           existingFolders,
@@ -866,7 +929,7 @@ class ScannerService {
           processedFolders: this.progress.processedFolders + 1
         });
         this.logProgress('folder');
-      }
+      });
 
       for (const folder of existingFolders) {
         if (!discoveredFolderIds.has(folder.id)) {
@@ -881,7 +944,7 @@ class ScannerService {
       metrics.derivativeJobsQueued = derivativeJobs.size;
 
       log.table('Discovery complete', [
-        ['Folders', sourceFolders.length],
+        ['Folders', discoveredSourceFolders],
         ['Files', summary.scanned_files],
         ['New', summary.new_files],
         ['Updated', summary.updated_files],
@@ -941,6 +1004,10 @@ class ScannerService {
 
     for (const relativePath of normalizedPaths) {
       if (isHiddenPath(relativePath)) {
+        continue;
+      }
+
+      if (this.isManagedGalleryPath(relativePath)) {
         continue;
       }
 
