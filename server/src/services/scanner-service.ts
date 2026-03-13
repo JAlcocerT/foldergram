@@ -19,15 +19,17 @@ import {
   maintenanceRepository,
   scanRunRepository
 } from '../db/repositories.js';
-import { generateDerivatives, readImageMetadata } from './derivative-service.js';
+import { generateDerivatives, readMediaMetadata } from './derivative-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
 import {
   createFingerprint,
-  getDerivativeRelativePath,
+  getMediaTypeFromExtension,
   getMimeTypeFromExtension,
+  getPreviewRelativePath,
   getStableSortTimestamp,
-  isSupportedImageFile
+  getThumbnailRelativePath,
+  isSupportedMediaFile
 } from '../utils/image-utils.js';
 import { resolveTakenAt } from '../utils/exif-utils.js';
 import {
@@ -500,7 +502,7 @@ class ScannerService {
         continue;
       }
 
-      if (currentRelativePath && entry.isFile() && isSupportedImageFile(entry.name)) {
+      if (currentRelativePath && entry.isFile() && isSupportedMediaFile(entry.name)) {
         hasDirectImages = true;
       }
     }
@@ -578,7 +580,7 @@ class ScannerService {
     }
 
     const imageFiles = entries.filter(
-      (entry) => entry.isFile() && isSupportedImageFile(entry.name) && !entry.name.startsWith('.')
+      (entry) => entry.isFile() && isSupportedMediaFile(entry.name) && !entry.name.startsWith('.')
     );
 
     if (imageFiles.length === 0) {
@@ -624,7 +626,7 @@ class ScannerService {
             this.setProgress({
               processedImages: this.progress.processedImages + 1
             });
-            log.error(joinLogParts(['Failed to stat image during discovery', formatStep('file', relativePath), message]));
+            log.error(joinLogParts(['Failed to stat media during discovery', formatStep('file', relativePath), message]));
           }
         })
       )
@@ -710,7 +712,7 @@ class ScannerService {
             folderHadErrors = true;
             const message = error instanceof Error ? error.message : String(error);
             errors.push(`${file.relativePath}: ${message}`);
-            log.error(joinLogParts(['Failed to index image', formatStep('file', file.relativePath), message]));
+            log.error(joinLogParts(['Failed to index media', formatStep('file', file.relativePath), message]));
           } finally {
             this.setProgress({
               processedImages: this.progress.processedImages + 1
@@ -1011,7 +1013,7 @@ class ScannerService {
         continue;
       }
 
-      if (!isSupportedImageFile(path.basename(relativePath))) {
+      if (!isSupportedMediaFile(path.basename(relativePath))) {
         continue;
       }
 
@@ -1258,8 +1260,11 @@ class ScannerService {
     const existing = imageRepository.getByRelativePath(file.relativePath);
     const extension = path.extname(file.absolutePath).toLowerCase();
     const absolutePathChanged = existing ? normalizePath(existing.absolute_path) !== normalizePath(file.absolutePath) : false;
-    const derivativeRelativePath = getDerivativeRelativePath(file.relativePath);
+    const mediaType = getMediaTypeFromExtension(extension);
+    const thumbnailRelativePath = getThumbnailRelativePath(file.relativePath);
+    const previewRelativePath = getPreviewRelativePath(file.relativePath, mediaType);
     const needsTakenAtBackfill = existing?.taken_at === null || existing?.taken_at_source === null;
+    const needsMediaBackfill = existing?.media_type !== mediaType || (mediaType === 'video' && existing?.duration_ms === null);
 
     if (existing && existing.checksum_or_fingerprint === fingerprint) {
       const refreshedIndexedRow = shouldRefreshUnchangedImage({
@@ -1270,11 +1275,19 @@ class ScannerService {
       });
 
       let metadataTakenAt = existing.taken_at;
-      if (needsTakenAtBackfill) {
-        metadataTakenAt = (await readImageMetadata(file.absolutePath)).takenAt;
+      let metadataDurationMs = existing.duration_ms;
+      let metadataWidth = existing.width;
+      let metadataHeight = existing.height;
+
+      if (needsTakenAtBackfill || needsMediaBackfill) {
+        const metadata = await readMediaMetadata(file.absolutePath, mediaType);
+        metadataTakenAt = metadata.takenAt;
+        metadataDurationMs = metadata.durationMs;
+        metadataWidth = metadata.width;
+        metadataHeight = metadata.height;
       }
 
-      if (refreshedIndexedRow || needsTakenAtBackfill) {
+      if (refreshedIndexedRow || needsTakenAtBackfill || needsMediaBackfill) {
         const resolvedTakenAt = resolveTakenAt({
           exifTakenAt: metadataTakenAt,
           existingTakenAt: existing.taken_at,
@@ -1294,13 +1307,17 @@ class ScannerService {
           relativePath: file.relativePath,
           absolutePath: file.absolutePath,
           fileSize: file.stats.size,
+          width: metadataWidth,
+          height: metadataHeight,
+          mediaType,
           mimeType: getMimeTypeFromExtension(extension),
+          durationMs: metadataDurationMs,
           fingerprint,
           mtimeMs: file.stats.mtimeMs,
           takenAt: resolvedTakenAt.takenAt,
           takenAtSource: resolvedTakenAt.source,
-          thumbnailPath: existing.thumbnail_path || derivativeRelativePath,
-          previewPath: existing.preview_path || derivativeRelativePath
+          thumbnailPath: existing.thumbnail_path || thumbnailRelativePath,
+          previewPath: existing.preview_path || previewRelativePath
         });
       }
 
@@ -1318,7 +1335,7 @@ class ScannerService {
       };
     }
 
-    const metadata = await readImageMetadata(file.absolutePath);
+    const metadata = await readMediaMetadata(file.absolutePath, mediaType);
     const sortTimestamp = getStableSortTimestamp(
       existing
         ? {
@@ -1350,15 +1367,17 @@ class ScannerService {
       fileSize: file.stats.size,
       width: metadata.width,
       height: metadata.height,
+      mediaType,
       mimeType: getMimeTypeFromExtension(extension),
+      durationMs: metadata.durationMs,
       fingerprint,
       mtimeMs: file.stats.mtimeMs,
       firstSeenAt,
       sortTimestamp,
       takenAt: resolvedTakenAt.takenAt,
       takenAtSource: resolvedTakenAt.source,
-      thumbnailPath: derivativeRelativePath,
-      previewPath: derivativeRelativePath
+      thumbnailPath: thumbnailRelativePath,
+      previewPath: previewRelativePath
     });
 
     return {

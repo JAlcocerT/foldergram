@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFingerprint, getDerivativeRelativePath, getStableSortTimestamp } from '../src/utils/image-utils.js';
+import {
+  createFingerprint,
+  getDerivativeRelativePath,
+  getMediaTypeFromExtension,
+  getPreviewRelativePath,
+  getStableSortTimestamp,
+  getThumbnailRelativePath,
+  isSupportedMediaFile,
+  isSupportedVideoFile
+} from '../src/utils/image-utils.js';
 import {
   getPathBreadcrumb,
   getRelativePathWithinRoot,
@@ -18,6 +27,17 @@ describe('scanner utilities', () => {
 
   it('generates mirrored webp derivative paths', () => {
     expect(getDerivativeRelativePath('folder-one/post-1.jpeg')).toBe('folder-one/post-1.webp');
+  });
+
+  it('generates separate thumbnail and preview paths for videos', () => {
+    expect(getThumbnailRelativePath('folder-one/reel-1.mov')).toBe('folder-one/reel-1.webp');
+    expect(getPreviewRelativePath('folder-one/reel-1.mov', 'video')).toBe('folder-one/reel-1.mp4');
+  });
+
+  it('detects supported video media files', () => {
+    expect(isSupportedVideoFile('clip.mp4')).toBe(true);
+    expect(isSupportedMediaFile('clip.webm')).toBe(true);
+    expect(getMediaTypeFromExtension('.mov')).toBe('video');
   });
 
   it('preserves existing sort timestamps before mtime fallback', () => {

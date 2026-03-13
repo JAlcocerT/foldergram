@@ -72,7 +72,7 @@
           </div>
 
           <p v-if="appStore.stats" class="m-0 shrink-0 whitespace-nowrap text-[0.74rem] text-muted">
-            {{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders
+            {{ indexedSummaryLabel }}
           </p>
         </div>
       </section>
@@ -92,7 +92,7 @@
             <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.processedFolders ?? 0 }}/{{ appStore.stats?.scan.discoveredFolders ?? 0 }}</dd>
           </div>
           <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
-            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Images indexed</dt>
+            <dt class="m-0 mb-[0.25rem] text-muted text-[0.74rem] uppercase tracking-[0.05em]">Posts indexed</dt>
             <dd class="m-0 text-base font-bold">{{ appStore.stats?.scan.processedImages ?? 0 }}/{{ appStore.stats?.scan.discoveredImages ?? 0 }}</dd>
           </div>
           <div class="px-[0.9rem] py-[0.8rem] rounded-[0.85rem]" style="background: color-mix(in srgb, var(--surface-alt) 88%, var(--accent) 12%)">
@@ -106,7 +106,7 @@
         </dl>
       </section>
 
-      <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No images indexed yet" description="Add folders under data/gallery/ and the feed will populate after the next scan." />
+      <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No posts indexed yet" description="Add folders under data/gallery/ and the feed will populate after the next scan." />
       <template v-else>
         <!-- Feed cards in home-layout context: transparent card, no shadow -->
         <div class="w-full max-w-[29.375rem] mx-auto flex flex-col gap-[1.2rem]">
@@ -191,16 +191,27 @@ const homeRecommendations = computed(() =>
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
 const activeRailViewerId = ref<string | null>(null);
+const indexedSummaryLabel = computed(() => {
+  if (!appStore.stats) {
+    return '';
+  }
+
+  if (appStore.stats.indexedVideos > 0) {
+    return `${appStore.stats.indexedImages} posts, ${appStore.stats.indexedVideos} videos across ${appStore.stats.folders} folders`;
+  }
+
+  return `${appStore.stats.indexedImages} posts across ${appStore.stats.folders} folders`;
+});
 const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
   {
     id: 'recent',
     label: 'Recent',
-    description: 'Newest photos first, with lighter runs from the same app folder.'
+    description: 'Newest posts first, with lighter runs from the same app folder.'
   },
   {
     id: 'rediscover',
     label: 'Rediscover',
-    description: 'Older photos resurface when they are worth another look.'
+    description: 'Older posts resurface when they are worth another look.'
   },
   {
     id: 'random',
@@ -219,14 +230,14 @@ const scanDescription = computed(() => {
 
   const currentFolder = scan.currentFolder ? ` Current folder: ${scan.currentFolder}.` : '';
   if (scan.phase === 'discovery' && scan.discoveredFolders === 0 && scan.discoveredImages === 0) {
-    return `Walking the library tree to find image folders before indexing begins.${currentFolder}`;
+    return `Walking the library tree to find media folders before indexing begins.${currentFolder}`;
   }
 
   if (scan.phase === 'derivatives') {
     return `Generating thumbnails and previews in the background.${currentFolder}`;
   }
 
-  return `Indexing folders and images so the library can open immediately.${currentFolder}`;
+  return `Indexing folders and posts so the library can open immediately.${currentFolder}`;
 });
 
 async function selectMode(mode: FeedMode) {

@@ -7,6 +7,7 @@ import type {
   ImageDetail,
   ImageRecord,
   LikeRecord,
+  MediaType,
   FolderRecord,
   FolderSummaryRecord,
   ScanRunRecord,
@@ -25,6 +26,8 @@ const FEED_IMAGE_SELECT_SQL = `
     images.filename,
     images.width,
     images.height,
+    images.media_type AS mediaType,
+    images.duration_ms AS durationMs,
     images.thumbnail_path AS thumbnailUrl,
     images.preview_path AS previewUrl,
     images.sort_timestamp AS sortTimestamp,
@@ -57,7 +60,9 @@ export interface UpsertImageInput {
   fileSize: number;
   width: number;
   height: number;
+  mediaType: MediaType;
   mimeType: string;
+  durationMs: number | null;
   fingerprint: string;
   mtimeMs: number;
   firstSeenAt: string;
@@ -75,7 +80,11 @@ export interface RefreshIndexedImageInput {
   relativePath: string;
   absolutePath: string;
   fileSize: number;
+  width: number;
+  height: number;
+  mediaType: MediaType;
   mimeType: string;
+  durationMs: number | null;
   fingerprint: string;
   mtimeMs: number;
   takenAt: number;
@@ -104,6 +113,7 @@ export const folderRepository = {
         SELECT
           folders.*,
           COUNT(images.id) AS image_count,
+          SUM(CASE WHEN images.media_type = 'video' THEN 1 ELSE 0 END) AS video_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
         INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
@@ -131,6 +141,7 @@ export const folderRepository = {
         SELECT
           folders.*,
           COUNT(images.id) AS image_count,
+          SUM(CASE WHEN images.media_type = 'video' THEN 1 ELSE 0 END) AS video_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
         INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
@@ -224,10 +235,10 @@ export const imageRepository = {
       `
       INSERT INTO images (
         folder_id, filename, extension, relative_path, absolute_path, file_size, width, height,
-        mime_type, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp, taken_at, taken_at_source,
+        media_type, mime_type, duration_ms, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp, taken_at, taken_at_source,
         thumbnail_path, preview_path, is_deleted, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
       ON CONFLICT(relative_path) DO UPDATE SET
         folder_id = excluded.folder_id,
         filename = excluded.filename,
@@ -236,7 +247,9 @@ export const imageRepository = {
         file_size = excluded.file_size,
         width = excluded.width,
         height = excluded.height,
+        media_type = excluded.media_type,
         mime_type = excluded.mime_type,
+        duration_ms = excluded.duration_ms,
         checksum_or_fingerprint = excluded.checksum_or_fingerprint,
         mtime_ms = excluded.mtime_ms,
         taken_at = excluded.taken_at,
@@ -255,7 +268,9 @@ export const imageRepository = {
       input.fileSize,
       input.width,
       input.height,
+      input.mediaType,
       input.mimeType,
+      input.durationMs,
       input.fingerprint,
       input.mtimeMs,
       input.firstSeenAt,
@@ -280,7 +295,11 @@ export const imageRepository = {
         extension = ?,
         absolute_path = ?,
         file_size = ?,
+        width = ?,
+        height = ?,
+        media_type = ?,
         mime_type = ?,
+        duration_ms = ?,
         checksum_or_fingerprint = ?,
         mtime_ms = ?,
         taken_at = ?,
@@ -297,7 +316,11 @@ export const imageRepository = {
       input.extension,
       input.absolutePath,
       input.fileSize,
+      input.width,
+      input.height,
+      input.mediaType,
       input.mimeType,
+      input.durationMs,
       input.fingerprint,
       input.mtimeMs,
       input.takenAt,
@@ -478,20 +501,28 @@ export const imageRepository = {
     ).all(startTimestamp, endTimestamp, limit, offset) as unknown as FeedImage[];
   },
 
-  listFolderImages(folderId: number, page: number, limit: number): FeedImage[] {
+  listFolderImages(folderId: number, page: number, limit: number, mediaType?: MediaType): FeedImage[] {
     const offset = (page - 1) * limit;
+    const mediaTypeClause = mediaType ? ' AND images.media_type = ?' : '';
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.folder_id = ? AND images.is_deleted = 0
+      WHERE images.folder_id = ? AND images.is_deleted = 0${mediaTypeClause}
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
-    ).all(folderId, limit, offset) as unknown as FeedImage[];
+    ).all(...(mediaType ? [folderId, mediaType, limit, offset] : [folderId, limit, offset])) as unknown as FeedImage[];
   },
 
-  countByFolder(folderId: number): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0').get(folderId) as { count: number }).count);
+  countByFolder(folderId: number, mediaType?: MediaType): number {
+    const mediaTypeClause = mediaType ? ' AND media_type = ?' : '';
+    return Number(
+      (
+        database
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0${mediaTypeClause}`)
+          .get(...(mediaType ? [folderId, mediaType] : [folderId])) as { count: number }
+      ).count
+    );
   },
 
   listActiveByFolder(folderId: number): ImageRecord[] {
@@ -529,7 +560,7 @@ export const imageRepository = {
     return row?.id ?? null;
   },
 
-  getImageDetail(id: number): ImageDetail | undefined {
+  getImageDetail(id: number, mediaType?: MediaType): ImageDetail | undefined {
     const detail = database.prepare(
       `
       SELECT
@@ -541,6 +572,8 @@ export const imageRepository = {
         images.filename,
         images.width,
         images.height,
+        images.media_type AS mediaType,
+        images.duration_ms AS durationMs,
         images.relative_path AS relativePath,
         images.mime_type AS mimeType,
         images.file_size AS fileSize,
@@ -555,31 +588,38 @@ export const imageRepository = {
       `
     ).get(id) as (Omit<ImageDetail, 'nextImageId' | 'previousImageId'> & { originalUrl: string }) | undefined;
 
-    if (!detail) {
+    if (!detail || (mediaType && detail.mediaType !== mediaType)) {
       return undefined;
     }
 
+    const mediaTypeClause = mediaType ? ' AND media_type = ?' : '';
     const next = database.prepare(
       `
       SELECT id
       FROM images
       WHERE folder_id = ? AND is_deleted = 0
+        ${mediaTypeClause}
         AND (sort_timestamp < ? OR (sort_timestamp = ? AND id < ?))
       ORDER BY sort_timestamp DESC, id DESC
       LIMIT 1
       `
-    ).get(detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
+    ).get(...(mediaType
+      ? [detail.folderId, mediaType, detail.sortTimestamp, detail.sortTimestamp, detail.id]
+      : [detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id])) as { id: number } | undefined;
 
     const previous = database.prepare(
       `
       SELECT id
       FROM images
       WHERE folder_id = ? AND is_deleted = 0
+        ${mediaTypeClause}
         AND (sort_timestamp > ? OR (sort_timestamp = ? AND id > ?))
       ORDER BY sort_timestamp ASC, id ASC
       LIMIT 1
       `
-    ).get(detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id) as { id: number } | undefined;
+    ).get(...(mediaType
+      ? [detail.folderId, mediaType, detail.sortTimestamp, detail.sortTimestamp, detail.id]
+      : [detail.folderId, detail.sortTimestamp, detail.sortTimestamp, detail.id])) as { id: number } | undefined;
 
     return {
       ...detail,
@@ -590,6 +630,16 @@ export const imageRepository = {
 
   countDeleted(): number {
     return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 1').get() as { count: number }).count);
+  },
+
+  countByMediaType(mediaType: MediaType): number {
+    return Number(
+      (
+        database
+          .prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND media_type = ?')
+          .get(mediaType) as { count: number }
+      ).count
+    );
   },
 
   countWithThumbnail(): number {
@@ -618,6 +668,8 @@ export const likeRepository = {
         images.filename,
         images.width,
         images.height,
+        images.media_type AS mediaType,
+        images.duration_ms AS durationMs,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
         images.sort_timestamp AS sortTimestamp,
@@ -662,6 +714,8 @@ export const likeRepository = {
         images.filename,
         images.width,
         images.height,
+        images.media_type AS mediaType,
+        images.duration_ms AS durationMs,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
         images.sort_timestamp AS sortTimestamp,

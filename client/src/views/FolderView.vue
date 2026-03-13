@@ -13,27 +13,49 @@
       <FolderHeader :folder="foldersStore.currentFolder" />
       <EmptyState
         v-if="!foldersStore.loadingFolder && foldersStore.currentImages.length === 0"
-        title="No images in this folder"
-        description="Drop supported images into this folder and rescan to see them here."
+        :title="activeTab === 'reels' ? 'No reels in this folder' : 'No posts in this folder'"
+        :description="
+          activeTab === 'reels'
+            ? 'Drop supported videos into this folder and rescan to see them in the reels tab.'
+            : 'Drop supported photos or videos into this folder and rescan to see them here.'
+        "
       />
       <template v-else>
         <div class="flex justify-center py-[0.95rem] mb-[0.45rem] border-t border-border" aria-label="Folder sections">
-          <span class="relative pt-[0.1rem] text-text text-[0.78rem] font-bold tracking-[0.11em] uppercase folder-tabs__item--active">Posts</span>
+          <div class="flex items-center gap-8">
+            <button
+              class="relative border-0 bg-transparent p-0 text-[0.78rem] font-bold tracking-[0.11em] uppercase cursor-pointer"
+              :class="activeTab === 'posts' ? 'text-text folder-tabs__item--active' : 'text-muted'"
+              type="button"
+              @click="setTab('posts')"
+            >
+              Posts
+            </button>
+            <button
+              class="relative border-0 bg-transparent p-0 text-[0.78rem] font-bold tracking-[0.11em] uppercase cursor-pointer"
+              :class="activeTab === 'reels' ? 'text-text folder-tabs__item--active' : 'text-muted'"
+              type="button"
+              @click="setTab('reels')"
+            >
+              Reels
+            </button>
+          </div>
         </div>
-        <FolderGrid :items="foldersStore.currentImages" />
+        <FolderGrid :items="foldersStore.currentImages" :variant="activeTab === 'reels' ? 'portrait' : 'square'" />
         <InfiniteLoader :loading="foldersStore.loadingFolder" :has-more="foldersStore.currentHasMore" @load-more="loadMore" />
       </template>
     </template>
     <EmptyState
       v-else-if="hasLoadedOnce && !foldersStore.loadingFolder"
-      title="No direct images in this app folder"
-      description="This source folder no longer has direct images. Browse the library to continue."
+      title="No direct posts in this app folder"
+      description="This source folder no longer has direct photos or videos. Browse the library to continue."
     />
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
@@ -49,7 +71,10 @@ const props = defineProps<{
 
 const appStore = useAppStore();
 const foldersStore = useFoldersStore();
+const route = useRoute();
+const router = useRouter();
 const hasLoadedOnce = ref(false);
+const activeTab = computed(() => (route.query.tab === 'reels' ? 'reels' : 'posts'));
 
 async function loadFolder() {
   if (appStore.isLibraryUnavailable) {
@@ -57,19 +82,39 @@ async function loadFolder() {
     return;
   }
 
-  await foldersStore.loadFolder(props.slug, true);
+  await foldersStore.loadFolder(props.slug, true, activeTab.value === 'reels' ? 'video' : undefined);
   hasLoadedOnce.value = true;
 }
 
 async function loadMore() {
   if (foldersStore.currentHasMore) {
-    await foldersStore.loadFolder(props.slug, false);
+    await foldersStore.loadFolder(props.slug, false, activeTab.value === 'reels' ? 'video' : undefined);
   }
 }
 
+async function setTab(tab: 'posts' | 'reels') {
+  if (activeTab.value === tab) {
+    return;
+  }
+
+  const nextQuery =
+    tab === 'reels'
+      ? { ...route.query, tab: 'reels' }
+      : Object.fromEntries(Object.entries(route.query).filter(([key]) => key !== 'tab'));
+
+  await router.replace({
+    name: 'folder',
+    params: { slug: props.slug },
+    query: nextQuery
+  });
+}
+
 onMounted(loadFolder);
-watch(() => props.slug, async () => {
-  hasLoadedOnce.value = false;
-  await loadFolder();
-});
+watch(
+  () => [props.slug, activeTab.value] as const,
+  async () => {
+    hasLoadedOnce.value = false;
+    await loadFolder();
+  }
+);
 </script>

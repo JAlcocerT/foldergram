@@ -35,7 +35,7 @@
     <RouterLink custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
       <a
         :href="href"
-        class="feed-media block aspect-square bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
+        class="feed-media relative block aspect-square bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
         @click="handleImageNavigation($event, navigate)"
       >
         <ResilientImage
@@ -44,6 +44,21 @@
           loading="lazy"
           :retry-while="appStore.isScanning"
         />
+        <div
+          v-if="item.mediaType === 'video'"
+          class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-4 py-3 text-white pointer-events-none bg-[linear-gradient(180deg,rgba(10,14,24,0)_0%,rgba(10,14,24,0.82)_100%)]"
+        >
+          <span class="inline-flex items-center gap-[0.4rem] text-[0.74rem] font-semibold tracking-[0.08em] uppercase">
+            <span class="i-fluent-video-16-filled w-[1.05rem] h-[1.05rem]" aria-hidden="true" />
+            Reel
+          </span>
+          <span
+            v-if="item.durationMs"
+            class="rounded-full bg-black/55 px-[0.55rem] py-[0.18rem] text-[0.76rem] font-semibold"
+          >
+            {{ formattedDuration }}
+          </span>
+        </div>
       </a>
     </RouterLink>
 
@@ -74,7 +89,7 @@
               aria-hidden="true"
             />
           </button>
-          <!-- Open image button -->
+          <!-- Open post button -->
           <RouterLink
             custom
             :to="`/image/${item.id}`"
@@ -83,7 +98,7 @@
             <a
               :href="href"
               class="inline-flex items-center justify-center w-8 h-8 border-0 bg-transparent cursor-pointer color-inherit transition-[opacity,transform] duration-180 hover:opacity-72 hover:-translate-y-px"
-              aria-label="Open image"
+              :aria-label="item.mediaType === 'video' ? 'Open reel' : 'Open post'"
               @click="handleImageNavigation($event, navigate)"
             >
               <svg
@@ -201,7 +216,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>{{ deleting ? "Deleting..." : "Delete image" }}</span>
+          <span>{{ deleting ? "Deleting..." : "Delete post" }}</span>
         </button>
         <button
           class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left"
@@ -229,8 +244,8 @@
 
     <ConfirmDialog
       v-if="confirmDeleteOpen"
-      title="Delete this image?"
-      message="This image will be permanently deleted from the hard drive. This action cannot be undone."
+      title="Delete this post?"
+      message="This file will be permanently deleted from the hard drive. This action cannot be undone."
       :loading="deleting"
       @cancel="confirmDeleteOpen = false"
       @confirm="confirmDelete"
@@ -252,6 +267,7 @@
   import { useFoldersStore } from "../stores/folders"
   import { useMomentsStore } from "../stores/moments"
   import type { FeedItem } from "../types/api"
+  import { formatMediaDuration } from "../utils/media"
   import Avatar from "./Avatar.vue"
 
   const props = defineProps<{
@@ -286,6 +302,10 @@
         year: "numeric",
       },
     ),
+  )
+
+  const formattedDuration = computed(() =>
+    formatMediaDuration(props.item.durationMs),
   )
 
   function handleImageNavigation(event: MouseEvent, navigate: () => void) {
@@ -333,9 +353,10 @@
       const removedFolder = foldersStore.removeImage(
         deleted.id,
         deleted.folderSlug,
+        props.item.mediaType,
       )
       momentsStore.removeImage(deleted.id)
-      appStore.removeIndexedImage(removedFolder ? 1 : 0)
+      appStore.removeIndexedImage(removedFolder ? 1 : 0, props.item.mediaType)
       confirmDeleteOpen.value = false
     } finally {
       deleting.value = false

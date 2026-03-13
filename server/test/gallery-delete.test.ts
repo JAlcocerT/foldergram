@@ -4,7 +4,13 @@ import path from 'node:path';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createFingerprint, getDerivativeRelativePath, getMimeTypeFromExtension } from '../src/utils/image-utils.js';
+import {
+  createFingerprint,
+  getMediaTypeFromExtension,
+  getMimeTypeFromExtension,
+  getPreviewRelativePath,
+  getThumbnailRelativePath
+} from '../src/utils/image-utils.js';
 
 type AppConfigModule = typeof import('../src/config/env.js');
 type GalleryServiceModule = typeof import('../src/services/gallery-service.js');
@@ -85,6 +91,22 @@ describe.sequential('gallery folder deletion', () => {
     await expectPathMissing(path.join(appConfig.previewsDir, 'parent'));
   });
 
+  it('deletes indexed videos and their generated preview mp4 files', async () => {
+    await createIndexedFolder('clips', ['clip-1.mp4']);
+
+    const result = await galleryService.deleteFolder('clips');
+
+    expect(result).toEqual({
+      slug: 'clips',
+      deletedImageCount: 1,
+      deletedFolderCount: 1,
+      deletedSourceFolder: false
+    });
+    await expectPathMissing(path.join(appConfig.galleryRoot, 'clips'));
+    await expectPathMissing(path.join(appConfig.thumbnailsDir, 'clips'));
+    await expectPathMissing(path.join(appConfig.previewsDir, 'clips'));
+  });
+
   it('keeps child source folders on disk and in the database when only direct images are deleted', async () => {
     await createIndexedFolder('parent', ['photo-1.jpg']);
     await createIndexedFolder('parent/child-a', ['photo-2.jpg']);
@@ -153,9 +175,11 @@ describe.sequential('gallery folder deletion', () => {
       const relativePath = `${relativeFolderPath}/${filename}`;
       const absolutePath = path.join(appConfig.galleryRoot, relativePath);
       const extension = path.extname(filename).toLowerCase();
-      const derivativeRelativePath = getDerivativeRelativePath(relativePath);
-      const thumbnailPath = path.join(appConfig.thumbnailsDir, derivativeRelativePath);
-      const previewPath = path.join(appConfig.previewsDir, derivativeRelativePath);
+      const mediaType = getMediaTypeFromExtension(extension);
+      const thumbnailRelativePath = getThumbnailRelativePath(relativePath);
+      const previewRelativePath = getPreviewRelativePath(relativePath, mediaType);
+      const thumbnailPath = path.join(appConfig.thumbnailsDir, thumbnailRelativePath);
+      const previewPath = path.join(appConfig.previewsDir, previewRelativePath);
 
       await fs.mkdir(path.dirname(absolutePath), { recursive: true });
       await fs.mkdir(path.dirname(thumbnailPath), { recursive: true });
@@ -175,15 +199,17 @@ describe.sequential('gallery folder deletion', () => {
         fileSize,
         width: 1200,
         height: 800,
+        mediaType,
         mimeType: getMimeTypeFromExtension(extension),
+        durationMs: mediaType === 'video' ? 15_000 : null,
         fingerprint: createFingerprint(relativePath, fileSize, mtimeMs),
         mtimeMs,
         firstSeenAt: '2026-03-01T00:00:00.000Z',
         sortTimestamp: mtimeMs,
         takenAt: mtimeMs,
         takenAtSource: 'mtime',
-        thumbnailPath: derivativeRelativePath,
-        previewPath: derivativeRelativePath
+        thumbnailPath: thumbnailRelativePath,
+        previewPath: previewRelativePath
       });
 
       images.push(image);

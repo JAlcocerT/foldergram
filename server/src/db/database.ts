@@ -47,6 +47,14 @@ class DatabaseManager {
   }
 
   private applyCompatColumnMigrations(): void {
+    if (this.tableExists('images') && !this.tableHasColumn('images', 'media_type')) {
+      this.database.exec("ALTER TABLE images ADD COLUMN media_type TEXT NOT NULL DEFAULT 'image'");
+    }
+
+    if (this.tableExists('images') && !this.tableHasColumn('images', 'duration_ms')) {
+      this.database.exec('ALTER TABLE images ADD COLUMN duration_ms REAL NULL');
+    }
+
     if (this.tableExists('images') && !this.tableHasColumn('images', 'taken_at')) {
       this.database.exec('ALTER TABLE images ADD COLUMN taken_at INTEGER NULL');
     }
@@ -59,6 +67,8 @@ class DatabaseManager {
   private applyCompatIndexes(): void {
     this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_taken_at ON images(taken_at DESC)');
     this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_taken_at_source ON images(is_deleted, taken_at_source)');
+    this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_media_type ON images(media_type, is_deleted, sort_timestamp DESC)');
+    this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_folder_media_sort ON images(folder_id, media_type, is_deleted, sort_timestamp DESC)');
   }
 }
 

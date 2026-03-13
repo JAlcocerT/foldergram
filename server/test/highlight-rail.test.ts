@@ -4,7 +4,13 @@ import fs from 'node:fs/promises';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createFingerprint, getDerivativeRelativePath, getMimeTypeFromExtension } from '../src/utils/image-utils.js';
+import {
+  createFingerprint,
+  getMediaTypeFromExtension,
+  getMimeTypeFromExtension,
+  getPreviewRelativePath,
+  getThumbnailRelativePath
+} from '../src/utils/image-utils.js';
 
 type AppConfigModule = typeof import('../src/config/env.js');
 type GalleryServiceModule = typeof import('../src/services/gallery-service.js');
@@ -96,7 +102,9 @@ describe.sequential('highlight rail selection', () => {
       const relativePath = `${relativeFolderPath}/${filename}`;
       const absolutePath = path.join(appConfig.galleryRoot, relativePath);
       const extension = path.extname(filename).toLowerCase();
-      const derivativeRelativePath = getDerivativeRelativePath(relativePath);
+      const mediaType = getMediaTypeFromExtension(extension);
+      const thumbnailRelativePath = getThumbnailRelativePath(relativePath);
+      const previewRelativePath = getPreviewRelativePath(relativePath, mediaType);
       const capturedAt = startTimestamp - index * 60_000;
       const fileSize = 1_000 + index;
 
@@ -109,15 +117,17 @@ describe.sequential('highlight rail selection', () => {
         fileSize,
         width: 1200,
         height: 800,
+        mediaType,
         mimeType: getMimeTypeFromExtension(extension),
+        durationMs: null,
         fingerprint: createFingerprint(relativePath, fileSize, capturedAt),
         mtimeMs: capturedAt,
         firstSeenAt: '2026-03-01T00:00:00.000Z',
         sortTimestamp: capturedAt,
         takenAt: capturedAt,
         takenAtSource: 'mtime',
-        thumbnailPath: derivativeRelativePath,
-        previewPath: derivativeRelativePath
+        thumbnailPath: thumbnailRelativePath,
+        previewPath: previewRelativePath
       });
 
       if (index === 0) {

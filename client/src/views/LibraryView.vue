@@ -32,7 +32,7 @@
             {{ formatCount(totalIndexedImages) }}
           </p>
           <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">
-            Images
+            Posts
           </p>
         </div>
       </div>
@@ -80,7 +80,7 @@
             class="h-10 pl-3 pr-9 border border-border rounded-[0.75rem] text-text text-[0.82rem] bg-surface-alt cursor-pointer appearance-none focus:outline-none focus:border-accent/40"
           >
             <option value="recent-desc">Recently updated</option>
-            <option value="images-desc">Most images</option>
+            <option value="images-desc">Most posts</option>
             <option value="name-asc">Name A–Z</option>
             <option value="name-desc">Name Z–A</option>
             <option value="path-asc">Path A–Z</option>
@@ -167,11 +167,11 @@
             <div class="grid gap-[0.15rem] justify-items-end">
               <span
                 class="text-[0.82rem] font-semibold text-text tabular-nums"
-                >{{ formatCount(folder.imageCount) }}</span
+                >{{ formatCount(folder.imageCount) }} posts</span
               >
-              <span class="text-[0.72rem] text-muted">{{
-                formatLatestDate(folder.latestImageMtimeMs)
-              }}</span>
+              <span class="text-[0.72rem] text-muted">
+                {{ formatCount(folder.videoCount) }} reels · {{ formatLatestDate(folder.latestImageMtimeMs) }}
+              </span>
             </div>
             <span
               class="w-[7px] h-[7px] rounded-full shrink-0"
@@ -394,7 +394,7 @@
       return ""
     }
 
-    const directImageLabel = `${formatCount(confirmDeleteFolder.value.imageCount)} direct image${confirmDeleteFolder.value.imageCount !== 1 ? "s" : ""}`
+    const directImageLabel = `${formatCount(confirmDeleteFolder.value.imageCount)} direct post${confirmDeleteFolder.value.imageCount !== 1 ? "s" : ""}`
     if (deleteSourceFolder.value) {
       return `This will permanently delete ${directImageLabel} and remove this source folder from the hard drive.`
     }
@@ -410,7 +410,7 @@
       return `Also remove ${formatCount(deleteChildFolderCount.value)} child app folder${deleteChildFolderCount.value !== 1 ? "s" : ""} and every file inside the subtree.`
     }
 
-    return "Also remove the source folder itself instead of only deleting its direct images."
+    return "Also remove the source folder itself instead of only deleting its direct posts."
   })
   const deleteFolderConfirmLabel = computed(() =>
     deleteSourceFolder.value ? "Delete folder subtree" : "Delete app folder",

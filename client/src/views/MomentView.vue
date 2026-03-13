@@ -33,7 +33,7 @@
             <p class="m-0 text-[0.96rem] text-muted">{{ momentsStore.currentMoment.subtitle }}</p>
           </div>
           <div class="flex flex-wrap gap-3 text-[0.82rem] text-muted">
-            <span>{{ momentsStore.currentMoment.imageCount }} photos</span>
+            <span>{{ momentsStore.currentMoment.imageCount }} posts</span>
             <span>{{ momentsStore.currentMoment.dateContext }}</span>
           </div>
         </div>

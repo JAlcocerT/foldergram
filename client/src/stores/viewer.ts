@@ -25,15 +25,15 @@ export const useViewerStore = defineStore('viewer', {
       this.error = null;
     },
 
-    async loadImage(id: number) {
+    async loadImage(id: number, mediaType?: 'image' | 'video') {
       this.loading = true;
       this.error = null;
       this.image = null;
 
       try {
-        this.image = await fetchImage(id);
+        this.image = await fetchImage(id, mediaType);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unable to load image';
+        this.error = error instanceof Error ? error.message : 'Unable to load post';
       } finally {
         this.loading = false;
       }
@@ -51,7 +51,7 @@ export const useViewerStore = defineStore('viewer', {
 
         return payload;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unable to delete image';
+        this.error = error instanceof Error ? error.message : 'Unable to delete post';
         throw error;
       } finally {
         this.deleting = false;

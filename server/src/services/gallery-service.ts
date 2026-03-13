@@ -9,7 +9,7 @@ import {
 } from '../constants/app-setting-keys.js';
 import { appConfig } from '../config/env.js';
 import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
-import type { FeedImage, ImageDetail, FolderSummaryRecord } from '../types/models.js';
+import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType } from '../types/models.js';
 import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBursts, listMonthDayKeysAroundDate } from '../utils/feed-utils.js';
 import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
@@ -151,6 +151,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
     folderPath: folder.folder_path,
     breadcrumb: getPathBreadcrumb(folder.folder_path),
     imageCount: folder.image_count,
+    videoCount: folder.video_count,
     latestImageMtimeMs: folder.latest_image_mtime_ms,
     avatarUrl: avatar ? mapImageDetail(avatar).thumbnailUrl : null
   };
@@ -395,7 +396,7 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
         {
           id: 'highlight-forgotten-favorites',
           title: 'Forgotten Favorites',
-          subtitle: 'Older liked images worth another look',
+          subtitle: 'Older liked posts worth another look',
           dateContext: 'Liked and older than 6 months',
           minimumImageCount: 1
         },
@@ -405,7 +406,7 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
         {
           id: 'highlight-deep-cuts',
           title: 'Deep Cuts',
-          subtitle: 'Older images resurfaced from the archive',
+          subtitle: 'Older posts resurfaced from the archive',
           dateContext: 'Older than 6 months',
           minimumImageCount: 1
         },
@@ -599,7 +600,7 @@ export const galleryService = {
     return buildFolderSummary(folder);
   },
 
-  getFolderImages(slug: string, page: number, limit: number) {
+  getFolderImages(slug: string, page: number, limit: number, mediaType?: MediaType) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
@@ -609,11 +610,11 @@ export const galleryService = {
       return null;
     }
 
-    const total = folder.image_count;
+    const total = mediaType ? imageRepository.countByFolder(folder.id, mediaType) : folder.image_count;
 
     return {
       folder: buildFolderSummary(folder),
-      items: imageRepository.listFolderImages(folder.id, page, limit).map(mapFeedImage),
+      items: imageRepository.listFolderImages(folder.id, page, limit, mediaType).map(mapFeedImage),
       page,
       limit,
       total,
@@ -621,12 +622,12 @@ export const galleryService = {
     };
   },
 
-  getImageDetail(id: number) {
+  getImageDetail(id: number, mediaType?: MediaType) {
     if (!storageService.getState().libraryAvailable) {
       return null;
     }
 
-    const detail = imageRepository.getImageDetail(id);
+    const detail = imageRepository.getImageDetail(id, mediaType);
     if (!detail) {
       return null;
     }
@@ -693,6 +694,7 @@ export const galleryService = {
     return {
       folders: storageState.libraryAvailable ? folderRepository.count() : 0,
       indexedImages: storageState.libraryAvailable ? imageRepository.countFeed() : 0,
+      indexedVideos: storageState.libraryAvailable ? imageRepository.countByMediaType('video') : 0,
       deletedImages: storageState.libraryAvailable ? imageRepository.countDeleted() : 0,
       thumbnailCount: storageState.libraryAvailable ? imageRepository.countWithThumbnail() : 0,
       previewCount: storageState.libraryAvailable ? imageRepository.countWithPreview() : 0,

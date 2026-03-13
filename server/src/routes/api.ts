@@ -12,6 +12,9 @@ const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(60).default(24)
 });
+const mediaTypeQuerySchema = z.object({
+  mediaType: z.enum(['image', 'video']).optional()
+});
 const deleteFolderQuerySchema = z.object({
   deleteSourceFolder: z.preprocess((value) => {
     if (value === undefined) {
@@ -118,8 +121,8 @@ router.delete('/folders/:slug', async (request, response) => {
 
 router.get('/folders/:slug/images', (request, response) => {
   const params = slugSchema.parse(request.params);
-  const query = paginationQuerySchema.parse(request.query);
-  const payload = galleryService.getFolderImages(params.slug, query.page, query.limit);
+  const query = paginationQuerySchema.merge(mediaTypeQuerySchema).parse(request.query);
+  const payload = galleryService.getFolderImages(params.slug, query.page, query.limit, query.mediaType);
 
   if (!payload) {
     response.status(404).json({ message: 'Folder not found' });
@@ -135,10 +138,11 @@ router.get('/likes', (_request, response) => {
 
 router.get('/images/:id', (request, response) => {
   const params = imageIdSchema.parse(request.params);
-  const image = galleryService.getImageDetail(params.id);
+  const query = mediaTypeQuerySchema.parse(request.query);
+  const image = galleryService.getImageDetail(params.id, query.mediaType);
 
   if (!image) {
-    response.status(404).json({ message: 'Image not found' });
+    response.status(404).json({ message: 'Post not found' });
     return;
   }
 
@@ -195,7 +199,7 @@ router.get('/originals/:id', (request, response) => {
   const originalPath = galleryService.getOriginalImagePath(params.id);
 
   if (!originalPath) {
-    response.status(404).json({ message: 'Original image not found' });
+    response.status(404).json({ message: 'Original media not found' });
     return;
   }
 

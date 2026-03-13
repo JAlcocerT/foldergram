@@ -3,6 +3,8 @@ import { defineStore } from 'pinia';
 import { fetchFolderImages, fetchFolders } from '../api/gallery';
 import type { FeedItem, FolderSummary } from '../types/api';
 
+type FolderMediaFilter = 'all' | 'video';
+
 interface FoldersState {
   items: FolderSummary[];
   loadingList: boolean;
@@ -10,6 +12,7 @@ interface FoldersState {
   listError: string | null;
   currentFolder: FolderSummary | null;
   currentImages: FeedItem[];
+  currentFilter: FolderMediaFilter;
   currentPage: number;
   currentLimit: number;
   currentHasMore: boolean;
@@ -25,6 +28,7 @@ export const useFoldersStore = defineStore('folders', {
     listError: null,
     currentFolder: null,
     currentImages: [],
+    currentFilter: 'all',
     currentPage: 1,
     currentLimit: 24,
     currentHasMore: true,
@@ -32,7 +36,7 @@ export const useFoldersStore = defineStore('folders', {
     folderError: null
   }),
   actions: {
-    removeImage(imageId: number, folderSlug: string) {
+    removeImage(imageId: number, folderSlug: string, mediaType: FeedItem['mediaType'] = 'image') {
       let removedFolder = false;
 
       this.items = this.items.flatMap((folder) => {
@@ -49,13 +53,16 @@ export const useFoldersStore = defineStore('folders', {
         return [
           {
             ...folder,
-            imageCount: nextImageCount
+            imageCount: nextImageCount,
+            videoCount: mediaType === 'video' ? Math.max(0, folder.videoCount - 1) : folder.videoCount
           }
         ];
       });
 
       if (this.currentFolder?.slug === folderSlug) {
-        this.currentImages = this.currentImages.filter((item) => item.id !== imageId);
+        if (this.currentFilter === 'all' || mediaType === 'video') {
+          this.currentImages = this.currentImages.filter((item) => item.id !== imageId);
+        }
 
         const nextImageCount = Math.max(0, this.currentFolder.imageCount - 1);
         if (nextImageCount === 0) {
@@ -65,7 +72,8 @@ export const useFoldersStore = defineStore('folders', {
         } else {
           this.currentFolder = {
             ...this.currentFolder,
-            imageCount: nextImageCount
+            imageCount: nextImageCount,
+            videoCount: mediaType === 'video' ? Math.max(0, this.currentFolder.videoCount - 1) : this.currentFolder.videoCount
           };
         }
       }
@@ -91,6 +99,7 @@ export const useFoldersStore = defineStore('folders', {
       this.listError = null;
       this.currentFolder = null;
       this.currentImages = [];
+      this.currentFilter = 'all';
       this.currentPage = 1;
       this.currentHasMore = true;
       this.loadingFolder = false;
@@ -124,14 +133,18 @@ export const useFoldersStore = defineStore('folders', {
       }
     },
 
-    async loadFolder(slug: string, reset = true) {
+    async loadFolder(slug: string, reset = true, mediaType?: FeedItem['mediaType']) {
       if (this.loadingFolder) {
         return;
       }
 
-      if (reset) {
+      const nextFilter: FolderMediaFilter = mediaType === 'video' ? 'video' : 'all';
+      const filterChanged = this.currentFilter !== nextFilter;
+
+      if (reset || filterChanged) {
         this.currentFolder = null;
         this.currentImages = [];
+        this.currentFilter = nextFilter;
         this.currentPage = 1;
         this.currentHasMore = true;
       }
@@ -140,7 +153,7 @@ export const useFoldersStore = defineStore('folders', {
       this.folderError = null;
 
       try {
-        const payload = await fetchFolderImages(slug, this.currentPage, this.currentLimit);
+        const payload = await fetchFolderImages(slug, this.currentPage, this.currentLimit, mediaType);
         this.currentFolder = payload.folder;
         this.currentImages.push(...payload.items);
         this.currentPage += 1;

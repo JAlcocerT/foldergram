@@ -44,7 +44,7 @@ withDefaults(
     loading?: boolean;
   }>(),
   {
-    confirmLabel: 'Delete image',
+    confirmLabel: 'Delete post',
     cancelLabel: 'Cancel',
     loadingLabel: 'Deleting...',
     loading: false

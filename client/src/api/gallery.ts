@@ -47,12 +47,27 @@ export function fetchFolder(slug: string) {
   return requestJson<FolderSummary>(`/api/folders/${encodeURIComponent(slug)}`);
 }
 
-export function fetchFolderImages(slug: string, page = 1, limit = 24) {
-  return requestJson<FolderImagesPayload>(`/api/folders/${encodeURIComponent(slug)}/images?page=${page}&limit=${limit}`);
+export function fetchFolderImages(slug: string, page = 1, limit = 24, mediaType?: 'image' | 'video') {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit)
+  });
+
+  if (mediaType) {
+    params.set('mediaType', mediaType);
+  }
+
+  return requestJson<FolderImagesPayload>(`/api/folders/${encodeURIComponent(slug)}/images?${params.toString()}`);
 }
 
-export function fetchImage(id: number) {
-  return requestJson<ImageDetail>(`/api/images/${id}`);
+export function fetchImage(id: number, mediaType?: 'image' | 'video') {
+  const params = new URLSearchParams();
+  if (mediaType) {
+    params.set('mediaType', mediaType);
+  }
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : '';
+  return requestJson<ImageDetail>(`/api/images/${id}${suffix}`);
 }
 
 export function fetchLikes() {

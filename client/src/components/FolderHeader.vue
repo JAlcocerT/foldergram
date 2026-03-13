@@ -15,6 +15,7 @@
       </div>
       <div class="flex items-center gap-8 flex-wrap font-base max-sm:justify-center">
         <span><strong class="mr-[0.35rem]">{{ folder.imageCount }}</strong>posts</span>
+        <span><strong class="mr-[0.35rem]">{{ folder.videoCount }}</strong>reels</span>
         <span v-if="folder.latestImageMtimeMs"><strong class="mr-[0.35rem]">{{ formattedUpdatedDate }}</strong>updated</span>
       </div>
       <div class="grid gap-[0.2rem] max-w-[32rem] max-sm:max-w-none">

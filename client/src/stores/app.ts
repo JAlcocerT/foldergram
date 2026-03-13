@@ -137,6 +137,7 @@ export const useAppStore = defineStore('app', {
         ...this.stats,
         folders: 0,
         indexedImages: 0,
+        indexedVideos: 0,
         deletedImages: 0,
         thumbnailCount: 0,
         previewCount: 0,
@@ -208,13 +209,16 @@ export const useAppStore = defineStore('app', {
       this.statsPollFailures = 0;
     },
 
-    removeIndexedImage(removedFolderCount = 0) {
+    removeIndexedImage(removedFolderCount = 0, mediaType: 'image' | 'video' = 'image') {
       if (!this.stats) {
         return;
       }
 
       this.stats.folders = Math.max(0, this.stats.folders - removedFolderCount);
       this.stats.indexedImages = Math.max(0, this.stats.indexedImages - 1);
+      if (mediaType === 'video') {
+        this.stats.indexedVideos = Math.max(0, this.stats.indexedVideos - 1);
+      }
       this.stats.deletedImages += 1;
     },
 

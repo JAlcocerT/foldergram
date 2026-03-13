@@ -1,6 +1,6 @@
 # Foldergram
 
-Foldergram is a local-only photo gallery app for browsing folders in an Instagram-inspired layout. It indexes images from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews with Sharp, and serves a Vue 3 SPA over localhost.
+Foldergram is a local-only photo and video gallery app for browsing folders in an Instagram-inspired layout. It indexes media from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews, and serves a Vue 3 SPA over localhost.
 
 ## Stack
 
@@ -10,6 +10,7 @@ Foldergram is a local-only photo gallery app for browsing folders in an Instagra
 - Vue 3 + Vite + Vue Router 4 + Pinia
 - built-in `node:sqlite`
 - Sharp
+- FFmpeg / FFprobe
 - Chokidar
 - Zod
 - `p-limit`
@@ -28,7 +29,7 @@ Foldergram is a local-only photo gallery app for browsing folders in an Instagra
 ## How it works
 
 - Each direct child folder inside the configured `GALLERY_ROOT` becomes one indexed folder.
-- Each supported image file inside that folder becomes one indexed post.
+- Each supported image or video file inside that folder becomes one indexed post.
 - Images placed directly inside the gallery root are ignored.
 - The backend scans the configured gallery root on startup, writes metadata to `data/db/gallery.sqlite` by default, and generates:
   - square feed/grid thumbnails in `data/thumbnails/`
@@ -36,14 +37,25 @@ Foldergram is a local-only photo gallery app for browsing folders in an Instagra
 - Feed and folder requests read from SQLite only. They do not scan the filesystem during API requests.
 - In development mode, Chokidar watches the configured gallery root and batches file changes before re-indexing.
 - If the configured storage is unavailable, the app shows a library-unavailable state instead of soft-deleting indexed content.
+- Folder pages include a `Posts` tab for all media and a `Reels` tab that filters to videos only.
 
-## Supported image formats
+## Supported media formats
 
+Images:
 - `.jpg`
 - `.jpeg`
 - `.png`
 - `.webp`
 - `.gif` as static preview/thumbnail
+
+Videos:
+- `.mp4`
+- `.mov`
+- `.m4v`
+- `.webm`
+- `.mkv`
+
+FFmpeg and FFprobe must be available on your local machine for video metadata, thumbnails, and preview MP4 generation.
 
 Nested subfolders are ignored by design.
 
@@ -52,7 +64,7 @@ Nested subfolders are ignored by design.
 1. Copy `.env.example` to `.env`.
 2. Keep the default paths unless you want custom directories.
 3. Add folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
-4. Add image files inside each folder.
+4. Add image or video files inside each folder.
 5. Install dependencies:
 
 ```bash
@@ -138,6 +150,7 @@ WSL note:
 - `GET /api/folders`
 - `GET /api/folders/:slug`
 - `GET /api/folders/:slug/images?page=1&limit=24`
+- `GET /api/folders/:slug/images?page=1&limit=24&mediaType=video`
 - `GET /api/likes`
 - `GET /api/images/:id`
 - `POST /api/images/:id/like`
@@ -154,7 +167,7 @@ WSL note:
 - `server/src/db`: schema and SQL repositories
 - `server/src/services/scanner-service.ts`: startup scans, incremental scans, deletion handling
 - `server/src/services/storage-service.ts`: configured storage availability and startup path handling
-- `server/src/services/derivative-service.ts`: Sharp thumbnail and preview generation
+- `server/src/services/derivative-service.ts`: Sharp image derivatives plus FFmpeg video thumbnails and preview generation
 - `server/src/services/watcher-service.ts`: debounced Chokidar watch mode
 - `client/src/stores`: Pinia state for feed, folders, likes, viewer, and app stats
 - `client/src/views`: home feed, folder page, likes page, and image detail page
@@ -166,7 +179,7 @@ WSL note:
 - Request-time performance stays fast because the API reads only from SQLite.
 - The scanner uses a lightweight fingerprint of `relative_path + file_size + mtime_ms` to avoid unnecessary heavy hashing.
 - `sort_timestamp` stays stable across rescans by preserving persisted sort data once an image is known.
-- Dev watching batches filesystem bursts so one copy operation does not trigger repeated expensive image work.
+- Dev watching batches filesystem bursts so one copy operation does not trigger repeated expensive media work.
 - The current startup scan runs before the server starts listening, so very large libraries can delay first response until indexing finishes.
 
 ## Where to change thumbnail sizes later

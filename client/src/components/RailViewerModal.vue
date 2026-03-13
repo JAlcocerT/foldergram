@@ -30,7 +30,7 @@
           <article class="story-side-card" :style="getPreviewTransitionStyle(previousCapsule.id)">
             <ResilientImage
               class="story-side-card__image"
-              :src="previousCapsule.coverImage.previewUrl"
+              :src="previousCapsule.coverImage.mediaType === 'video' ? previousCapsule.coverImage.thumbnailUrl : previousCapsule.coverImage.previewUrl"
               :alt="previousCapsule.title"
               loading="lazy"
               :retry-while="appStore.isScanning"
@@ -38,7 +38,7 @@
             <div class="story-side-card__shade" />
             <div class="story-side-card__meta">
               <strong class="block truncate text-[0.92rem]">{{ previousCapsule.title }}</strong>
-              <span class="block truncate text-[0.78rem] text-white/68">{{ previousCapsule.imageCount }} photos</span>
+              <span class="block truncate text-[0.78rem] text-white/68">{{ previousCapsule.imageCount }} posts</span>
             </div>
           </article>
         </button>
@@ -48,7 +48,7 @@
         <button
           class="story-stage__pager story-stage__pager--left"
           type="button"
-          aria-label="Previous photo"
+          aria-label="Previous post"
           :disabled="!canGoPreviousImage"
           @click="showPreviousImage"
         >
@@ -113,14 +113,14 @@
           <button
             class="story-stage__image-nav story-stage__image-nav--left"
             type="button"
-            aria-label="Previous photo"
+            aria-label="Previous post"
             :disabled="!canGoPreviousImage"
             @click="showPreviousImage"
           />
           <button
             class="story-stage__image-nav story-stage__image-nav--right"
             type="button"
-            aria-label="Next photo"
+            aria-label="Next post"
             :disabled="!canGoNextImage"
             @click="showNextImage"
           />
@@ -129,7 +129,7 @@
             <ResilientImage
               v-if="displayImage"
               class="story-stage__image"
-              :src="displayImage.previewUrl"
+              :src="displayImage.mediaType === 'video' ? displayImage.thumbnailUrl : displayImage.previewUrl"
               :alt="displayImage.filename"
               loading="eager"
               :retry-while="appStore.isScanning"
@@ -150,7 +150,7 @@
         <button
           class="story-stage__pager story-stage__pager--right"
           type="button"
-          aria-label="Next photo"
+          aria-label="Next post"
           :disabled="!canGoNextImage"
           @click="showNextImage"
         >
@@ -179,7 +179,7 @@
           <article class="story-side-card story-side-card--compact" :style="getPreviewTransitionStyle(capsule.id)">
             <ResilientImage
               class="story-side-card__image"
-              :src="capsule.coverImage.previewUrl"
+              :src="capsule.coverImage.mediaType === 'video' ? capsule.coverImage.thumbnailUrl : capsule.coverImage.previewUrl"
               :alt="capsule.title"
               loading="lazy"
               :retry-while="appStore.isScanning"
@@ -187,7 +187,7 @@
             <div class="story-side-card__shade" />
             <div class="story-side-card__meta">
               <strong class="block truncate text-[0.9rem]">{{ capsule.title }}</strong>
-              <span class="block truncate text-[0.76rem] text-white/68">{{ capsule.imageCount }} photos</span>
+              <span class="block truncate text-[0.76rem] text-white/68">{{ capsule.imageCount }} posts</span>
             </div>
           </article>
         </button>
@@ -266,7 +266,7 @@ const activeCapsuleMeta = computed(() => {
     return '';
   }
 
-  return `${activeCapsule.value.imageCount} photos · ${activeCapsule.value.dateContext}`;
+  return `${activeCapsule.value.imageCount} posts · ${activeCapsule.value.dateContext}`;
 });
 const footerMeta = computed(() => {
   if (!displayImage.value) {

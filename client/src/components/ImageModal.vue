@@ -1,7 +1,7 @@
 <template>
   <section v-if="image" :class="['viewer relative', { 'viewer--modal': isModal }]" @wheel="handleWheel">
     <!-- Close button (modal only) -->
-    <button v-if="isModal" class="fixed top-[5px] right-[5px] z-55 inline-flex items-center justify-center w-[2.35rem] h-[2.35rem] p-0 border-0 text-white bg-transparent cursor-pointer" type="button" aria-label="Close image" @click="$emit('close')">
+    <button v-if="isModal" class="fixed top-[5px] right-[5px] z-55 inline-flex items-center justify-center w-[2.35rem] h-[2.35rem] p-0 border-0 text-white bg-transparent cursor-pointer" type="button" aria-label="Close post" @click="$emit('close')">
       <svg class="w-[1.2rem] h-[1.2rem]" viewBox="0 0 24 24" role="presentation">
         <path
           d="m7 7 10 10M17 7 7 17"
@@ -21,8 +21,8 @@
         'inline-flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-full text-[#111] bg-white/88 shadow-[0_8px_20px_rgba(0,0,0,0.18)]',
         isModal ? 'fixed top-1/2 z-45 -translate-y-1/2 left-[5px]' : 'absolute top-1/2 z-2 -mt-[1.1rem] left-[-3.25rem] max-md:left-[-2.75rem]'
       ]"
-      :to="`/image/${image.previousImageId}`"
-      aria-label="Previous image"
+      :to="{ name: 'image', params: { id: String(image.previousImageId) }, query: route.query }"
+      aria-label="Previous post"
     >
       <svg class="w-4 h-4" viewBox="0 0 24 24" role="presentation">
         <path
@@ -43,8 +43,8 @@
         'inline-flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-full text-[#111] bg-white/88 shadow-[0_8px_20px_rgba(0,0,0,0.18)]',
         isModal ? 'fixed top-1/2 z-45 -translate-y-1/2 right-[5px]' : 'absolute top-1/2 z-2 -mt-[1.1rem] right-[-3.25rem] max-md:right-[-2.75rem]'
       ]"
-      :to="`/image/${image.nextImageId}`"
-      aria-label="Next image"
+      :to="{ name: 'image', params: { id: String(image.nextImageId) }, query: route.query }"
+      aria-label="Next post"
     >
       <svg class="w-4 h-4" viewBox="0 0 24 24" role="presentation">
         <path
@@ -65,7 +65,21 @@
         class="viewer-media relative bg-surface-alt"
         :class="isModal ? 'h-[calc(100vh-2rem)] min-h-0' : 'min-h-[34rem] max-md:min-h-[18rem]'"
       >
-        <ResilientImage :src="image.previewUrl" :alt="image.filename" loading="eager" :retry-while="appStore.isScanning" class="object-contain" />
+        <video
+          v-if="image.mediaType === 'video'"
+          ref="videoElement"
+          class="w-full h-full object-contain"
+          :src="image.previewUrl"
+          :poster="image.thumbnailUrl"
+          autoplay
+          controls
+          loop
+          muted
+          playsinline
+          preload="metadata"
+          @loadedmetadata="attemptVideoPlayback"
+        />
+        <ResilientImage v-else :src="image.previewUrl" :alt="image.filename" loading="eager" :retry-while="appStore.isScanning" class="object-contain" />
       </div>
 
       <!-- Sidebar -->
@@ -102,7 +116,11 @@
           </div>
           <div>
             <dt class="text-muted text-[0.75rem] mb-[0.25rem] uppercase tracking-[0.05em]">Type</dt>
-            <dd class="m-0 text-[0.96rem] font-semibold">{{ image.mimeType }}</dd>
+            <dd class="m-0 text-[0.96rem] font-semibold">{{ image.mediaType === 'video' ? `Video (${image.mimeType})` : image.mimeType }}</dd>
+          </div>
+          <div v-if="image.durationMs">
+            <dt class="text-muted text-[0.75rem] mb-[0.25rem] uppercase tracking-[0.05em]">Duration</dt>
+            <dd class="m-0 text-[0.96rem] font-semibold">{{ formattedDuration }}</dd>
           </div>
           <div>
             <dt class="text-muted text-[0.75rem] mb-[0.25rem] uppercase tracking-[0.05em]">Size</dt>
@@ -136,7 +154,7 @@
               :href="image.originalUrl"
               target="_blank"
               rel="noreferrer"
-              aria-label="Open original image"
+              aria-label="Open original file"
             >
               <svg class="w-[1.55rem] h-[1.55rem]" viewBox="0 0 24 24" role="presentation">
                 <path d="M11 7H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1" />
@@ -148,7 +166,7 @@
             <button
               class="inline-flex items-center justify-center p-0 border-0 bg-transparent cursor-pointer text-[#d93025] transition-[opacity,transform] duration-180 hover:opacity-72 hover:-translate-y-px disabled:opacity-45 disabled:cursor-wait disabled:transform-none"
               type="button"
-              aria-label="Delete image"
+              aria-label="Delete post"
               :disabled="deleting"
               @click="$emit('delete')"
             >
@@ -167,14 +185,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import type { ImageDetail, FolderSummary } from '../types/api';
 import { useAppStore } from '../stores/app';
 import { useLikesStore } from '../stores/likes';
 import Avatar from './Avatar.vue';
 import ResilientImage from './ResilientImage.vue';
+import { formatMediaDuration } from '../utils/media';
 
 const props = defineProps<{
   image: ImageDetail | null;
@@ -190,7 +209,9 @@ defineEmits<{
 
 const likesStore = useLikesStore();
 const appStore = useAppStore();
+const route = useRoute();
 const router = useRouter();
+const videoElement = ref<HTMLVideoElement | null>(null);
 const wheelDeltaAccumulator = ref(0);
 const navigationLockedUntil = ref(0);
 
@@ -221,12 +242,34 @@ const formattedDate = computed(() =>
       })
     : ''
 );
+const formattedDuration = computed(() => formatMediaDuration(props.image?.durationMs));
+
+async function attemptVideoPlayback(): Promise<void> {
+  if (props.image?.mediaType !== 'video') {
+    return;
+  }
+
+  await nextTick();
+  const video = videoElement.value;
+  if (!video) {
+    return;
+  }
+
+  video.muted = true;
+
+  try {
+    await video.play();
+  } catch {
+    // Ignore autoplay rejections and leave manual controls available.
+  }
+}
 
 watch(
   () => props.image?.id ?? null,
   () => {
     wheelDeltaAccumulator.value = 0;
     navigationLockedUntil.value = 0;
+    void attemptVideoPlayback();
   }
 );
 
@@ -241,7 +284,7 @@ async function navigateByDirection(direction: 'previous' | 'next') {
   }
 
   navigationLockedUntil.value = Date.now() + NAVIGATION_COOLDOWN_MS;
-  await router.push({ name: 'image', params: { id: String(targetId) } });
+  await router.push({ name: 'image', params: { id: String(targetId) }, query: route.query });
 }
 
 function handleWheel(event: WheelEvent) {
@@ -304,9 +347,11 @@ function handleKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
+  void attemptVideoPlayback();
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+  videoElement.value?.pause();
 });
 </script>

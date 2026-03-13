@@ -11,6 +11,8 @@ export interface FeedItem {
   filename: string;
   width: number;
   height: number;
+  mediaType: 'image' | 'video';
+  durationMs: number | null;
   thumbnailUrl: string;
   previewUrl: string;
   sortTimestamp: number;
@@ -24,6 +26,7 @@ export interface FolderSummary {
   folderPath: string;
   breadcrumb: string | null;
   imageCount: number;
+  videoCount: number;
   latestImageMtimeMs: number | null;
   avatarUrl: string | null;
 }
@@ -140,6 +143,7 @@ export interface RebuildLibraryResult {
 export interface AppStats {
   folders: number;
   indexedImages: number;
+  indexedVideos: number;
   deletedImages: number;
   thumbnailCount: number;
   previewCount: number;

@@ -1,3 +1,4 @@
+export type MediaType = 'image' | 'video';
 export type TakenAtSource = 'exif' | 'mtime' | 'first_seen' | 'sort_timestamp';
 
 export interface FolderRecord {
@@ -12,6 +13,7 @@ export interface FolderRecord {
 
 export interface FolderSummaryRecord extends FolderRecord {
   image_count: number;
+  video_count: number;
   latest_image_mtime_ms: number | null;
 }
 
@@ -25,7 +27,9 @@ export interface ImageRecord {
   file_size: number;
   width: number;
   height: number;
+  media_type: MediaType;
   mime_type: string;
+  duration_ms: number | null;
   checksum_or_fingerprint: string;
   mtime_ms: number;
   first_seen_at: string;
@@ -80,6 +84,8 @@ export interface FeedImage {
   filename: string;
   width: number;
   height: number;
+  mediaType: MediaType;
+  durationMs: number | null;
   thumbnailUrl: string;
   previewUrl: string;
   sortTimestamp: number;

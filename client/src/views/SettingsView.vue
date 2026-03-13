@@ -69,7 +69,7 @@
               <dd class="m-0 text-base font-bold">{{ folderMetric }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Images</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Posts</dt>
               <dd class="m-0 text-base font-bold">{{ imageMetric }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
@@ -102,7 +102,7 @@
           </div>
 
           <p class="m-0 text-muted">
-            This clears the indexed folder and image tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
+            This clears the indexed folder and post tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
           </p>
 
           <dl class="grid gap-[0.8rem] m-0">
@@ -146,8 +146,12 @@
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.folders ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed images</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed posts</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedImages ?? 0) }}</dd>
+            </div>
+            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed videos</dt>
+              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedVideos ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
               <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previews</dt>
@@ -188,7 +192,7 @@
     <ConfirmDialog
       v-if="confirmRebuildOpen"
       title="Rebuild the current library index?"
-      message="This will clear the indexed database tables for folders, images, likes, and scan history, remove generated thumbnails and previews, then rescan the active gallery root. Original files in the gallery will not be deleted."
+      message="This will clear the indexed database tables for folders, posts, likes, and scan history, remove generated thumbnails and previews, then rescan the active gallery root. Original files in the gallery will not be deleted."
       confirm-label="Rebuild library index"
       loading-label="Rebuilding..."
       :loading="rebuilding"
@@ -399,7 +403,7 @@ const progressDescription = computed(() => {
 
   const currentFolder = scan.value.currentFolder ? ` Current folder: ${scan.value.currentFolder}.` : '';
   if (scan.value.phase === 'discovery' && scan.value.discoveredFolders === 0 && scan.value.discoveredImages === 0) {
-    return `Walking the library tree to find image folders before indexing starts.${currentFolder}`;
+    return `Walking the library tree to find media folders before indexing starts.${currentFolder}`;
   }
 
   if (scan.value.phase === 'derivatives') {

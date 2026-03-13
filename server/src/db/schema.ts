@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS images (
   file_size INTEGER NOT NULL,
   width INTEGER NOT NULL,
   height INTEGER NOT NULL,
+  media_type TEXT NOT NULL DEFAULT 'image',
   mime_type TEXT NOT NULL,
+  duration_ms REAL NULL,
   checksum_or_fingerprint TEXT NOT NULL,
   mtime_ms REAL NOT NULL,
   first_seen_at TEXT NOT NULL,
@@ -76,7 +78,9 @@ CREATE INDEX IF NOT EXISTS idx_images_sort_timestamp ON images(sort_timestamp DE
 CREATE INDEX IF NOT EXISTS idx_images_taken_at ON images(taken_at DESC);
 CREATE INDEX IF NOT EXISTS idx_images_taken_at_source ON images(is_deleted, taken_at_source);
 CREATE INDEX IF NOT EXISTS idx_images_folder_sort ON images(folder_id, is_deleted, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_folder_media_sort ON images(folder_id, media_type, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_images_media_type ON images(media_type, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);
 CREATE INDEX IF NOT EXISTS idx_folder_scan_state_updated_at ON folder_scan_state(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_likes_created_at ON likes(created_at DESC);

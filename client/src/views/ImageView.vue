@@ -1,8 +1,8 @@
 <template>
   <div :class="modal ? 'w-[min(100%,72rem)]' : 'w-[min(100%,72rem)] mx-auto'" @click.stop>
-    <ErrorState v-if="viewerStore.error" title="Could not load image" :message="viewerStore.error" />
+    <ErrorState v-if="viewerStore.error" title="Could not load post" :message="viewerStore.error" />
     <div v-else-if="viewerStore.loading" class="card p-8 text-center">
-      <p class="text-muted">Loading image...</p>
+      <p class="text-muted">Loading post...</p>
     </div>
     <ImageModal
       v-else
@@ -15,8 +15,8 @@
     />
     <ConfirmDialog
       v-if="confirmDeleteOpen"
-      title="Delete this image?"
-      message="This image will be permanently deleted from the hard drive. This action cannot be undone."
+      title="Delete this post?"
+      message="This file will be permanently deleted from the hard drive. This action cannot be undone."
       :loading="viewerStore.deleting"
       @cancel="confirmDeleteOpen = false"
       @confirm="handleDelete"
@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import ErrorState from '../components/ErrorState.vue';
@@ -53,22 +53,24 @@ const likesStore = useLikesStore();
 const viewerStore = useViewerStore();
 const foldersStore = useFoldersStore();
 const momentsStore = useMomentsStore();
+const route = useRoute();
 const router = useRouter();
 const confirmDeleteOpen = ref(false);
 
 const imageId = computed(() => Number(props.id));
+const activeMediaType = computed(() => (route.query.tab === 'reels' ? 'video' : undefined));
 const folder = computed(() =>
   viewerStore.image ? foldersStore.items.find((entry) => entry.slug === viewerStore.image?.folderSlug) ?? null : null
 );
 
 async function loadImage() {
   if (Number.isFinite(imageId.value)) {
-    await viewerStore.loadImage(imageId.value);
+    await viewerStore.loadImage(imageId.value, activeMediaType.value);
   }
 }
 
 onMounted(loadImage);
-watch(imageId, loadImage);
+watch(() => [imageId.value, activeMediaType.value] as const, loadImage);
 
 async function handleDelete() {
   if (!viewerStore.image) {
@@ -81,9 +83,9 @@ async function handleDelete() {
 
   feedStore.removeImage(deleted.id);
   likesStore.removeImage(deleted.id);
-  const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug);
+  const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug, currentImage.mediaType);
   momentsStore.removeImage(deleted.id);
-  appStore.removeIndexedImage(removedFolder ? 1 : 0);
+  appStore.removeIndexedImage(removedFolder ? 1 : 0, currentImage.mediaType);
 
   if (props.modal) {
     emit('close');
