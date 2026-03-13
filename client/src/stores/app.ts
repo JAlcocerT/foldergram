@@ -9,9 +9,36 @@ interface AppState {
   error: string | null;
   theme: 'light' | 'dark';
   lastOpenedFolderSlug: string | null;
+  recentOpenedFolderSlugs: string[];
   imageModalBackgroundPath: string | null;
   statsPollFailures: number;
   statsPollTimer: ReturnType<typeof setInterval> | null;
+}
+
+const THEME_STORAGE_KEY = 'insta-local-theme';
+const LAST_OPENED_FOLDER_STORAGE_KEY = 'insta-local-last-opened-folder';
+const RECENT_OPENED_FOLDERS_STORAGE_KEY = 'insta-local-recent-opened-folders';
+const RECENT_OPENED_FOLDERS_LIMIT = 24;
+
+function parseStoredRecentFolderSlugs(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((entry): entry is string => typeof entry === 'string')
+      .map((entry) => entry.trim())
+      .filter((entry, index, items) => entry.length > 0 && items.indexOf(entry) === index)
+      .slice(0, RECENT_OPENED_FOLDERS_LIMIT);
+  } catch {
+    return [];
+  }
 }
 
 export const useAppStore = defineStore('app', {
@@ -21,6 +48,7 @@ export const useAppStore = defineStore('app', {
     error: null,
     theme: 'light',
     lastOpenedFolderSlug: null,
+    recentOpenedFolderSlugs: [],
     imageModalBackgroundPath: null,
     statsPollFailures: 0,
     statsPollTimer: null
@@ -35,8 +63,21 @@ export const useAppStore = defineStore('app', {
     isInitialScan: (state) => state.stats?.scan.isScanning === true && state.stats?.scan.lastCompletedScan === null
   },
   actions: {
+    persistOpenedFolderState() {
+      if (this.lastOpenedFolderSlug) {
+        window.localStorage.setItem(LAST_OPENED_FOLDER_STORAGE_KEY, this.lastOpenedFolderSlug);
+      } else {
+        window.localStorage.removeItem(LAST_OPENED_FOLDER_STORAGE_KEY);
+      }
+
+      window.localStorage.setItem(
+        RECENT_OPENED_FOLDERS_STORAGE_KEY,
+        JSON.stringify(this.recentOpenedFolderSlugs.slice(0, RECENT_OPENED_FOLDERS_LIMIT))
+      );
+    },
+
     initializeTheme() {
-      const savedTheme = window.localStorage.getItem('insta-local-theme');
+      const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
       const preferredTheme =
         savedTheme === 'light' || savedTheme === 'dark'
           ? savedTheme
@@ -48,14 +89,21 @@ export const useAppStore = defineStore('app', {
     },
 
     initializeLastOpenedFolder() {
-      const savedSlug = window.localStorage.getItem('insta-local-last-opened-folder');
+      const savedSlug = window.localStorage.getItem(LAST_OPENED_FOLDER_STORAGE_KEY);
       this.lastOpenedFolderSlug = savedSlug && savedSlug.length > 0 ? savedSlug : null;
+
+      const savedRecentSlugs = parseStoredRecentFolderSlugs(window.localStorage.getItem(RECENT_OPENED_FOLDERS_STORAGE_KEY));
+      this.recentOpenedFolderSlugs = this.lastOpenedFolderSlug
+        ? [this.lastOpenedFolderSlug, ...savedRecentSlugs.filter((slug) => slug !== this.lastOpenedFolderSlug)]
+        : savedRecentSlugs;
+
+      this.persistOpenedFolderState();
     },
 
     setTheme(theme: 'light' | 'dark') {
       this.theme = theme;
       document.documentElement.dataset.theme = theme;
-      window.localStorage.setItem('insta-local-theme', theme);
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     },
 
     toggleTheme() {
@@ -64,7 +112,11 @@ export const useAppStore = defineStore('app', {
 
     recordOpenedFolder(slug: string) {
       this.lastOpenedFolderSlug = slug;
-      window.localStorage.setItem('insta-local-last-opened-folder', slug);
+      this.recentOpenedFolderSlugs = [slug, ...this.recentOpenedFolderSlugs.filter((entry) => entry !== slug)].slice(
+        0,
+        RECENT_OPENED_FOLDERS_LIMIT
+      );
+      this.persistOpenedFolderState();
     },
 
     setImageModalBackground(path: string) {

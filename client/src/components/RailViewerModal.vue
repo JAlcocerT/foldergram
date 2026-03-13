@@ -19,34 +19,15 @@
     </button>
 
     <section class="story-overlay">
-      <button
-        class="story-highlight-arrow story-highlight-arrow--left"
-        type="button"
-        aria-label="Previous highlight"
-        :disabled="!previousCapsule"
-        @click="openPreviousHighlight"
-      >
-        <svg class="h-5 w-5" viewBox="0 0 24 24" role="presentation">
-          <path
-            d="m14.5 6.5-5 5 5 5"
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.8"
-          />
-        </svg>
-      </button>
-
       <div class="story-preview-slot story-preview-slot--left">
         <button
           v-if="previousCapsule"
           class="story-preview-button"
           type="button"
           :aria-label="`Open ${previousCapsule.title}`"
-          @click="openCapsule(previousCapsule.id)"
+          @click="openCapsule(previousCapsule.id, { fromPreview: true })"
         >
-          <article class="story-side-card">
+          <article class="story-side-card" :style="getPreviewTransitionStyle(previousCapsule.id)">
             <ResilientImage
               class="story-side-card__image"
               :src="previousCapsule.coverImage.previewUrl"
@@ -63,70 +44,128 @@
         </button>
       </div>
 
-      <article class="story-stage">
-        <div class="story-stage__progress">
-          <span
-            v-for="(_, index) in progressMarkers"
-            :key="index"
-            class="story-stage__progress-track"
-          >
-            <span class="story-stage__progress-fill" :style="{ transform: `scaleX(${segmentProgress(index)})` }" />
-          </span>
-        </div>
-
-        <header class="story-stage__header">
-          <div class="story-stage__header-main">
-            <div class="story-stage__ring">
-              <div class="story-stage__ring-inner">
-                <Avatar
-                  class="h-[2.55rem] w-[2.55rem]"
-                  :name="activeCapsule?.title ?? railSingularLabel"
-                  :src="activeCapsule?.coverImage.thumbnailUrl ?? null"
-                />
-              </div>
-            </div>
-            <div class="min-w-0">
-              <strong class="block truncate text-[0.95rem]">{{ activeCapsule?.title ?? 'Loading…' }}</strong>
-              <p class="m-0 truncate text-[0.78rem] text-white/68">{{ activeCapsuleMeta }}</p>
-            </div>
-          </div>
-          <span class="shrink-0 text-[0.76rem] font-semibold text-white/64">{{ imagePositionLabel }}</span>
-        </header>
-
+      <div class="story-stage-shell">
         <button
-          class="story-stage__image-nav story-stage__image-nav--left"
+          class="story-stage__pager story-stage__pager--left"
           type="button"
           aria-label="Previous photo"
+          :disabled="!canGoPreviousImage"
           @click="showPreviousImage"
-        />
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="m14.5 6.5-5 5 5 5"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+        </button>
+
+        <article class="story-stage" :class="{ 'story-stage--capsule-switching': isCapsuleSwitching }">
+          <div class="story-stage__progress">
+            <span
+              v-for="(_, index) in progressMarkers"
+              :key="index"
+              class="story-stage__progress-track"
+            >
+              <span class="story-stage__progress-fill" :style="{ transform: `scaleX(${segmentProgress(index)})` }" />
+            </span>
+          </div>
+
+          <header class="story-stage__header">
+            <div class="story-stage__header-main">
+              <div class="story-stage__ring">
+                <div class="story-stage__ring-inner">
+                  <Avatar
+                    class="h-[2.55rem] w-[2.55rem]"
+                    :name="activeCapsule?.title ?? railSingularLabel"
+                    :src="activeCapsule?.coverImage.thumbnailUrl ?? null"
+                  />
+                </div>
+              </div>
+              <div class="min-w-0">
+                <strong class="block truncate text-[0.95rem]">{{ activeCapsule?.title ?? 'Loading…' }}</strong>
+                <p class="m-0 truncate text-[0.78rem] text-white/68">{{ activeCapsuleMeta }}</p>
+              </div>
+            </div>
+
+            <div class="story-stage__controls">
+              <button
+                class="story-stage__control-button"
+                type="button"
+                :aria-label="isPaused ? 'Resume playback' : 'Pause playback'"
+                @click="togglePaused"
+              >
+                <svg v-if="isPaused" class="h-4 w-4" viewBox="0 0 24 24" role="presentation">
+                  <path d="M8 6.5v11l8.5-5.5Z" fill="currentColor" />
+                </svg>
+                <svg v-else class="h-4 w-4" viewBox="0 0 24 24" role="presentation">
+                  <path d="M8 6.75h2.75v10.5H8zm5.25 0H16v10.5h-2.75z" fill="currentColor" />
+                </svg>
+              </button>
+              <span class="story-stage__counter">{{ imagePositionLabel }}</span>
+            </div>
+          </header>
+
+          <button
+            class="story-stage__image-nav story-stage__image-nav--left"
+            type="button"
+            aria-label="Previous photo"
+            :disabled="!canGoPreviousImage"
+            @click="showPreviousImage"
+          />
+          <button
+            class="story-stage__image-nav story-stage__image-nav--right"
+            type="button"
+            aria-label="Next photo"
+            :disabled="!canGoNextImage"
+            @click="showNextImage"
+          />
+
+          <div class="story-stage__surface" :style="activeStageTransitionStyle">
+            <ResilientImage
+              v-if="displayImage"
+              class="story-stage__image"
+              :src="displayImage.previewUrl"
+              :alt="displayImage.filename"
+              loading="eager"
+              :retry-while="appStore.isScanning"
+            />
+            <div v-else class="story-stage__empty">
+              Loading {{ railSingularLabel.toLowerCase() }}…
+            </div>
+          </div>
+
+          <footer class="story-stage__footer">
+            <div class="grid gap-[0.18rem]">
+              <strong class="text-[0.92rem]">{{ displayImage?.folderName ?? activeCapsule?.title }}</strong>
+              <p class="m-0 text-[0.8rem] text-white/70">{{ footerMeta }}</p>
+            </div>
+          </footer>
+        </article>
+
         <button
-          class="story-stage__image-nav story-stage__image-nav--right"
+          class="story-stage__pager story-stage__pager--right"
           type="button"
           aria-label="Next photo"
+          :disabled="!canGoNextImage"
           @click="showNextImage"
-        />
-
-        <div class="story-stage__surface">
-          <ResilientImage
-            v-if="displayImage"
-            class="story-stage__image"
-            :src="displayImage.previewUrl"
-            :alt="displayImage.filename"
-            loading="eager"
-            :retry-while="appStore.isScanning"
-          />
-          <div v-else class="story-stage__empty">
-            Loading {{ railSingularLabel.toLowerCase() }}…
-          </div>
-        </div>
-
-        <footer class="story-stage__footer">
-          <div class="grid gap-[0.18rem]">
-            <strong class="text-[0.92rem]">{{ displayImage?.folderName ?? activeCapsule?.title }}</strong>
-            <p class="m-0 text-[0.8rem] text-white/70">{{ footerMeta }}</p>
-          </div>
-        </footer>
-      </article>
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="m9.5 6.5 5 5-5 5"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+        </button>
+      </div>
 
       <div class="story-preview-slot story-preview-slot--right">
         <button
@@ -135,9 +174,9 @@
           class="story-preview-button"
           type="button"
           :aria-label="`Open ${capsule.title}`"
-          @click="openCapsule(capsule.id)"
+          @click="openCapsule(capsule.id, { fromPreview: true })"
         >
-          <article class="story-side-card story-side-card--compact">
+          <article class="story-side-card story-side-card--compact" :style="getPreviewTransitionStyle(capsule.id)">
             <ResilientImage
               class="story-side-card__image"
               :src="capsule.coverImage.previewUrl"
@@ -153,31 +192,12 @@
           </article>
         </button>
       </div>
-
-      <button
-        class="story-highlight-arrow story-highlight-arrow--right"
-        type="button"
-        aria-label="Next highlight"
-        :disabled="!nextHighlightCapsule"
-        @click="openNextHighlight"
-      >
-        <svg class="h-5 w-5" viewBox="0 0 24 24" role="presentation">
-          <path
-            d="m9.5 6.5 5 5-5 5"
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.8"
-          />
-        </svg>
-      </button>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import type { FeedItem, MomentCapsule } from '../types/api';
 import { useAppStore } from '../stores/app';
@@ -186,6 +206,8 @@ import Avatar from './Avatar.vue';
 import ResilientImage from './ResilientImage.vue';
 
 const STORY_AUTO_ADVANCE_MS = 4200;
+const CAPSULE_SWITCH_ANIMATION_MS = 360;
+const CAPSULE_VIEW_TRANSITION_NAME = 'rail-highlight-stage';
 
 const props = defineProps<{
   items: MomentCapsule[];
@@ -202,7 +224,10 @@ const momentsStore = useMomentsStore();
 const activeCapsuleId = ref(props.initialId);
 const activeImageIndex = ref(0);
 const autoplayProgress = ref(0);
+const isPaused = ref(false);
+const activeCapsuleTransitionId = ref<string | null>(null);
 const transitionPending = ref(false);
+const isCapsuleSwitching = ref(false);
 
 let previousBodyOverflow = '';
 let animationFrameId = 0;
@@ -220,26 +245,22 @@ const activeImages = computed(() =>
   momentsStore.currentMoment?.id === activeCapsuleId.value ? momentsStore.currentImages : []
 );
 const displayImage = computed<FeedItem | null>(() => activeImages.value[activeImageIndex.value] ?? activeCapsule.value?.coverImage ?? null);
+const totalImageCount = computed(() => Math.max(activeCapsule.value?.imageCount ?? activeImages.value.length, 1));
 const previousCapsule = computed(() => {
   const index = activeCapsuleIndex.value;
   return index > 0 ? props.items[index - 1] : null;
-});
-const nextHighlightCapsule = computed(() => {
-  const index = activeCapsuleIndex.value;
-  return index >= 0 ? props.items[index + 1] ?? null : null;
 });
 const nextCapsules = computed(() => {
   const index = activeCapsuleIndex.value;
   return index >= 0 ? props.items.slice(index + 1, index + 3) : [];
 });
-const progressMarkers = computed(() => Array.from({ length: Math.max(activeImages.value.length, 1) }));
-const imagePositionLabel = computed(() => {
-  if (activeImages.value.length === 0) {
-    return '1 / 1';
-  }
-
-  return `${activeImageIndex.value + 1} / ${activeImages.value.length}`;
-});
+const activeStageTransitionStyle = computed(() =>
+  activeCapsuleTransitionId.value !== null && activeCapsuleId.value === activeCapsuleTransitionId.value
+    ? { viewTransitionName: CAPSULE_VIEW_TRANSITION_NAME }
+    : undefined
+);
+const progressMarkers = computed(() => Array.from({ length: totalImageCount.value }));
+const imagePositionLabel = computed(() => `${Math.min(activeImageIndex.value + 1, totalImageCount.value)}/${totalImageCount.value}`);
 const activeCapsuleMeta = computed(() => {
   if (!activeCapsule.value) {
     return '';
@@ -258,6 +279,13 @@ const footerMeta = computed(() => {
     year: 'numeric'
   });
 });
+const canGoPreviousImage = computed(() => !transitionPending.value && activeImages.value.length > 0 && activeImageIndex.value > 0);
+const canGoNextImage = computed(
+  () =>
+    !transitionPending.value &&
+    activeImages.value.length > 0 &&
+    (activeImageIndex.value < activeImages.value.length - 1 || momentsStore.currentHasMore)
+);
 
 watch(
   () => props.initialId,
@@ -269,7 +297,7 @@ watch(
 watch(
   () => [displayImage.value?.id ?? null, activeCapsuleId.value] as const,
   () => {
-    restartAutoplay();
+    syncAutoplayForCurrentImage();
   }
 );
 
@@ -306,15 +334,14 @@ function stopAutoplay() {
   }
 }
 
-function restartAutoplay() {
+function startAutoplay() {
   stopAutoplay();
-  autoplayProgress.value = 0;
 
-  if (!displayImage.value) {
+  if (!displayImage.value || isPaused.value) {
     return;
   }
 
-  autoplayStartedAt = performance.now();
+  autoplayStartedAt = performance.now() - autoplayProgress.value * STORY_AUTO_ADVANCE_MS;
 
   const tick = async (now: number) => {
     autoplayProgress.value = Math.min(1, (now - autoplayStartedAt) / STORY_AUTO_ADVANCE_MS);
@@ -331,8 +358,41 @@ function restartAutoplay() {
   animationFrameId = requestAnimationFrame(tick);
 }
 
+function syncAutoplayForCurrentImage() {
+  autoplayProgress.value = 0;
+  startAutoplay();
+}
+
+function togglePaused() {
+  if (!displayImage.value) {
+    return;
+  }
+
+  isPaused.value = !isPaused.value;
+
+  if (isPaused.value) {
+    stopAutoplay();
+    return;
+  }
+
+  startAutoplay();
+}
+
+function supportsViewTransitions() {
+  return typeof document !== 'undefined' && 'startViewTransition' in document;
+}
+
+function getPreviewTransitionStyle(capsuleId: string) {
+  if (activeCapsuleTransitionId.value === capsuleId && activeCapsuleId.value !== capsuleId) {
+    return {
+      viewTransitionName: CAPSULE_VIEW_TRANSITION_NAME
+    };
+  }
+
+  return undefined;
+}
+
 async function ensureCapsuleLoaded(id: string, reset = true) {
-  transitionPending.value = true;
   stopAutoplay();
   activeCapsuleId.value = id;
 
@@ -340,14 +400,54 @@ async function ensureCapsuleLoaded(id: string, reset = true) {
     activeImageIndex.value = 0;
   }
 
+  await loadCapsuleData(id, reset);
+}
+
+async function loadCapsuleData(id: string, reset = true) {
+  transitionPending.value = true;
+
   try {
-    await momentsStore.loadMoment(id, true);
+    await momentsStore.loadMoment(id, reset);
   } finally {
     transitionPending.value = false;
   }
 }
 
-async function openCapsule(id: string) {
+async function runCapsuleTransition(id: string) {
+  activeCapsuleTransitionId.value = id;
+
+  if (!supportsViewTransitions()) {
+    isCapsuleSwitching.value = true;
+    stopAutoplay();
+    activeCapsuleId.value = id;
+    activeImageIndex.value = 0;
+    await nextTick();
+    window.setTimeout(() => {
+      isCapsuleSwitching.value = false;
+      activeCapsuleTransitionId.value = null;
+    }, CAPSULE_SWITCH_ANIMATION_MS);
+    await loadCapsuleData(id, true);
+    return;
+  }
+
+  const transition = (document as Document & {
+    startViewTransition: (updateCallback: () => Promise<void> | void) => { finished: Promise<void> };
+  }).startViewTransition(async () => {
+    stopAutoplay();
+    activeCapsuleId.value = id;
+    activeImageIndex.value = 0;
+    await nextTick();
+  });
+
+  const clearTransitionVisuals = () => {
+    activeCapsuleTransitionId.value = null;
+  };
+
+  transition.finished.then(clearTransitionVisuals).catch(clearTransitionVisuals);
+  await loadCapsuleData(id, true);
+}
+
+async function openCapsule(id: string, options: { fromPreview?: boolean } = {}) {
   if (transitionPending.value) {
     return;
   }
@@ -356,23 +456,12 @@ async function openCapsule(id: string) {
     return;
   }
 
+  if (options.fromPreview) {
+    await runCapsuleTransition(id);
+    return;
+  }
+
   await ensureCapsuleLoaded(id, true);
-}
-
-async function openPreviousHighlight() {
-  if (!previousCapsule.value) {
-    return;
-  }
-
-  await openCapsule(previousCapsule.value.id);
-}
-
-async function openNextHighlight() {
-  if (!nextHighlightCapsule.value) {
-    return;
-  }
-
-  await openCapsule(nextHighlightCapsule.value.id);
 }
 
 async function showNextImage() {
@@ -410,11 +499,6 @@ async function showNextImageInternal(fromAutoplay: boolean) {
     }
   }
 
-  if (nextHighlightCapsule.value) {
-    await ensureCapsuleLoaded(nextHighlightCapsule.value.id, true);
-    return;
-  }
-
   if (fromAutoplay) {
     autoplayProgress.value = 1;
   }
@@ -427,16 +511,6 @@ async function showPreviousImage() {
 
   if (activeImageIndex.value > 0) {
     activeImageIndex.value -= 1;
-    return;
-  }
-
-  if (!previousCapsule.value) {
-    return;
-  }
-
-  await ensureCapsuleLoaded(previousCapsule.value.id, true);
-  if (momentsStore.currentImages.length > 0) {
-    activeImageIndex.value = momentsStore.currentImages.length - 1;
   }
 }
 
@@ -449,13 +523,19 @@ async function handleKeydown(event: KeyboardEvent) {
 
   if (event.key === 'ArrowRight') {
     event.preventDefault();
-    await openNextHighlight();
+    await showNextImage();
     return;
   }
 
   if (event.key === 'ArrowLeft') {
     event.preventDefault();
-    await openPreviousHighlight();
+    await showPreviousImage();
+    return;
+  }
+
+  if (event.key === ' ' || event.key === 'Spacebar') {
+    event.preventDefault();
+    togglePaused();
   }
 }
 
@@ -492,33 +572,9 @@ onUnmounted(() => {
   height: 100%;
   align-items: center;
   justify-content: center;
-  gap: 1.35rem;
-  grid-template-columns: 0 minmax(0, 28rem) minmax(0, 22rem) 0;
-}
-
-.story-highlight-arrow {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  color: white;
-  cursor: pointer;
-  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
-}
-
-.story-highlight-arrow:hover {
-  background: rgba(255, 255, 255, 0.24);
-  transform: scale(1.04);
-}
-
-.story-highlight-arrow:disabled {
-  opacity: 0.22;
-  cursor: default;
-  transform: none;
+  gap: 1.1rem;
+  padding: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .story-preview-slot {
@@ -575,14 +631,52 @@ onUnmounted(() => {
   padding: 0.9rem;
 }
 
+.story-stage-shell {
+  display: grid;
+  width: min(100%, 34rem);
+  justify-self: center;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .story-stage {
   position: relative;
+  justify-self: center;
   width: min(100%, 28rem);
-  height: min(100%, 44rem);
+  height: min(calc(100vh - 2.5rem), 44rem);
   overflow: hidden;
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   background: #000;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56);
+}
+
+.story-stage--capsule-switching {
+  animation: capsule-stage-switch 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.story-stage__pager {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
+}
+
+.story-stage__pager:hover {
+  background: rgba(255, 255, 255, 0.26);
+  transform: scale(1.04);
+}
+
+.story-stage__pager:disabled {
+  opacity: 0.24;
+  cursor: default;
+  transform: none;
 }
 
 .story-stage__surface {
@@ -648,6 +742,40 @@ onUnmounted(() => {
   gap: 0.75rem;
 }
 
+.story-stage__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.story-stage__control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.26);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 150ms ease, opacity 150ms ease;
+}
+
+.story-stage__control-button:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.story-stage__counter {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.68);
+  letter-spacing: 0.01em;
+}
+
 .story-stage__ring {
   flex-shrink: 0;
   border-radius: 999px;
@@ -672,6 +800,10 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+.story-stage__image-nav:disabled {
+  cursor: default;
+}
+
 .story-stage__image-nav--left {
   left: 0;
 }
@@ -690,10 +822,9 @@ onUnmounted(() => {
 
 @media (min-width: 1024px) {
   .story-overlay {
-    grid-template-columns: 2.75rem 11rem minmax(0, 28rem) minmax(0, 22rem) 2.75rem;
+    grid-template-columns: minmax(0, 11rem) minmax(0, 34rem) minmax(0, 22rem);
   }
 
-  .story-highlight-arrow,
   .story-preview-slot {
     display: flex;
   }
@@ -701,5 +832,37 @@ onUnmounted(() => {
   .story-preview-slot--left {
     justify-content: flex-end;
   }
+
+  .story-stage-shell {
+    grid-template-columns: 2.85rem minmax(0, 28rem) 2.85rem;
+    gap: 0.85rem;
+  }
+
+  .story-stage__pager {
+    display: inline-flex;
+  }
+}
+
+@keyframes capsule-stage-switch {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:global(::view-transition-group(rail-highlight-stage)) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:global(::view-transition-old(rail-highlight-stage)),
+:global(::view-transition-new(rail-highlight-stage)) {
+  border-radius: 1rem;
+  overflow: clip;
 }
 </style>

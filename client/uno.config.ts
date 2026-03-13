@@ -1,11 +1,23 @@
-import { defineConfig, presetWind4 } from 'unocss';
+import { defineConfig, presetIcons, presetWind4 } from 'unocss';
 import transformerDirectives from '@unocss/transformer-directives';
 
 export default defineConfig({
   presets: [
     presetWind4(),
+    presetIcons(),
   ],
   transformers: [transformerDirectives()],
+  safelist: [
+    'i-fluent-home-16-filled',
+    'i-fluent-home-16-regular',
+    'i-fluent-settings-16-filled',
+    'i-fluent-settings-16-regular',
+    'i-fluent-heart-16-filled',
+    'i-fluent-heart-16-regular',
+    'i-fluent-folder-16-filled',
+    'i-fluent-folder-16-regular',
+    'i-fluent-line-horizontal-3-20-filled',
+  ],
   theme: {
     colors: {
       accent: 'var(--accent)',

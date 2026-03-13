@@ -1,13 +1,12 @@
 <template>
-  <div class="card overflow-hidden skeleton">
-    <div class="flex items-center gap-3 px-4 min-h-[3.65rem]">
-      <div class="skeleton__avatar w-[2.65rem] h-[2.65rem] rounded-full shrink-0"></div>
-      <div class="skeleton__lines flex flex-col gap-[0.45rem] w-48">
+  <div class="skeleton bg-transparent">
+    <div class="flex items-center gap-[0.72rem] px-4 py-[0.55rem]">
+      <div class="skeleton__avatar w-8 h-8 rounded-full shrink-0"></div>
+      <div class="skeleton__lines flex flex-col gap-[0.45rem] w-28">
         <span class="block h-[0.8rem] rounded-full"></span>
-        <span class="block h-[0.8rem] rounded-full w-3/5"></span>
       </div>
     </div>
-    <div class="skeleton__media aspect-square"></div>
+    <div class="skeleton__media aspect-square rounded-[0.5rem] border border-border"></div>
   </div>
 </template>
 

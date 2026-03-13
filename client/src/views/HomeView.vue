@@ -1,5 +1,5 @@
 <template>
-  <section class="grid grid-cols-[minmax(0,39.75rem)_19rem] gap-[3.5rem] items-start justify-center w-[min(100%,67rem)] mx-auto max-md:grid-cols-1 max-md:w-full">
+  <section class="desktop-content-compensation grid grid-cols-[minmax(0,39.375rem)_19.9375rem] gap-[4rem] items-start justify-center w-[min(100%,63.3125rem)] mx-auto max-md:grid-cols-1 max-md:w-full">
     <!-- Main feed column -->
     <div class="min-w-0">
       <section
@@ -26,49 +26,54 @@
         <p class="m-0 text-muted">{{ scanDescription }}</p>
       </section>
 
-      <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5">
-        <section v-if="momentsStore.items.length" class="mb-1">
-          <div class="flex gap-[1.05rem] overflow-x-auto pb-4 [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
+      <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5 w-full max-w-[39.375rem]">
+        <section v-if="momentsStore.items.length" class="mb-2">
+          <div class="stories-bar flex gap-[0.95rem] overflow-x-auto pb-5 pr-2 pt-[0.12rem] [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
             <button
               v-for="moment in momentsStore.items"
               :key="moment.id"
-              class="flex flex-col items-center gap-[0.55rem] min-w-[6.1rem] border-0 bg-transparent p-0 text-muted text-[0.72rem] text-center cursor-pointer"
+              class="flex flex-col items-center gap-[0.48rem] min-w-[5.85rem] border-0 bg-transparent p-0 text-muted text-[0.74rem] text-center cursor-pointer transition-transform duration-180 hover:-translate-y-[1px]"
               :title="`${moment.title} · ${moment.subtitle}`"
               type="button"
               @click="openRailViewer(moment.id)"
             >
-              <div class="rounded-full p-[3px] bg-[var(--story-ring)] shadow-[0_10px_26px_rgba(246,80,117,0.18)]">
-                <div class="rounded-full bg-bg p-[2px]">
-                  <Avatar class="w-[4.75rem] h-[4.75rem]" :name="moment.title" :src="moment.coverImage.thumbnailUrl" />
+              <div
+                class="rounded-full p-[0.26rem] shadow-[0_14px_30px_rgba(246,106,61,0.18)]"
+                style="background: var(--story-ring);"
+              >
+                <div class="rounded-full bg-bg p-[0.2rem]">
+                  <Avatar class="w-[4.625rem] h-[4.625rem]" :name="moment.title" :src="moment.coverImage.thumbnailUrl" />
                 </div>
               </div>
-              <span class="max-w-full overflow-hidden text-ellipsis font-semibold leading-tight text-text">{{ moment.title }}</span>
+              <span class="max-w-[5.75rem] overflow-hidden text-ellipsis whitespace-nowrap font-semibold leading-tight text-text">{{ moment.title }}</span>
             </button>
           </div>
         </section>
 
-        <header v-if="appStore.stats" class="flex items-end justify-between gap-4">
-          <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders</p>
-        </header>
+        <div class="w-full max-w-[29.375rem] mx-auto flex items-center justify-between gap-[0.8rem]">
+          <div class="flex flex-wrap gap-[0.35rem]">
+            <button
+              v-for="mode in feedModes"
+              :key="mode.id"
+              class="min-h-[2rem] px-[0.82rem] rounded-full border text-[0.71rem] font-bold transition-[background-color,border-color,color,box-shadow] duration-180"
+              :class="feedStore.mode === mode.id ? 'border-[#1f2937] text-white shadow-[var(--shadow)]' : 'border-border text-text bg-surface hover:border-text/25 hover:bg-surface-alt'"
+              :style="
+                feedStore.mode === mode.id
+                  ? 'background: linear-gradient(135deg, #1f2937 0%, #111827 100%);'
+                  : undefined
+              "
+              :title="mode.description"
+              :aria-label="`${mode.label}. ${mode.description}`"
+              type="button"
+              @click="selectMode(mode.id)"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
 
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="mode in feedModes"
-            :key="mode.id"
-            class="min-h-10 px-4 rounded-full border text-[0.82rem] font-bold transition-[background-color,border-color,color,box-shadow] duration-180"
-            :class="feedStore.mode === mode.id ? 'border-[#1f2937] text-white shadow-[var(--shadow)]' : 'border-border text-text bg-surface hover:border-text/25 hover:bg-surface-alt'"
-            :style="
-              feedStore.mode === mode.id
-                ? 'background: linear-gradient(135deg, #1f2937 0%, #111827 100%);'
-                : undefined
-            "
-            :title="mode.description"
-            :aria-label="`${mode.label}. ${mode.description}`"
-            type="button"
-            @click="selectMode(mode.id)"
-          >
-            {{ mode.label }}
-          </button>
+          <p v-if="appStore.stats" class="m-0 shrink-0 whitespace-nowrap text-[0.74rem] text-muted">
+            {{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders
+          </p>
         </div>
       </section>
 
@@ -104,10 +109,12 @@
       <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No images indexed yet" description="Add folders under data/gallery/ and the feed will populate after the next scan." />
       <template v-else>
         <!-- Feed cards in home-layout context: transparent card, no shadow -->
-        <div class="flex flex-col gap-[1.2rem]">
+        <div class="w-full max-w-[29.375rem] mx-auto flex flex-col gap-[1.2rem]">
           <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />
         </div>
-        <InfiniteLoader :loading="feedStore.loading" :has-more="feedStore.hasMore" @load-more="feedStore.loadMore" />
+        <div class="w-full max-w-[29.375rem] mx-auto">
+          <InfiniteLoader :loading="feedStore.loading" :has-more="feedStore.hasMore" @load-more="feedStore.loadMore" />
+        </div>
       </template>
 
       <RailViewerModal
@@ -120,7 +127,7 @@
     </div>
 
     <!-- Right rail (suggestions) — hidden on mobile -->
-    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="sticky top-8 grid gap-[1.15rem] text-muted max-md:hidden" aria-label="Folder recommendations">
+    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="sticky top-8 grid gap-[1.15rem] w-[19.9375rem] text-muted max-md:hidden" aria-label="Folder recommendations">
       <div class="flex items-center gap-[0.8rem]">
         <Avatar class="w-11 h-11" :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
         <div class="flex-1 min-w-0">
@@ -198,7 +205,7 @@ const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
   {
     id: 'random',
     label: 'Random',
-    description: 'A stable session shuffle for aimless browsing.'
+    description: 'A fresh shuffle that stays steady while you browse.'
   }
 ];
 const showInitialScanState = computed(

@@ -122,12 +122,11 @@
             :disabled="likesStore.isPending(image.id)"
             @click="likesStore.toggleLike(image)"
           >
-            <svg class="w-[1.55rem] h-[1.55rem]" viewBox="0 0 48 48" role="presentation">
-              <path
-                d="M7.923 10.155a10.42 10.42 0 0 1 13.806.684l2.272 2.223l2.266-2.22a10.42 10.42 0 0 1 13.809-.687c4.85 3.887 5.242 11.13.837 15.516l-16.03 15.964a1.25 1.25 0 0 1-1.764 0L7.087 25.67c-4.405-4.386-4.015-11.628.836-15.516zm12.057 2.47a7.92 7.92 0 0 0-10.494-.52C5.8 15.06 5.503 20.565 8.851 23.9L24 38.986l15.148-15.087c3.348-3.334 3.05-8.839-.636-11.793a7.921 7.921 0 0 0-10.496.522l-3.141 3.077a1.25 1.25 0 0 1-1.75 0l-3.146-3.08z"
-                fill="currentColor"
-              />
-            </svg>
+            <span
+              class="w-[1.55rem] h-[1.55rem]"
+              :class="likesStore.isLiked(image.id) ? 'i-fluent-heart-16-filled' : 'i-fluent-heart-16-regular'"
+              aria-hidden="true"
+            />
           </button>
 
           <div class="flex items-center gap-4">

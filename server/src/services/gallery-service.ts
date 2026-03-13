@@ -48,6 +48,8 @@ const LAST_YEAR_RADIUS_DAYS = 45;
 const HIGHLIGHT_BATCH_CANDIDATE_LIMIT = 180;
 const HIGHLIGHT_BATCH_COUNT = 3;
 const HIGHLIGHT_CAPSULE_MAX_ITEMS = 30;
+// Keep the rail visually distinct from the first home-feed screen when enough alternatives exist.
+const HIGHLIGHT_FEED_OVERLAP_WINDOW = 18;
 const RAIL_COVER_CANDIDATE_LIMIT = 12;
 
 function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
@@ -200,17 +202,35 @@ function sliceItemsForPage(items: FeedImage[], page: number, limit: number): Fee
   return items.slice(offset, offset + limit);
 }
 
-function getCappedItemCount(total: number, maxItems: number): number {
-  return Math.max(0, Math.min(total, maxItems));
-}
-
-function limitItemsForPage(items: FeedImage[], page: number, limit: number, total: number): FeedImage[] {
-  const offset = (page - 1) * limit;
-  if (offset >= total) {
-    return [];
+function filterExcludedFeedItems(items: FeedImage[], excludedImageIds: Set<number>): FeedImage[] {
+  if (excludedImageIds.size === 0) {
+    return items;
   }
 
-  return items.slice(0, total - offset);
+  return items.filter((item) => !excludedImageIds.has(item.id));
+}
+
+function limitHighlightItems(items: FeedImage[], minimumImageCount: number, excludedImageIds: Set<number>): FeedImage[] {
+  const cappedItems = items.slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  if (excludedImageIds.size === 0) {
+    return cappedItems;
+  }
+
+  const filteredItems = filterExcludedFeedItems(items, excludedImageIds).slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  return filteredItems.length >= minimumImageCount ? filteredItems : cappedItems;
+}
+
+function buildStaticCapsuleDefinition(
+  capsule: Pick<FeedCapsuleDefinition, 'id' | 'title' | 'subtitle' | 'dateContext' | 'minimumImageCount'>,
+  items: FeedImage[]
+): FeedCapsuleDefinition {
+  const cappedItems = items.slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
+
+  return {
+    ...capsule,
+    count: () => cappedItems.length,
+    list: (page, limit) => sliceItemsForPage(cappedItems, page, limit)
+  };
 }
 
 function listDiversifiedModeItems(
@@ -250,13 +270,36 @@ function createDailySeed(now = new Date()): number {
   return Number(`${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`);
 }
 
-function getRecentBatchHighlightItems(): FeedImage[] {
+function getHighlightFeedOverlapImageIds(): Set<number> {
+  const total = imageRepository.countFeed();
+  const recentFeedItems = listDiversifiedModeItems(total, 1, HIGHLIGHT_FEED_OVERLAP_WINDOW, (offset, batchLimit) =>
+    imageRepository.listRecentCandidates(offset, batchLimit)
+  );
+
+  return new Set(recentFeedItems.map((item) => item.id));
+}
+
+function getRecentBatchHighlightItems(excludedImageIds: Set<number>): FeedImage[] {
   const candidates = imageRepository.listRecentCandidates(0, HIGHLIGHT_BATCH_CANDIDATE_LIMIT);
   const bursts = groupFeedBursts(candidates)
     .filter((burst) => burst.items.length >= 2)
+    .slice(0, HIGHLIGHT_BATCH_COUNT * 2);
+  const filteredBursts = bursts
+    .map((burst) => ({
+      ...burst,
+      items: filterExcludedFeedItems(burst.items, excludedImageIds)
+    }))
+    .filter((burst) => burst.items.length >= 2)
     .slice(0, HIGHLIGHT_BATCH_COUNT);
 
-  return bursts.flatMap((burst) => burst.items);
+  if (filteredBursts.length > 0) {
+    return filteredBursts.flatMap((burst) => burst.items).slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  }
+
+  return bursts
+    .slice(0, HIGHLIGHT_BATCH_COUNT)
+    .flatMap((burst) => burst.items)
+    .slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
 }
 
 function buildMomentRailDefinition(now = new Date()): FeedRailDefinition {
@@ -312,13 +355,25 @@ function buildMomentRailDefinition(now = new Date()): FeedRailDefinition {
 }
 
 function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
-  const recentBatchItems = getRecentBatchHighlightItems().slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  const excludedImageIds = getHighlightFeedOverlapImageIds();
   const rediscoverCutoff = now.getTime() - REDISCOVER_MIN_AGE_MS;
   const dailySeed = createDailySeed(now);
+  const highlightFetchLimit = HIGHLIGHT_CAPSULE_MAX_ITEMS + HIGHLIGHT_FEED_OVERLAP_WINDOW;
+  const recentBatchItems = getRecentBatchHighlightItems(excludedImageIds);
+  const forgottenFavoriteItems = limitHighlightItems(
+    likeRepository.listLikedOlderThan(1, highlightFetchLimit, rediscoverCutoff),
+    1,
+    excludedImageIds
+  );
+  const deepCutItems = limitHighlightItems(
+    listDiversifiedModeItems(imageRepository.countRediscover(rediscoverCutoff), 1, highlightFetchLimit, (offset, batchLimit) =>
+      imageRepository.listRediscoverCandidates(offset, batchLimit, rediscoverCutoff)
+    ),
+    1,
+    excludedImageIds
+  );
+  const luckyDipItems = limitHighlightItems(imageRepository.listRandom(1, highlightFetchLimit, dailySeed), 1, excludedImageIds);
   const recentBatchCount = groupFeedBursts(recentBatchItems).length;
-  const forgottenFavoritesCount = getCappedItemCount(likeRepository.countLikedOlderThan(rediscoverCutoff), HIGHLIGHT_CAPSULE_MAX_ITEMS);
-  const deepCutsCount = getCappedItemCount(imageRepository.countRediscover(rediscoverCutoff), HIGHLIGHT_CAPSULE_MAX_ITEMS);
-  const luckyDipCount = getCappedItemCount(imageRepository.countFeed(), HIGHLIGHT_CAPSULE_MAX_ITEMS);
 
   return {
     kind: 'highlights',
@@ -326,46 +381,46 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
     description: 'Curated sets from your library when capture dates are sparse or synthetic.',
     singularLabel: 'Highlight',
     capsules: [
-      {
-        id: 'highlight-recent-batches',
-        title: 'Recent Batches',
-        subtitle: 'Latest runs gathered into one set',
-        dateContext: `${recentBatchCount} batch${recentBatchCount === 1 ? '' : 'es'}`,
-        minimumImageCount: 2,
-        count: () => recentBatchItems.length,
-        list: (page, limit) => sliceItemsForPage(recentBatchItems, page, limit)
-      },
-      {
-        id: 'highlight-forgotten-favorites',
-        title: 'Forgotten Favorites',
-        subtitle: 'Older liked images worth another look',
-        dateContext: 'Liked and older than 6 months',
-        minimumImageCount: 1,
-        count: () => forgottenFavoritesCount,
-        list: (page, limit) => limitItemsForPage(likeRepository.listLikedOlderThan(page, limit, rediscoverCutoff), page, limit, forgottenFavoritesCount)
-      },
-      {
-        id: 'highlight-deep-cuts',
-        title: 'Deep Cuts',
-        subtitle: 'Older images resurfaced from the archive',
-        dateContext: 'Older than 6 months',
-        minimumImageCount: 1,
-        count: () => deepCutsCount,
-        list: (page, limit) => {
-          return listDiversifiedModeItems(deepCutsCount, page, limit, (offset, batchLimit) =>
-            imageRepository.listRediscoverCandidates(offset, batchLimit, rediscoverCutoff)
-          );
-        }
-      },
-      {
-        id: 'highlight-lucky-dip',
-        title: 'Lucky Dip',
-        subtitle: 'A playful mix from across the library',
-        dateContext: 'Stable for today',
-        minimumImageCount: 1,
-        count: () => luckyDipCount,
-        list: (page, limit) => limitItemsForPage(imageRepository.listRandom(page, limit, dailySeed), page, limit, luckyDipCount)
-      }
+      buildStaticCapsuleDefinition(
+        {
+          id: 'highlight-recent-batches',
+          title: 'Recent Batches',
+          subtitle: 'Latest runs gathered into one set',
+          dateContext: `${recentBatchCount} batch${recentBatchCount === 1 ? '' : 'es'}`,
+          minimumImageCount: 2
+        },
+        recentBatchItems
+      ),
+      buildStaticCapsuleDefinition(
+        {
+          id: 'highlight-forgotten-favorites',
+          title: 'Forgotten Favorites',
+          subtitle: 'Older liked images worth another look',
+          dateContext: 'Liked and older than 6 months',
+          minimumImageCount: 1
+        },
+        forgottenFavoriteItems
+      ),
+      buildStaticCapsuleDefinition(
+        {
+          id: 'highlight-deep-cuts',
+          title: 'Deep Cuts',
+          subtitle: 'Older images resurfaced from the archive',
+          dateContext: 'Older than 6 months',
+          minimumImageCount: 1
+        },
+        deepCutItems
+      ),
+      buildStaticCapsuleDefinition(
+        {
+          id: 'highlight-lucky-dip',
+          title: 'Lucky Dip',
+          subtitle: 'A playful mix from across the library',
+          dateContext: 'Stable for today',
+          minimumImageCount: 1
+        },
+        luckyDipItems
+      )
     ]
   };
 }

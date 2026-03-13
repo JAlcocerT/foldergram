@@ -3,9 +3,6 @@ import { defineStore } from 'pinia';
 import { fetchFeed } from '../api/gallery';
 import type { FeedItem, FeedMode } from '../types/api';
 
-const FEED_MODE_STORAGE_KEY = 'insta-local-home-feed-mode';
-const RANDOM_SEED_STORAGE_KEY = 'insta-local-random-feed-seed';
-
 interface FeedState {
   mode: FeedMode;
   items: FeedItem[];
@@ -29,7 +26,7 @@ function createRandomSeed(): number {
 
 export const useFeedStore = defineStore('feed', {
   state: (): FeedState => ({
-    mode: 'recent',
+    mode: 'random',
     items: [],
     page: 1,
     limit: 18,
@@ -41,17 +38,8 @@ export const useFeedStore = defineStore('feed', {
   }),
   actions: {
     initializeMode() {
-      const savedMode = window.sessionStorage.getItem(FEED_MODE_STORAGE_KEY);
-      if (savedMode === 'recent' || savedMode === 'rediscover' || savedMode === 'random') {
-        this.mode = savedMode;
-      }
-
-      const savedSeed = Number(window.sessionStorage.getItem(RANDOM_SEED_STORAGE_KEY));
-      this.randomSeed = Number.isFinite(savedSeed) && savedSeed >= 0 ? savedSeed : null;
-    },
-
-    persistMode() {
-      window.sessionStorage.setItem(FEED_MODE_STORAGE_KEY, this.mode);
+      this.mode = 'random';
+      this.randomSeed = null;
     },
 
     ensureRandomSeed() {
@@ -60,17 +48,16 @@ export const useFeedStore = defineStore('feed', {
       }
 
       this.randomSeed = createRandomSeed();
-      window.sessionStorage.setItem(RANDOM_SEED_STORAGE_KEY, String(this.randomSeed));
       return this.randomSeed;
     },
 
     async setMode(mode: FeedMode) {
-      if (this.mode === mode && this.initialized) {
+      if (this.mode === mode && this.initialized && mode !== 'random') {
         return;
       }
 
       this.mode = mode;
-      this.persistMode();
+      this.randomSeed = mode === 'random' ? createRandomSeed() : null;
       await this.loadInitial(true);
     },
 
