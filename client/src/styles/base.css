@@ -255,6 +255,50 @@ img[data-loaded="true"] {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* ── Explore shell mode ────────────────────────────────────── */
+.app-shell--explore,
+.app-shell--explore .app-shell__content,
+.app-shell--explore .app-shell__main,
+.app-shell--explore .sidebar,
+.app-shell--explore .topbar {
+  color: #f5f7fb;
+  background: #04070d;
+}
+
+.app-shell--explore .topbar {
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+}
+
+.app-shell--explore .sidebar__brand,
+.app-shell--explore .sidebar-item,
+.app-shell--explore .topbar__icon-link {
+  color: rgba(245, 247, 251, 0.96);
+}
+
+.app-shell--explore .sidebar__link.router-link-active,
+.app-shell--explore .sidebar__folder.router-link-active,
+.app-shell--explore .topbar__icon-link.router-link-active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-shell--explore .sidebar__brand:hover,
+.app-shell--explore .sidebar-item:hover,
+.app-shell--explore .topbar__icon-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-shell--explore .sidebar__section-label,
+.app-shell--explore .sidebar__meta,
+.app-shell--explore .text-muted {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.app-shell--explore .sidebar__badge {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
 /* ── Settings progress bar fill transition ──────────────────── */
 .settings-progress__fill {
   transition: width 0.24s ease;

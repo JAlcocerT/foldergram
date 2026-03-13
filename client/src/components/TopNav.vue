@@ -10,6 +10,11 @@
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-home-16-filled' : 'i-fluent-home-16-regular'" aria-hidden="true" />
         </a>
       </RouterLink>
+      <RouterLink custom :to="{ name: 'explore' }" v-slot="{ href, navigate, isActive }">
+        <a :href="href" class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer transition-colors duration-150 hover:bg-white/8" :class="{ 'router-link-active': isActive }" aria-label="Search" @click="navigate">
+          <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-search-16-filled' : 'i-fluent-search-16-regular'" aria-hidden="true" />
+        </a>
+      </RouterLink>
       <RouterLink custom :to="{ name: 'library' }" v-slot="{ href, navigate, isActive }">
         <a :href="href" class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer transition-colors duration-150 hover:bg-white/8" :class="{ 'router-link-active': isActive }" aria-label="Library" @click="navigate">
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-folder-16-filled' : 'i-fluent-folder-16-regular'" aria-hidden="true" />

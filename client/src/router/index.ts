@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ImageView from '../views/ImageView.vue';
 import LibraryView from '../views/LibraryView.vue';
 import LikesView from '../views/LikesView.vue';
+import ExploreView from '../views/ExploreView.vue';
 import FolderView from '../views/FolderView.vue';
 import MomentView from '../views/MomentView.vue';
 import SettingsView from '../views/SettingsView.vue';
@@ -28,6 +29,14 @@ export const router = createRouter({
       component: LibraryView
     },
     {
+      path: '/explore',
+      name: 'explore',
+      component: ExploreView,
+      meta: {
+        shell: 'explore'
+      }
+    },
+    {
       path: '/likes/posts',
       name: 'likes',
       component: LikesView
@@ -44,7 +53,8 @@ export const router = createRouter({
       props: true
     },
     {
-      path: '/:slug',
+      path: '/folders/:slug',
+      alias: '/:slug',
       name: 'folder',
       component: FolderView,
       props: true

@@ -24,6 +24,17 @@
         </a>
       </RouterLink>
 
+      <RouterLink custom :to="{ name: 'explore' }" v-slot="{ href, navigate, isActive }">
+        <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
+          <span
+            class="sidebar__icon flex-shrink-0 w-[1.45rem] h-[1.45rem]"
+            :class="isActive ? 'i-fluent-search-16-filled' : 'i-fluent-search-16-regular'"
+            aria-hidden="true"
+          />
+          <span class="sidebar__label text-[0.9rem]">Search</span>
+        </a>
+      </RouterLink>
+
       <RouterLink custom :to="{ name: 'library' }" v-slot="{ href, navigate, isActive }">
         <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
           <span
