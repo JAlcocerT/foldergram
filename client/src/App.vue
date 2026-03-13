@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router';
 
 import AppShell from './components/AppShell.vue';
@@ -22,6 +22,18 @@ const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
 const route = useRoute();
 const router = useRouter();
+let lockedScrollX = 0;
+let lockedScrollY = 0;
+let modalScrollLocked = false;
+const previousBodyStyles = {
+  position: '',
+  top: '',
+  left: '',
+  right: '',
+  width: '',
+  overflowY: '',
+  paddingRight: ''
+};
 
 function resolveDisplayRoute(targetPath: string): RouteLocationNormalizedLoaded | null {
   const resolved = router.resolve(targetPath);
@@ -51,11 +63,61 @@ const displayRoute = computed<RouteLocationNormalizedLoaded | undefined>(() =>
   showImageModal.value ? modalBackgroundRoute.value ?? undefined : route
 );
 
+function lockModalScroll() {
+  if (modalScrollLocked) {
+    return;
+  }
+
+  lockedScrollX = window.scrollX;
+  lockedScrollY = window.scrollY;
+
+  previousBodyStyles.position = document.body.style.position;
+  previousBodyStyles.top = document.body.style.top;
+  previousBodyStyles.left = document.body.style.left;
+  previousBodyStyles.right = document.body.style.right;
+  previousBodyStyles.width = document.body.style.width;
+  previousBodyStyles.overflowY = document.body.style.overflowY;
+  previousBodyStyles.paddingRight = document.body.style.paddingRight;
+
+  const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${lockedScrollY}px`;
+  document.body.style.left = `-${lockedScrollX}px`;
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflowY = 'hidden';
+
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+  }
+
+  modalScrollLocked = true;
+}
+
+function unlockModalScroll() {
+  if (!modalScrollLocked) {
+    return;
+  }
+
+  document.body.style.position = previousBodyStyles.position;
+  document.body.style.top = previousBodyStyles.top;
+  document.body.style.left = previousBodyStyles.left;
+  document.body.style.right = previousBodyStyles.right;
+  document.body.style.width = previousBodyStyles.width;
+  document.body.style.overflowY = previousBodyStyles.overflowY;
+  document.body.style.paddingRight = previousBodyStyles.paddingRight;
+  window.scrollTo(lockedScrollX, lockedScrollY);
+
+  modalScrollLocked = false;
+}
+
 onMounted(async () => {
   await Promise.all([appStore.fetchStats(), foldersStore.fetchFolders(), likesStore.initialize()]);
 });
 
 onUnmounted(() => {
+  unlockModalScroll();
   appStore.stopStatsPolling();
 });
 
@@ -71,11 +133,28 @@ watch(
 );
 
 watch(
-  () => route.name,
-  (name) => {
-    if (name !== 'image') {
-      appStore.clearImageModalBackground();
+  showImageModal,
+  async (isVisible, wasVisible) => {
+    if (isVisible) {
+      lockModalScroll();
+      return;
     }
+
+    if (!wasVisible) {
+      return;
+    }
+
+    await nextTick();
+    unlockModalScroll();
+
+    requestAnimationFrame(() => {
+      if (route.name !== 'image') {
+        appStore.clearImageModalBackground();
+      }
+    });
+  },
+  {
+    immediate: true
   }
 );
 

@@ -120,7 +120,7 @@
       <template v-else>
         <!-- Feed cards in home-layout context: transparent card, no shadow -->
         <div class="w-full max-w-[29.375rem] mx-auto flex flex-col gap-[1.2rem]">
-          <FeedList :items="feedStore.items" :show-skeleton="!feedStore.initialized && feedStore.loading" />
+          <FeedList :items="feedStore.items" context="home" :show-skeleton="!feedStore.initialized && feedStore.loading" />
         </div>
         <div class="w-full max-w-[29.375rem] mx-auto">
           <InfiniteLoader :loading="feedStore.loading" :has-more="feedStore.hasMore" @load-more="feedStore.loadMore" />
@@ -167,6 +167,18 @@
           <span class="ml-auto text-accent-strong text-[0.76rem] font-bold">Open</span>
         </RouterLink>
       </div>
+
+      <p class="m-0 mt-[1.4rem] text-center text-[0.64rem] font-semibold uppercase tracking-[0.08em] leading-[1.7] text-muted">
+        Foldergram is open source.
+        <a
+          class="text-muted transition-colors duration-180 hover:text-text"
+          href="https://github.com/sajjadalis/forldergram"
+          target="_blank"
+          rel="noreferrer"
+        >
+          View on GitHub
+        </a>
+      </p>
     </aside>
   </section>
 </template>

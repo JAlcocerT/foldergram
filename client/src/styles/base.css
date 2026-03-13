@@ -133,6 +133,7 @@ img[data-loaded="true"] {
 /* ── Image fill rules per context ───────────────────────────── */
 /* All images rendered by ResilientImage should fill their container */
 .feed-media img,
+.feed-media video,
 .folder-grid__item img,
 .avatar-base img {
   width: 100%;
