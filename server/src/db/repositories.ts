@@ -531,6 +531,12 @@ export const imageRepository = {
       .all(folderId) as unknown as ImageRecord[];
   },
 
+  listActive(): ImageRecord[] {
+    return database
+      .prepare('SELECT * FROM images WHERE is_deleted = 0 ORDER BY folder_id ASC, sort_timestamp DESC, id DESC')
+      .all() as unknown as ImageRecord[];
+  },
+
   countMissingTimestampMetadataByFolder(folderId: number): number {
     return Number(
       (

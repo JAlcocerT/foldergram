@@ -159,6 +159,7 @@ WSL note:
 - `GET /api/admin/stats`
 - `POST /api/admin/rescan`
 - `POST /api/admin/rebuild-index`
+- `POST /api/admin/rebuild-thumbnails`
 - `GET /api/originals/:id`
 
 ## Architecture summary

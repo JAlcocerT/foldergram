@@ -4,7 +4,7 @@
       <div>
         <span class="eyebrow">Settings</span>
         <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">Library Controls</h1>
-        <p class="m-0 text-muted">Run a manual scan, watch live progress, and keep Foldergram in sync with your folders.</p>
+        <p class="m-0 text-muted">Run scans, refresh thumbnails, or reset the library index.</p>
       </div>
     </header>
 
@@ -15,7 +15,7 @@
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
               <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Scan Library</h2>
-              <p class="m-0 text-muted">Use a manual scan after adding folders or when you want a full derivative repair pass.</p>
+              <p class="m-0 text-muted">Run a scan after adding folders or when you want to refresh indexed media.</p>
             </div>
             <span
               class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
@@ -40,44 +40,6 @@
             <p class="m-0 text-muted">{{ scanActionNote }}</p>
           </div>
 
-          <!-- Progress bar -->
-          <div
-            class="relative h-[0.88rem] overflow-hidden rounded-full"
-            style="background: color-mix(in srgb, var(--surface-alt) 82%, var(--accent) 18%)"
-            role="progressbar"
-            aria-label="Scan progress"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            :aria-valuenow="progressPercent"
-          >
-            <div
-              class="settings-progress__fill absolute inset-y-0 left-0 rounded-full bg-[linear-gradient(90deg,var(--accent)_0%,#4ec5ff_100%)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
-              :style="{ width: `${progressPercent}%` }"
-            />
-          </div>
-
-          <p class="m-0 text-muted">{{ progressDescription }}</p>
-
-          <!-- Metrics grid -->
-          <dl class="grid grid-cols-2 gap-[0.8rem] m-0 max-sm:grid-cols-1">
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Phase</dt>
-              <dd class="m-0 text-base font-bold">{{ phaseLabel }}</dd>
-            </div>
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Folders</dt>
-              <dd class="m-0 text-base font-bold">{{ folderMetric }}</dd>
-            </div>
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Posts</dt>
-              <dd class="m-0 text-base font-bold">{{ imageMetric }}</dd>
-            </div>
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Derivatives</dt>
-              <dd class="m-0 text-base font-bold">{{ derivativeMetric }}</dd>
-            </div>
-          </dl>
-
           <p v-if="scanError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ scanError }}</p>
         </section>
 
@@ -88,10 +50,8 @@
         >
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library Index</h2>
-              <p class="m-0 text-muted">
-                Reset the indexed database tables and rebuild the current library from the active gallery location.
-              </p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library</h2>
+              <p class="m-0 text-muted">Refresh thumbnails or reset the library index from the current gallery root.</p>
             </div>
             <span
               class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
@@ -100,10 +60,6 @@
               {{ appStore.isLibraryRebuildRequired ? 'Recommended' : 'Optional' }}
             </span>
           </div>
-
-          <p class="m-0 text-muted">
-            This clears the indexed folder and post tables, likes, scan history, thumbnails, and previews, then rescans the current gallery root. Original files inside the gallery are not deleted.
-          </p>
 
           <dl class="grid gap-[0.8rem] m-0">
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, var(--accent) 8%)">
@@ -116,14 +72,33 @@
             </div>
           </dl>
 
-          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
-            <button class="btn-primary min-w-[13rem]" type="button" :disabled="rebuildActionDisabled" @click="confirmRebuildOpen = true">
-              {{ rebuildButtonLabel }}
-            </button>
-            <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
-          </div>
+          <div class="grid gap-[1rem]">
+            <section class="grid gap-[0.7rem]">
+              <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+                <button class="btn-primary min-w-[13rem]" type="button" :disabled="thumbnailRebuildActionDisabled" @click="confirmThumbnailRebuildOpen = true">
+                  {{ thumbnailRebuildButtonLabel }}
+                </button>
+                <p class="m-0 text-muted">
+                  Rebuild feed and profile thumbnails plus video posters from indexed media only.
+                </p>
+              </div>
+              <p class="m-0 text-muted">{{ thumbnailRebuildActionNote }}</p>
+              <p v-if="thumbnailRebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ thumbnailRebuildError }}</p>
+            </section>
 
-          <p v-if="rebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ rebuildError }}</p>
+            <section class="grid gap-[0.7rem]">
+              <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+                <button class="btn-primary min-w-[13rem]" type="button" :disabled="rebuildActionDisabled" @click="confirmRebuildOpen = true">
+                  {{ rebuildButtonLabel }}
+                </button>
+                <p class="m-0 text-muted">
+                  Reset the library index and regenerate cached media from the current gallery root.
+                </p>
+              </div>
+              <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
+              <p v-if="rebuildError" class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]">{{ rebuildError }}</p>
+            </section>
+          </div>
         </section>
       </div>
 
@@ -193,11 +168,21 @@
       v-if="confirmRebuildOpen"
       title="Rebuild the current library index?"
       message="This will clear the indexed database tables for folders, posts, likes, and scan history, remove generated thumbnails and previews, then rescan the active gallery root. Original files in the gallery will not be deleted."
-      confirm-label="Rebuild library index"
+      confirm-label="Rebuild Library Index (Reset)"
       loading-label="Rebuilding..."
       :loading="rebuilding"
       @cancel="confirmRebuildOpen = false"
       @confirm="runLibraryRebuild"
+    />
+    <ConfirmDialog
+      v-if="confirmThumbnailRebuildOpen"
+      title="Regenerate thumbnails only?"
+      message="This will remove generated feed and profile thumbnails plus video poster images, then rebuild them from the current indexed library. Previews, likes, scan history, and indexed library records will not be changed. Original files in the gallery will not be deleted."
+      confirm-label="Regenerate Thumbnails"
+      loading-label="Regenerating..."
+      :loading="rebuildingThumbnails"
+      @cancel="confirmThumbnailRebuildOpen = false"
+      @confirm="runThumbnailRebuild"
     />
   </section>
 </template>
@@ -207,7 +192,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import ConfirmDialog from '../components/ConfirmDialog.vue';
-import { triggerLibraryRebuild, triggerManualScan } from '../api/gallery';
+import { triggerLibraryRebuild, triggerManualScan, triggerThumbnailRebuild } from '../api/gallery';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
@@ -224,9 +209,12 @@ const viewerStore = useViewerStore();
 const route = useRoute();
 const scanError = ref<string | null>(null);
 const rebuildError = ref<string | null>(null);
+const thumbnailRebuildError = ref<string | null>(null);
 const requestingScan = ref(false);
 const rebuilding = ref(false);
+const rebuildingThumbnails = ref(false);
 const confirmRebuildOpen = ref(false);
+const confirmThumbnailRebuildOpen = ref(false);
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -249,6 +237,15 @@ function formatDateTime(value: string | null | undefined) {
 
 const scan = computed(() => appStore.stats?.scan ?? null);
 const lastCompletedScan = computed(() => scan.value?.lastCompletedScan ?? appStore.stats?.lastScan ?? null);
+const activeScanReason = computed(() => scan.value?.scanReason ?? null);
+const isLibraryRebuildActive = computed(
+  () => rebuilding.value || (appStore.isScanning && activeScanReason.value === 'rebuild')
+);
+const isThumbnailRebuildActive = computed(
+  () => rebuildingThumbnails.value || (appStore.isScanning && activeScanReason.value === 'rebuild-thumbnails')
+);
+const isRebuildOperationActive = computed(() => isLibraryRebuildActive.value || isThumbnailRebuildActive.value);
+const scanProgressActive = computed(() => requestingScan.value || Boolean(scan.value?.isScanning && !isRebuildOperationActive.value));
 const highlightRebuildAction = computed(() => route.query.action === 'rebuild');
 const waitingForInitialStatus = computed(() => !appStore.stats || appStore.loadingStats);
 const scanActionDisabled = computed(
@@ -258,10 +255,27 @@ const scanActionDisabled = computed(
     appStore.isLibraryRebuildRequired ||
     appStore.isScanning ||
     requestingScan.value ||
-    rebuilding.value
+    rebuilding.value ||
+    rebuildingThumbnails.value
 );
 const rebuildActionDisabled = computed(
-  () => waitingForInitialStatus.value || appStore.isLibraryUnavailable || appStore.isScanning || requestingScan.value || rebuilding.value
+  () =>
+    waitingForInitialStatus.value ||
+    appStore.isLibraryUnavailable ||
+    appStore.isScanning ||
+    requestingScan.value ||
+    rebuilding.value ||
+    rebuildingThumbnails.value
+);
+const thumbnailRebuildActionDisabled = computed(
+  () =>
+    waitingForInitialStatus.value ||
+    appStore.isLibraryUnavailable ||
+    appStore.isLibraryRebuildRequired ||
+    appStore.isScanning ||
+    requestingScan.value ||
+    rebuilding.value ||
+    rebuildingThumbnails.value
 );
 const rebuildCardStyle = computed(() =>
   appStore.isLibraryRebuildRequired
@@ -273,7 +287,7 @@ const statusTone = computed(() => {
     return 'danger';
   }
 
-  if (appStore.isScanning || requestingScan.value) {
+  if (scanProgressActive.value || isRebuildOperationActive.value) {
     return 'active';
   }
 
@@ -288,22 +302,22 @@ const statusLabel = computed(() => {
     return 'Storage unavailable';
   }
 
-  if (appStore.isScanning || requestingScan.value) {
+  if (scanProgressActive.value) {
     return 'Scan in progress';
+  }
+
+  if (isRebuildOperationActive.value) {
+    return 'Rebuild active';
   }
 
   return 'Ready';
 });
 const scanButtonLabel = computed(() => {
-  if (appStore.isScanning) {
-    return 'Scanning now...';
+  if (scanProgressActive.value) {
+    return 'Scanning library...';
   }
 
-  if (requestingScan.value) {
-    return 'Starting scan...';
-  }
-
-  return 'Run Manual Scan';
+  return 'Run Scan Library';
 });
 const scanActionNote = computed(() => {
   if (waitingForInitialStatus.value) {
@@ -315,25 +329,32 @@ const scanActionNote = computed(() => {
   }
 
   if (appStore.isLibraryRebuildRequired) {
-    return 'Rebuild the library index first because the configured gallery location changed.';
+    return 'Rebuild the library index first because the gallery location changed.';
   }
 
-  if (rebuilding.value) {
-    return 'The current library is being rebuilt.';
+  if (isRebuildOperationActive.value) {
+    return 'Another library task is running. Live progress appears in the sticky status bar.';
   }
 
-  if (appStore.isScanning) {
-    return 'Live progress updates below while the current scan runs.';
+  if (scanProgressActive.value) {
+    return 'Live progress appears in the sticky status bar.';
   }
 
-  return 'Manual scans recheck the library and repair missing thumbnails or previews when needed.';
+  return 'Scans check for added, updated, or missing media.';
 });
 const rebuildButtonLabel = computed(() => {
-  if (rebuilding.value) {
+  if (isLibraryRebuildActive.value) {
     return 'Rebuilding now...';
   }
 
-  return 'Rebuild Library Index';
+  return 'Rebuild Library Index (Reset)';
+});
+const thumbnailRebuildButtonLabel = computed(() => {
+  if (isThumbnailRebuildActive.value) {
+    return 'Regenerating now...';
+  }
+
+  return 'Regenerate Thumbnails';
 });
 const rebuildActionNote = computed(() => {
   if (waitingForInitialStatus.value) {
@@ -344,75 +365,50 @@ const rebuildActionNote = computed(() => {
     return appStore.libraryUnavailableReason;
   }
 
-  if (rebuilding.value) {
-    return 'Clearing cached derivatives and rebuilding the current library index.';
+  if (isLibraryRebuildActive.value) {
+    return 'Live progress appears in the sticky status bar.';
+  }
+
+  if (isThumbnailRebuildActive.value) {
+    return 'Wait for thumbnail regeneration to finish first.';
+  }
+
+  if (appStore.isScanning) {
+    return 'Wait for the current scan to finish first.';
   }
 
   if (appStore.isLibraryRebuildRequired) {
-    return 'Recommended because the configured gallery location changed.';
+    return 'Recommended because the gallery location changed.';
   }
 
-  return 'Use this when you want a clean rebuild of cache and indexed library state.';
+  return 'Use this for a full library reset.';
 });
-const phaseLabel = computed(() => {
-  if (appStore.isScanning || requestingScan.value) {
-    return scan.value?.phase === 'derivatives' ? 'Derivatives' : 'Discovery';
+const thumbnailRebuildActionNote = computed(() => {
+  if (waitingForInitialStatus.value) {
+    return 'Loading current library status...';
   }
 
-  return 'Idle';
-});
-const folderMetric = computed(() => `${scan.value?.processedFolders ?? 0}/${scan.value?.discoveredFolders ?? 0}`);
-const imageMetric = computed(() => `${scan.value?.processedImages ?? 0}/${scan.value?.discoveredImages ?? 0}`);
-const derivativeMetric = computed(() => `${scan.value?.processedDerivativeJobs ?? 0}/${scan.value?.queuedDerivativeJobs ?? 0}`);
-const progressPercent = computed(() => {
-  if (!scan.value) {
-    return 0;
-  }
-
-  if (!scan.value.isScanning) {
-    return lastCompletedScan.value ? 100 : 0;
-  }
-
-  const discoveryTotal = scan.value.discoveredFolders + scan.value.discoveredImages;
-  const discoveryDone = scan.value.processedFolders + scan.value.processedImages;
-  const discoveryRatio = discoveryTotal > 0 ? discoveryDone / discoveryTotal : 0;
-
-  if (scan.value.phase === 'discovery') {
-    return Math.round(Math.min(92, Math.max(8, discoveryRatio * 78)));
-  }
-
-  if (scan.value.queuedDerivativeJobs === 0) {
-    return 100;
-  }
-
-  const derivativeRatio = scan.value.processedDerivativeJobs / scan.value.queuedDerivativeJobs;
-  return Math.round(Math.min(99, 78 + derivativeRatio * 22));
-});
-const progressDescription = computed(() => {
   if (appStore.isLibraryUnavailable) {
     return appStore.libraryUnavailableReason;
   }
 
-  if (!scan.value) {
-    return 'Preparing scan status...';
+  if (appStore.isLibraryRebuildRequired) {
+    return 'Unavailable until the library index is rebuilt for the new gallery location.';
   }
 
-  if (!scan.value.isScanning && !requestingScan.value) {
-    return 'Manual scans use the same indexed pipeline as startup, with a full derivative repair pass when needed.';
+  if (isThumbnailRebuildActive.value) {
+    return 'Live progress appears in the sticky status bar.';
   }
 
-  const currentFolder = scan.value.currentFolder ? ` Current folder: ${scan.value.currentFolder}.` : '';
-  if (scan.value.phase === 'discovery' && scan.value.discoveredFolders === 0 && scan.value.discoveredImages === 0) {
-    return `Walking the library tree to find media folders before indexing starts.${currentFolder}`;
+  if (isLibraryRebuildActive.value) {
+    return 'Wait for the full rebuild to finish first.';
   }
 
-  if (scan.value.phase === 'derivatives') {
-    return scan.value.queuedDerivativeJobs > 0
-      ? `Generating thumbnails and previews for queued changes.${currentFolder}`
-      : `Finishing the current scan.${currentFolder}`;
+  if (appStore.isScanning) {
+    return 'Wait for the current scan to finish first.';
   }
 
-  return `Scanning folders and indexing any changes found in the library.${currentFolder}`;
+  return 'Use this for a faster thumbnail-only refresh.';
 });
 const storageLabel = computed(() => (appStore.isLibraryUnavailable ? 'Unavailable' : 'Available'));
 const lastScanStatus = computed(() => {
@@ -462,7 +458,7 @@ async function runManualScan() {
     await appStore.fetchStats({ background: true });
     await Promise.all([foldersStore.fetchFolders(true), feedStore.loadInitial(true)]);
   } catch (error) {
-    scanError.value = error instanceof Error ? error.message : 'Unable to start a manual scan.';
+    scanError.value = error instanceof Error ? error.message : 'Unable to start a library scan.';
   } finally {
     requestingScan.value = false;
   }
@@ -499,6 +495,34 @@ async function runLibraryRebuild() {
     await appStore.fetchStats({ background: true });
   } finally {
     rebuilding.value = false;
+  }
+}
+
+async function runThumbnailRebuild() {
+  if (thumbnailRebuildActionDisabled.value) {
+    return;
+  }
+
+  rebuildingThumbnails.value = true;
+  thumbnailRebuildError.value = null;
+  confirmThumbnailRebuildOpen.value = false;
+
+  try {
+    const request = triggerThumbnailRebuild();
+    void warmScanStatus();
+    await request;
+    await appStore.fetchStats({ background: true });
+    await Promise.all([
+      foldersStore.fetchFolders(true),
+      feedStore.loadInitial(true),
+      likesStore.initialize(true),
+      momentsStore.fetchMoments(true)
+    ]);
+  } catch (error) {
+    thumbnailRebuildError.value = error instanceof Error ? error.message : 'Unable to regenerate thumbnails.';
+    await appStore.fetchStats({ background: true });
+  } finally {
+    rebuildingThumbnails.value = false;
   }
 }
 

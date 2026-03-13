@@ -19,7 +19,7 @@ import {
   maintenanceRepository,
   scanRunRepository
 } from '../db/repositories.js';
-import { generateDerivatives, readMediaMetadata } from './derivative-service.js';
+import { generateDerivatives, generateThumbnailDerivative, readMediaMetadata } from './derivative-service.js';
 import { log } from './log-service.js';
 import { storageService } from './storage-service.js';
 import {
@@ -65,6 +65,7 @@ interface DerivativeJob {
   absolutePath: string;
   relativePath: string;
   force: boolean;
+  kind: 'all' | 'thumbnail';
 }
 
 interface ProcessedFileSummary {
@@ -158,6 +159,8 @@ const derivativeLimit = pLimit(appConfig.scanDerivativeConcurrency);
 const HEARTBEAT_INTERVAL_MS = 5000;
 const DERIVATIVE_CACHE_KEEP_FILE = '.gitkeep';
 const ROOT_DISCOVERY_LABEL = '(root)';
+export const LIBRARY_REBUILD_REQUIRED_MESSAGE =
+  'Library rebuild required before scanning because the configured gallery root changed.';
 
 function createEmptySummary(): ScanSummary {
   return {
@@ -295,6 +298,11 @@ class ScannerService {
     const resolvedOptions = resolveFullScanOptions({ repairUnchangedDerivatives: false });
 
     await this.enqueue(async () => this.performLibraryRebuild(reason, resolvedOptions));
+    return scanRunRepository.latest();
+  }
+
+  async rebuildThumbnails(reason = 'rebuild-thumbnails'): Promise<ScanRunRecord | undefined> {
+    await this.enqueue(async () => this.performThumbnailRebuild(reason));
     return scanRunRepository.latest();
   }
 
@@ -438,19 +446,18 @@ class ScannerService {
     appSettingsRepository.remove(PREVIOUS_GALLERY_ROOT_SETTING_KEY);
   }
 
+  private async resetDerivativeDirectory(targetDirectory: string): Promise<void> {
+    await fs.rm(targetDirectory, { recursive: true, force: true });
+    await fs.mkdir(targetDirectory, { recursive: true });
+    await fs.writeFile(path.join(targetDirectory, DERIVATIVE_CACHE_KEEP_FILE), '');
+  }
+
+  private async clearThumbnailCache(): Promise<void> {
+    await this.resetDerivativeDirectory(appConfig.thumbnailsDir);
+  }
+
   private async clearDerivedMediaCache(): Promise<void> {
-    await Promise.all([
-      fs.rm(appConfig.thumbnailsDir, { recursive: true, force: true }),
-      fs.rm(appConfig.previewsDir, { recursive: true, force: true })
-    ]);
-    await Promise.all([
-      fs.mkdir(appConfig.thumbnailsDir, { recursive: true }),
-      fs.mkdir(appConfig.previewsDir, { recursive: true })
-    ]);
-    await Promise.all([
-      fs.writeFile(path.join(appConfig.thumbnailsDir, DERIVATIVE_CACHE_KEEP_FILE), ''),
-      fs.writeFile(path.join(appConfig.previewsDir, DERIVATIVE_CACHE_KEEP_FILE), '')
-    ]);
+    await Promise.all([this.resetDerivativeDirectory(appConfig.thumbnailsDir), this.resetDerivativeDirectory(appConfig.previewsDir)]);
   }
 
   private isManagedGalleryPath(relativePath: string): boolean {
@@ -798,6 +805,94 @@ class ScannerService {
     return summary;
   }
 
+  private async performThumbnailRebuild(reason: string): Promise<ScanSummary> {
+    if (this.isLibraryRebuildRequired()) {
+      throw new Error(LIBRARY_REBUILD_REQUIRED_MESSAGE);
+    }
+
+    const runId = scanRunRepository.start();
+    const summary = createEmptySummary();
+    const errors: string[] = [];
+    let derivativeSummary: DerivativeProcessingSummary = {
+      durationMs: 0,
+      generatedPreviews: 0,
+      generatedThumbnails: 0,
+      queuedJobs: 0
+    };
+    const rebuildStartedAt = performance.now();
+
+    if (!storageService.refreshAvailability().libraryAvailable) {
+      return this.finishUnavailableRun(runId, reason);
+    }
+
+    this.beginProgress(reason, runId);
+    log.info(
+      joinLogParts([
+        'Rebuild thumbnails',
+        formatStep('reason', reason),
+        formatStep('root', normalizePath(appConfig.galleryRoot))
+      ])
+    );
+
+    try {
+      const indexedImages = imageRepository.listActive();
+      const indexedFolders = new Set(
+        indexedImages
+          .map((image) => getSourceFolderPathFromRelativePath(image.relative_path))
+          .filter((folderPath): folderPath is string => Boolean(folderPath))
+      );
+      const derivativeJobs: DerivativeJob[] = indexedImages.map((image) => ({
+        absolutePath: image.absolute_path,
+        relativePath: image.relative_path,
+        force: true,
+        kind: 'thumbnail'
+      }));
+
+      summary.scanned_files = indexedImages.length;
+      this.setProgress({
+        discoveredFolders: indexedFolders.size,
+        processedFolders: indexedFolders.size,
+        discoveredImages: indexedImages.length,
+        processedImages: indexedImages.length,
+        queuedDerivativeJobs: 0,
+        processedDerivativeJobs: 0,
+        generatedThumbnails: 0,
+        generatedPreviews: 0,
+        currentFolder: null
+      });
+
+      await this.clearThumbnailCache();
+      derivativeSummary = await this.processDerivativeJobs(derivativeJobs, errors);
+    } catch (error) {
+      summary.status = 'failed';
+      summary.error_text = error instanceof Error ? error.message : String(error);
+      log.error('Thumbnail rebuild failed', summary.error_text);
+    }
+
+    if (errors.length > 0) {
+      summary.error_text = errors.join('\n').slice(0, 8000);
+      if (summary.status !== 'failed') {
+        summary.status = 'completed_with_errors';
+      }
+    }
+
+    this.finishRun(runId, summary);
+    log.table(
+      `Finished thumbnail rebuild (${reason})`,
+      [
+        ['Status', summary.status],
+        ['Indexed media', summary.scanned_files],
+        ['Thumbnails', derivativeSummary.generatedThumbnails],
+        ['Previews', derivativeSummary.generatedPreviews],
+        ['Duration', formatDuration(elapsedMilliseconds(rebuildStartedAt))]
+      ],
+      summary.status === 'completed' ? 'success' : summary.status === 'completed_with_errors' ? 'warning' : 'error'
+    );
+    this.finishProgress();
+
+    return summary;
+  }
+
   private async performFullScan(reason: string, options: FullScanOptions): Promise<ScanSummary> {
     const runId = scanRunRepository.start();
     const summary = createEmptySummary();
@@ -1121,7 +1216,8 @@ class ScannerService {
 
     queue.set(job.relativePath, {
       ...job,
-      force: existing.force || job.force
+      force: existing.force || job.force,
+      kind: existing.kind === 'all' || job.kind === 'all' ? 'all' : 'thumbnail'
     });
   }
 
@@ -1167,20 +1263,31 @@ class ScannerService {
               currentFolder: getSourceFolderPathFromRelativePath(job.relativePath)
             });
 
-            const derivatives = await generateDerivatives(job.absolutePath, job.relativePath, job.force);
+            if (job.kind === 'thumbnail') {
+              const thumbnail = await generateThumbnailDerivative(job.absolutePath, job.relativePath, job.force);
 
-            if (derivatives.generatedThumbnail) {
-              generatedThumbnails += 1;
-              this.setProgress({
-                generatedThumbnails: this.progress.generatedThumbnails + 1
-              });
-            }
+              if (thumbnail.generatedThumbnail) {
+                generatedThumbnails += 1;
+                this.setProgress({
+                  generatedThumbnails: this.progress.generatedThumbnails + 1
+                });
+              }
+            } else {
+              const derivatives = await generateDerivatives(job.absolutePath, job.relativePath, job.force);
 
-            if (derivatives.generatedPreview) {
-              generatedPreviews += 1;
-              this.setProgress({
-                generatedPreviews: this.progress.generatedPreviews + 1
-              });
+              if (derivatives.generatedThumbnail) {
+                generatedThumbnails += 1;
+                this.setProgress({
+                  generatedThumbnails: this.progress.generatedThumbnails + 1
+                });
+              }
+
+              if (derivatives.generatedPreview) {
+                generatedPreviews += 1;
+                this.setProgress({
+                  generatedPreviews: this.progress.generatedPreviews + 1
+                });
+              }
             }
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -1327,7 +1434,8 @@ class ScannerService {
           ? {
               absolutePath: file.absolutePath,
               relativePath: file.relativePath,
-              force: false
+              force: false,
+              kind: 'all'
             }
           : null,
         refreshedIndexedRow,
@@ -1385,7 +1493,8 @@ class ScannerService {
       derivativeJob: {
         absolutePath: file.absolutePath,
         relativePath: file.relativePath,
-        force: true
+        force: true,
+        kind: 'all'
       },
       refreshedIndexedRow: false,
       relativePath: file.relativePath

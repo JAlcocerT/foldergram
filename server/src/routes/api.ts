@@ -2,7 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 
 import { galleryService } from '../services/gallery-service.js';
-import { scannerService } from '../services/scanner-service.js';
+import { LIBRARY_REBUILD_REQUIRED_MESSAGE, scannerService } from '../services/scanner-service.js';
 import { storageService } from '../services/storage-service.js';
 import { watcherService } from '../services/watcher-service.js';
 
@@ -210,7 +210,7 @@ router.post('/admin/rescan', async (_request, response) => {
   try {
     if (scannerService.isLibraryRebuildRequired()) {
       response.status(409).json({
-        message: 'Library rebuild required before scanning because the configured gallery root changed.'
+        message: LIBRARY_REBUILD_REQUIRED_MESSAGE
       });
       return;
     }
@@ -237,6 +237,31 @@ router.post('/admin/rebuild-index', async (_request, response) => {
       ok: true,
       lastScan
     });
+  } finally {
+    await watcherService.start();
+  }
+});
+
+router.post('/admin/rebuild-thumbnails', async (_request, response) => {
+  if (scannerService.isLibraryRebuildRequired()) {
+    response.status(409).json({
+      message: LIBRARY_REBUILD_REQUIRED_MESSAGE
+    });
+    return;
+  }
+
+  await watcherService.stop();
+
+  try {
+    const lastScan = await scannerService.rebuildThumbnails('rebuild-thumbnails');
+    response.json({
+      ok: true,
+      lastScan
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to regenerate thumbnails.';
+    const status = /rebuild required/i.test(message) ? 409 : 500;
+    response.status(status).json({ message });
   } finally {
     await watcherService.start();
   }

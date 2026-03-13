@@ -20,12 +20,6 @@
         </div>
       </section>
 
-      <!-- Inline scan state (while feed already loaded) -->
-      <section v-if="appStore.isScanning && appStore.stats" class="grid gap-[0.3rem] px-4 py-[0.95rem] mb-[1.1rem] border border-border rounded-[1rem] bg-surface shadow-[var(--shadow)]" aria-live="polite">
-        <strong>Scanning library</strong>
-        <p class="m-0 text-muted">{{ scanDescription }}</p>
-      </section>
-
       <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5 w-full max-w-[39.375rem]">
         <section v-if="momentsStore.items.length" class="mb-2">
           <div class="stories-bar flex gap-[0.95rem] overflow-x-auto pb-5 pr-2 pt-[0.12rem] [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
@@ -71,9 +65,25 @@
             </button>
           </div>
 
-          <p v-if="appStore.stats" class="m-0 shrink-0 whitespace-nowrap text-[0.74rem] text-muted">
-            {{ indexedSummaryLabel }}
-          </p>
+          <div
+            v-if="appStore.stats"
+            class="m-0 shrink-0 flex items-center gap-[0.75rem] whitespace-nowrap text-[0.85rem] text-muted"
+            :aria-label="indexedSummaryLabel"
+            role="status"
+          >
+            <span class="inline-flex items-center gap-[0.28rem]">
+              <span class="i-fluent-image-16-regular w-[1.1rem] h-[1.1rem]" aria-hidden="true" />
+              <strong class="font-semibold text-text">{{ formattedIndexedImageCount }}</strong>
+            </span>
+            <span class="inline-flex items-center gap-[0.28rem]">
+              <span class="i-fluent-play-circle-24-filled w-[1.1rem] h-[1.1rem]" aria-hidden="true" />
+              <strong class="font-semibold text-text">{{ formattedIndexedVideoCount }}</strong>
+            </span>
+            <span class="inline-flex items-center gap-[0.28rem]">
+              <span class="i-fluent-folder-16-regular w-[1.1rem] h-[1.1rem]" aria-hidden="true" />
+              <strong class="font-semibold text-text">{{ formattedFolderCount }}</strong>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -191,17 +201,21 @@ const homeRecommendations = computed(() =>
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
 const activeRailViewerId = ref<string | null>(null);
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat().format(value);
+}
+
 const indexedSummaryLabel = computed(() => {
   if (!appStore.stats) {
     return '';
   }
 
-  if (appStore.stats.indexedVideos > 0) {
-    return `${appStore.stats.indexedImages} posts, ${appStore.stats.indexedVideos} videos across ${appStore.stats.folders} folders`;
-  }
-
-  return `${appStore.stats.indexedImages} posts across ${appStore.stats.folders} folders`;
+  return `${formatCount(appStore.stats.indexedImages)} posts, ${formatCount(appStore.stats.indexedVideos)} videos across ${formatCount(appStore.stats.folders)} folders`;
 });
+const formattedIndexedImageCount = computed(() => formatCount(appStore.stats?.indexedImages ?? 0));
+const formattedIndexedVideoCount = computed(() => formatCount(appStore.stats?.indexedVideos ?? 0));
+const formattedFolderCount = computed(() => formatCount(appStore.stats?.folders ?? 0));
 const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
   {
     id: 'recent',
@@ -229,6 +243,10 @@ const scanDescription = computed(() => {
   }
 
   const currentFolder = scan.currentFolder ? ` Current folder: ${scan.currentFolder}.` : '';
+  if (scan.scanReason === 'rebuild-thumbnails') {
+    return `Regenerating thumbnails and video posters in the background.${currentFolder}`;
+  }
+
   if (scan.phase === 'discovery' && scan.discoveredFolders === 0 && scan.discoveredImages === 0) {
     return `Walking the library tree to find media folders before indexing begins.${currentFolder}`;
   }

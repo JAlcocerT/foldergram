@@ -140,6 +140,11 @@ export interface RebuildLibraryResult {
   lastScan: ScanRunSummary | null;
 }
 
+export interface RebuildThumbnailsResult {
+  ok: boolean;
+  lastScan: ScanRunSummary | null;
+}
+
 export interface AppStats {
   folders: number;
   indexedImages: number;

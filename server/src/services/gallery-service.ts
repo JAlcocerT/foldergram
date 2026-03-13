@@ -52,9 +52,18 @@ const HIGHLIGHT_CAPSULE_MAX_ITEMS = 30;
 const HIGHLIGHT_FEED_OVERLAP_WINDOW = 18;
 const RAIL_COVER_CANDIDATE_LIMIT = 12;
 
-function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
+function getThumbnailAssetVersion(): string | null {
+  const lastCompletedScanId = scanRunRepository.latestCompleted()?.id ?? null;
+  return lastCompletedScanId === null ? null : String(lastCompletedScanId);
+}
+
+function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string, version?: string | null): string {
   const encodedSegments = relativePath.split('/').map(encodeURIComponent).join('/');
-  return `${basePath}/${encodedSegments}`;
+  if (!version) {
+    return `${basePath}/${encodedSegments}`;
+  }
+
+  return `${basePath}/${encodedSegments}?v=${encodeURIComponent(version)}`;
 }
 
 function buildOriginalUrl(id: number): string {
@@ -121,26 +130,27 @@ function isSameOrDescendantFolderPath(rootFolderPath: string, candidateFolderPat
   return candidateFolderPath === rootFolderPath || candidateFolderPath.startsWith(`${rootFolderPath}/`);
 }
 
-function mapFeedImage(image: FeedImage): FeedImage {
+function mapFeedImage(image: FeedImage, thumbnailVersion = getThumbnailAssetVersion()): FeedImage {
   return {
     ...image,
     folderBreadcrumb: getPathBreadcrumb(image.folderPath),
-    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl),
+    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl, thumbnailVersion),
     previewUrl: toPublicMediaUrl('/previews', image.previewUrl)
   };
 }
 
-function mapImageDetail(image: ImageDetail): ImageDetail {
+function mapImageDetail(image: ImageDetail, thumbnailVersion = getThumbnailAssetVersion()): ImageDetail {
   return {
     ...image,
     folderBreadcrumb: getPathBreadcrumb(image.folderPath),
-    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl),
+    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl, thumbnailVersion),
     previewUrl: toPublicMediaUrl('/previews', image.previewUrl),
     originalUrl: buildOriginalUrl(image.id)
   };
 }
 
 function buildFolderSummary(folder: FolderSummaryRecord) {
+  const thumbnailVersion = getThumbnailAssetVersion();
   const avatarImageId = folder.avatar_image_id ?? imageRepository.getLatestFolderImageId(folder.id);
   const avatar = avatarImageId ? imageRepository.getImageDetail(avatarImageId) : undefined;
 
@@ -153,7 +163,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
     imageCount: folder.image_count,
     videoCount: folder.video_count,
     latestImageMtimeMs: folder.latest_image_mtime_ms,
-    avatarUrl: avatar ? mapImageDetail(avatar).thumbnailUrl : null
+    avatarUrl: avatar ? mapImageDetail(avatar, thumbnailVersion).thumbnailUrl : null
   };
 }
 
@@ -184,8 +194,8 @@ function formatMonthYear(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(date);
 }
 
-function mapFeedItems(items: FeedImage[]): FeedImage[] {
-  return items.map(mapFeedImage);
+function mapFeedItems(items: FeedImage[], thumbnailVersion = getThumbnailAssetVersion()): FeedImage[] {
+  return items.map((item) => mapFeedImage(item, thumbnailVersion));
 }
 
 function buildPaginatedPayload(items: FeedImage[], page: number, limit: number, total: number) {
@@ -428,6 +438,7 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
 
 function materializeRailDefinition(definition: FeedRailDefinition) {
   const usedCoverImageIds = new Set<number>();
+  const thumbnailVersion = getThumbnailAssetVersion();
 
   return {
     ...definition,
@@ -452,7 +463,7 @@ function materializeRailDefinition(definition: FeedRailDefinition) {
           subtitle: capsule.subtitle,
           dateContext: capsule.dateContext,
           imageCount,
-          coverImage: mapFeedImage(coverImage)
+          coverImage: mapFeedImage(coverImage, thumbnailVersion)
         };
       })
       .filter((capsule): capsule is NonNullable<typeof capsule> => capsule !== null)
@@ -611,10 +622,11 @@ export const galleryService = {
     }
 
     const total = mediaType ? imageRepository.countByFolder(folder.id, mediaType) : folder.image_count;
+    const thumbnailVersion = getThumbnailAssetVersion();
 
     return {
       folder: buildFolderSummary(folder),
-      items: imageRepository.listFolderImages(folder.id, page, limit, mediaType).map(mapFeedImage),
+      items: imageRepository.listFolderImages(folder.id, page, limit, mediaType).map((image) => mapFeedImage(image, thumbnailVersion)),
       page,
       limit,
       total,
@@ -632,7 +644,7 @@ export const galleryService = {
       return null;
     }
 
-    return mapImageDetail(detail);
+    return mapImageDetail(detail, getThumbnailAssetVersion());
   },
 
   getLikes() {
@@ -643,7 +655,7 @@ export const galleryService = {
     }
 
     return {
-      items: likeRepository.listLikedImages().map(mapFeedImage)
+      items: mapFeedItems(likeRepository.listLikedImages())
     };
   },
 

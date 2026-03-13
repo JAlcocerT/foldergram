@@ -12,6 +12,7 @@ import type {
   PaginatedFeed,
   FolderImagesPayload,
   RebuildLibraryResult,
+  RebuildThumbnailsResult,
   FolderSummary
 } from '../types/api';
 import { requestJson } from './http';
@@ -116,6 +117,12 @@ export function triggerManualScan() {
 
 export function triggerLibraryRebuild() {
   return requestJson<RebuildLibraryResult>('/api/admin/rebuild-index', {
+    method: 'POST'
+  });
+}
+
+export function triggerThumbnailRebuild() {
+  return requestJson<RebuildThumbnailsResult>('/api/admin/rebuild-thumbnails', {
     method: 'POST'
   });
 }

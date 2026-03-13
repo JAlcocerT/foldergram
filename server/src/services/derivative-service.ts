@@ -55,6 +55,11 @@ export interface DerivativeResult extends MediaMetadata {
   generatedPreview: boolean;
 }
 
+export interface ThumbnailDerivativeResult {
+  thumbnailPath: string;
+  generatedThumbnail: boolean;
+}
+
 async function ensureParentDirectory(filePath: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 }
@@ -129,6 +134,84 @@ export async function readMediaMetadata(sourcePath: string, mediaType: MediaType
   return mediaType === 'video' ? readVideoMetadata(sourcePath) : readImageMetadata(sourcePath);
 }
 
+async function writeImageThumbnail(sourcePath: string, thumbnailAbsolutePath: string): Promise<void> {
+  await ensureParentDirectory(thumbnailAbsolutePath);
+  await sharp(sourcePath, { animated: false })
+    .rotate()
+    .resize({
+      width: THUMBNAIL_SIZE,
+      withoutEnlargement: true
+    })
+    .webp({ quality: 82, effort: 4 })
+    .toFile(thumbnailAbsolutePath);
+}
+
+async function writeImagePreview(sourcePath: string, previewAbsolutePath: string): Promise<void> {
+  await ensureParentDirectory(previewAbsolutePath);
+  await sharp(sourcePath, { animated: false })
+    .rotate()
+    .resize({
+      width: PREVIEW_MAX_WIDTH,
+      withoutEnlargement: true
+    })
+    .webp({ quality: 86, effort: 4 })
+    .toFile(previewAbsolutePath);
+}
+
+async function writeVideoThumbnail(sourcePath: string, thumbnailAbsolutePath: string): Promise<void> {
+  await ensureParentDirectory(thumbnailAbsolutePath);
+  await runBinary('ffmpeg', [
+    '-y',
+    '-v',
+    'error',
+    '-i',
+    sourcePath,
+    '-vf',
+    `thumbnail,scale='min(${THUMBNAIL_SIZE},iw)':-2:flags=lanczos`,
+    '-frames:v',
+    '1',
+    '-c:v',
+    'libwebp',
+    '-quality',
+    '82',
+    '-compression_level',
+    '4',
+    thumbnailAbsolutePath
+  ]);
+}
+
+async function writeVideoPreview(sourcePath: string, previewAbsolutePath: string): Promise<void> {
+  await ensureParentDirectory(previewAbsolutePath);
+  await runBinary('ffmpeg', [
+    '-y',
+    '-v',
+    'error',
+    '-i',
+    sourcePath,
+    '-map',
+    '0:v:0',
+    '-map',
+    '0:a?',
+    '-vf',
+    `scale='min(${PREVIEW_MAX_WIDTH},iw)':-2:flags=lanczos`,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-crf',
+    '24',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '128k',
+    previewAbsolutePath
+  ]);
+}
+
 async function generateImageDerivatives(
   sourcePath: string,
   thumbnailAbsolutePath: string,
@@ -139,27 +222,11 @@ async function generateImageDerivatives(
   const shouldWritePreview = force || !(await fileExists(previewAbsolutePath));
 
   if (shouldWriteThumbnail) {
-    await ensureParentDirectory(thumbnailAbsolutePath);
-    await sharp(sourcePath, { animated: false })
-      .rotate()
-      .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
-        fit: 'cover',
-        position: 'attention'
-      })
-      .webp({ quality: 82, effort: 4 })
-      .toFile(thumbnailAbsolutePath);
+    await writeImageThumbnail(sourcePath, thumbnailAbsolutePath);
   }
 
   if (shouldWritePreview) {
-    await ensureParentDirectory(previewAbsolutePath);
-    await sharp(sourcePath, { animated: false })
-      .rotate()
-      .resize({
-        width: PREVIEW_MAX_WIDTH,
-        withoutEnlargement: true
-      })
-      .webp({ quality: 86, effort: 4 })
-      .toFile(previewAbsolutePath);
+    await writeImagePreview(sourcePath, previewAbsolutePath);
   }
 
   return {
@@ -178,62 +245,40 @@ async function generateVideoDerivatives(
   const shouldWritePreview = force || !(await fileExists(previewAbsolutePath));
 
   if (shouldWriteThumbnail) {
-    await ensureParentDirectory(thumbnailAbsolutePath);
-    await runBinary('ffmpeg', [
-      '-y',
-      '-v',
-      'error',
-      '-i',
-      sourcePath,
-      '-vf',
-      `thumbnail,scale=${THUMBNAIL_SIZE}:${THUMBNAIL_SIZE}:force_original_aspect_ratio=increase,crop=${THUMBNAIL_SIZE}:${THUMBNAIL_SIZE}`,
-      '-frames:v',
-      '1',
-      '-c:v',
-      'libwebp',
-      '-quality',
-      '82',
-      '-compression_level',
-      '4',
-      thumbnailAbsolutePath
-    ]);
+    await writeVideoThumbnail(sourcePath, thumbnailAbsolutePath);
   }
 
   if (shouldWritePreview) {
-    await ensureParentDirectory(previewAbsolutePath);
-    await runBinary('ffmpeg', [
-      '-y',
-      '-v',
-      'error',
-      '-i',
-      sourcePath,
-      '-map',
-      '0:v:0',
-      '-map',
-      '0:a?',
-      '-vf',
-      `scale='min(${PREVIEW_MAX_WIDTH},iw)':-2:flags=lanczos`,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'veryfast',
-      '-crf',
-      '24',
-      '-pix_fmt',
-      'yuv420p',
-      '-movflags',
-      '+faststart',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '128k',
-      previewAbsolutePath
-    ]);
+    await writeVideoPreview(sourcePath, previewAbsolutePath);
   }
 
   return {
     generatedThumbnail: shouldWriteThumbnail,
     generatedPreview: shouldWritePreview
+  };
+}
+
+export async function generateThumbnailDerivative(
+  sourcePath: string,
+  relativePath: string,
+  force = false
+): Promise<ThumbnailDerivativeResult> {
+  const mediaType = getMediaTypeFromExtension(path.extname(relativePath));
+  const thumbnailPath = getThumbnailRelativePath(relativePath);
+  const thumbnailAbsolutePath = safeJoin(appConfig.thumbnailsDir, thumbnailPath);
+  const shouldWriteThumbnail = force || !(await fileExists(thumbnailAbsolutePath));
+
+  if (shouldWriteThumbnail) {
+    if (mediaType === 'video') {
+      await writeVideoThumbnail(sourcePath, thumbnailAbsolutePath);
+    } else {
+      await writeImageThumbnail(sourcePath, thumbnailAbsolutePath);
+    }
+  }
+
+  return {
+    thumbnailPath,
+    generatedThumbnail: shouldWriteThumbnail
   };
 }
 

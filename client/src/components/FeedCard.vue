@@ -35,7 +35,8 @@
     <RouterLink custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
       <a
         :href="href"
-        class="feed-media relative block aspect-square bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
+        class="feed-media relative block bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
+        :style="{ aspectRatio: mediaAspectRatio }"
         @click="handleImageNavigation($event, navigate)"
       >
         <ResilientImage
@@ -267,6 +268,7 @@
   import { useFoldersStore } from "../stores/folders"
   import { useMomentsStore } from "../stores/moments"
   import type { FeedItem } from "../types/api"
+  import { resolveFeedAspectRatio } from "../utils/media-layout"
   import { formatMediaDuration } from "../utils/media"
   import Avatar from "./Avatar.vue"
 
@@ -306,6 +308,10 @@
 
   const formattedDuration = computed(() =>
     formatMediaDuration(props.item.durationMs),
+  )
+
+  const mediaAspectRatio = computed(() =>
+    resolveFeedAspectRatio(props.item.width, props.item.height),
   )
 
   function handleImageNavigation(event: MouseEvent, navigate: () => void) {
