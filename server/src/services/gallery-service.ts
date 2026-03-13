@@ -47,6 +47,8 @@ const THIS_WEEK_RADIUS_DAYS = 7;
 const LAST_YEAR_RADIUS_DAYS = 45;
 const HIGHLIGHT_BATCH_CANDIDATE_LIMIT = 180;
 const HIGHLIGHT_BATCH_COUNT = 3;
+const HIGHLIGHT_CAPSULE_MAX_ITEMS = 30;
+const RAIL_COVER_CANDIDATE_LIMIT = 12;
 
 function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: string): string {
   const encodedSegments = relativePath.split('/').map(encodeURIComponent).join('/');
@@ -198,6 +200,19 @@ function sliceItemsForPage(items: FeedImage[], page: number, limit: number): Fee
   return items.slice(offset, offset + limit);
 }
 
+function getCappedItemCount(total: number, maxItems: number): number {
+  return Math.max(0, Math.min(total, maxItems));
+}
+
+function limitItemsForPage(items: FeedImage[], page: number, limit: number, total: number): FeedImage[] {
+  const offset = (page - 1) * limit;
+  if (offset >= total) {
+    return [];
+  }
+
+  return items.slice(0, total - offset);
+}
+
 function listDiversifiedModeItems(
   total: number,
   page: number,
@@ -297,10 +312,13 @@ function buildMomentRailDefinition(now = new Date()): FeedRailDefinition {
 }
 
 function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
-  const recentBatchItems = getRecentBatchHighlightItems();
+  const recentBatchItems = getRecentBatchHighlightItems().slice(0, HIGHLIGHT_CAPSULE_MAX_ITEMS);
   const rediscoverCutoff = now.getTime() - REDISCOVER_MIN_AGE_MS;
   const dailySeed = createDailySeed(now);
   const recentBatchCount = groupFeedBursts(recentBatchItems).length;
+  const forgottenFavoritesCount = getCappedItemCount(likeRepository.countLikedOlderThan(rediscoverCutoff), HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  const deepCutsCount = getCappedItemCount(imageRepository.countRediscover(rediscoverCutoff), HIGHLIGHT_CAPSULE_MAX_ITEMS);
+  const luckyDipCount = getCappedItemCount(imageRepository.countFeed(), HIGHLIGHT_CAPSULE_MAX_ITEMS);
 
   return {
     kind: 'highlights',
@@ -323,8 +341,8 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
         subtitle: 'Older liked images worth another look',
         dateContext: 'Liked and older than 6 months',
         minimumImageCount: 1,
-        count: () => likeRepository.countLikedOlderThan(rediscoverCutoff),
-        list: (page, limit) => likeRepository.listLikedOlderThan(page, limit, rediscoverCutoff)
+        count: () => forgottenFavoritesCount,
+        list: (page, limit) => limitItemsForPage(likeRepository.listLikedOlderThan(page, limit, rediscoverCutoff), page, limit, forgottenFavoritesCount)
       },
       {
         id: 'highlight-deep-cuts',
@@ -332,10 +350,9 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
         subtitle: 'Older images resurfaced from the archive',
         dateContext: 'Older than 6 months',
         minimumImageCount: 1,
-        count: () => imageRepository.countRediscover(rediscoverCutoff),
+        count: () => deepCutsCount,
         list: (page, limit) => {
-          const total = imageRepository.countRediscover(rediscoverCutoff);
-          return listDiversifiedModeItems(total, page, limit, (offset, batchLimit) =>
+          return listDiversifiedModeItems(deepCutsCount, page, limit, (offset, batchLimit) =>
             imageRepository.listRediscoverCandidates(offset, batchLimit, rediscoverCutoff)
           );
         }
@@ -346,14 +363,16 @@ function buildHighlightRailDefinition(now = new Date()): FeedRailDefinition {
         subtitle: 'A playful mix from across the library',
         dateContext: 'Stable for today',
         minimumImageCount: 1,
-        count: () => imageRepository.countFeed(),
-        list: (page, limit) => imageRepository.listRandom(page, limit, dailySeed)
+        count: () => luckyDipCount,
+        list: (page, limit) => limitItemsForPage(imageRepository.listRandom(page, limit, dailySeed), page, limit, luckyDipCount)
       }
     ]
   };
 }
 
 function materializeRailDefinition(definition: FeedRailDefinition) {
+  const usedCoverImageIds = new Set<number>();
+
   return {
     ...definition,
     capsules: definition.capsules
@@ -363,10 +382,13 @@ function materializeRailDefinition(definition: FeedRailDefinition) {
           return null;
         }
 
-        const coverImage = capsule.list(1, 1)[0];
+        const coverCandidates = capsule.list(1, RAIL_COVER_CANDIDATE_LIMIT);
+        const coverImage = coverCandidates.find((image) => !usedCoverImageIds.has(image.id)) ?? coverCandidates[0];
         if (!coverImage) {
           return null;
         }
+
+        usedCoverImageIds.add(coverImage.id);
 
         return {
           id: capsule.id,

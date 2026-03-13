@@ -2,10 +2,6 @@
   <section class="grid grid-cols-[minmax(0,39.75rem)_19rem] gap-[3.5rem] items-start justify-center w-[min(100%,67rem)] mx-auto max-md:grid-cols-1 max-md:w-full">
     <!-- Main feed column -->
     <div class="min-w-0">
-      <header v-if="appStore.stats" class="flex items-end justify-between gap-4 pb-[0.8rem]">
-        <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders</p>
-      </header>
-
       <section
         v-if="appStore.isLibraryRebuildRequired && appStore.stats && !appStore.isRebuilding"
         class="grid gap-[0.55rem] px-5 py-[1rem] mb-[1.1rem] border rounded-[1rem] shadow-[var(--shadow)]"
@@ -31,53 +27,49 @@
       </section>
 
       <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5">
-        <div class="grid gap-[0.75rem]">
-          <div class="grid gap-[0.2rem]">
-            <strong class="text-[1rem]">Home Feed</strong>
-            <p class="m-0 text-muted max-w-[42rem]">{{ activeModeDescription }}</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
+        <section v-if="momentsStore.items.length" class="mb-1">
+          <div class="flex gap-[1.05rem] overflow-x-auto pb-4 [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
             <button
-              v-for="mode in feedModes"
-              :key="mode.id"
-              class="min-h-10 px-4 rounded-full border text-[0.82rem] font-bold transition-[background-color,border-color,color,box-shadow] duration-180"
-              :class="feedStore.mode === mode.id ? 'border-[#1f2937] text-white shadow-[var(--shadow)]' : 'border-border text-text bg-surface hover:border-text/25 hover:bg-surface-alt'"
-              :style="
-                feedStore.mode === mode.id
-                  ? 'background: linear-gradient(135deg, #1f2937 0%, #111827 100%);'
-                  : undefined
-              "
-              type="button"
-              @click="selectMode(mode.id)"
-            >
-              {{ mode.label }}
-            </button>
-          </div>
-        </div>
-
-        <section v-if="momentsStore.items.length" class="grid gap-[0.8rem]">
-          <div class="flex items-center justify-between gap-4">
-            <div class="grid gap-[0.15rem]">
-              <strong class="text-[0.98rem]">{{ momentsStore.railTitle }}</strong>
-              <p class="m-0 text-muted text-[0.82rem]">{{ momentsStore.railDescription }}</p>
-            </div>
-          </div>
-          <div class="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
-            <RouterLink
               v-for="moment in momentsStore.items"
               :key="moment.id"
-              class="flex flex-col items-center gap-[0.45rem] min-w-[5.5rem] text-muted text-[0.69rem] text-center"
-              :to="{ name: 'moment', params: { id: moment.id } }"
+              class="flex flex-col items-center gap-[0.55rem] min-w-[6.1rem] border-0 bg-transparent p-0 text-muted text-[0.72rem] text-center cursor-pointer"
               :title="`${moment.title} · ${moment.subtitle}`"
+              type="button"
+              @click="openRailViewer(moment.id)"
             >
-              <div class="p-[2px] rounded-full bg-[var(--story-ring)]">
-                <Avatar class="w-[4.2rem] h-[4.2rem] border-2 border-bg" :name="moment.title" :src="moment.coverImage.thumbnailUrl" />
+              <div class="rounded-full p-[3px] bg-[var(--story-ring)] shadow-[0_10px_26px_rgba(246,80,117,0.18)]">
+                <div class="rounded-full bg-bg p-[2px]">
+                  <Avatar class="w-[4.75rem] h-[4.75rem]" :name="moment.title" :src="moment.coverImage.thumbnailUrl" />
+                </div>
               </div>
-              <span class="max-w-full overflow-hidden text-ellipsis font-semibold text-text">{{ moment.title }}</span>
-              <span class="max-w-full overflow-hidden text-ellipsis">{{ moment.imageCount }} photos</span>
-            </RouterLink>
+              <span class="max-w-full overflow-hidden text-ellipsis font-semibold leading-tight text-text">{{ moment.title }}</span>
+            </button>
           </div>
         </section>
+
+        <header v-if="appStore.stats" class="flex items-end justify-between gap-4">
+          <p class="m-0 text-muted">{{ appStore.stats.indexedImages }} images across {{ appStore.stats.folders }} folders</p>
+        </header>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="mode in feedModes"
+            :key="mode.id"
+            class="min-h-10 px-4 rounded-full border text-[0.82rem] font-bold transition-[background-color,border-color,color,box-shadow] duration-180"
+            :class="feedStore.mode === mode.id ? 'border-[#1f2937] text-white shadow-[var(--shadow)]' : 'border-border text-text bg-surface hover:border-text/25 hover:bg-surface-alt'"
+            :style="
+              feedStore.mode === mode.id
+                ? 'background: linear-gradient(135deg, #1f2937 0%, #111827 100%);'
+                : undefined
+            "
+            :title="mode.description"
+            :aria-label="`${mode.label}. ${mode.description}`"
+            type="button"
+            @click="selectMode(mode.id)"
+          >
+            {{ mode.label }}
+          </button>
+        </div>
       </section>
 
       <!-- States -->
@@ -117,6 +109,14 @@
         </div>
         <InfiniteLoader :loading="feedStore.loading" :has-more="feedStore.hasMore" @load-more="feedStore.loadMore" />
       </template>
+
+      <RailViewerModal
+        v-if="activeRailViewerId && momentsStore.items.length"
+        :items="momentsStore.items"
+        :initial-id="activeRailViewerId"
+        :rail-singular-label="momentsStore.railSingularLabel"
+        @close="closeRailViewer"
+      />
     </div>
 
     <!-- Right rail (suggestions) — hidden on mobile -->
@@ -155,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import Avatar from '../components/Avatar.vue';
@@ -163,6 +163,7 @@ import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
 import FeedList from '../components/FeedList.vue';
 import InfiniteLoader from '../components/InfiniteLoader.vue';
+import RailViewerModal from '../components/RailViewerModal.vue';
 import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
@@ -182,6 +183,7 @@ const homeRecommendations = computed(() =>
 );
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
+const activeRailViewerId = ref<string | null>(null);
 const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
   {
     id: 'recent',
@@ -199,9 +201,6 @@ const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
     description: 'A stable session shuffle for aimless browsing.'
   }
 ];
-const activeModeDescription = computed(
-  () => feedModes.find((mode) => mode.id === feedStore.mode)?.description ?? feedModes[0].description
-);
 const showInitialScanState = computed(
   () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
 );
@@ -225,6 +224,14 @@ const scanDescription = computed(() => {
 
 async function selectMode(mode: FeedMode) {
   await feedStore.setMode(mode);
+}
+
+function openRailViewer(id: string) {
+  activeRailViewerId.value = id;
+}
+
+function closeRailViewer() {
+  activeRailViewerId.value = null;
 }
 
 onMounted(async () => {
@@ -270,6 +277,15 @@ watch(
     }
 
     await momentsStore.fetchMoments(true);
+  }
+);
+
+watch(
+  () => momentsStore.items.map((item) => item.id),
+  (ids) => {
+    if (activeRailViewerId.value && !ids.includes(activeRailViewerId.value)) {
+      activeRailViewerId.value = ids[0] ?? null;
+    }
   }
 );
 </script>
