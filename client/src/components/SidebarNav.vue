@@ -3,10 +3,16 @@
     class="sidebar group flex h-full w-[4.85rem] flex-col overflow-visible bg-bg px-[0.95rem] py-5 text-text transition-[width] duration-220 ease hover:w-60"
   >
     <RouterLink
-      class="sidebar__brand inline-flex items-center justify-center w-12 h-12 p-[0.3rem] rounded-[1rem] color-inherit transition-[background-color,transform,opacity] duration-180 hover:bg-surface-hover hover:-translate-y-px"
+      class="sidebar__brand relative inline-flex items-center justify-center w-12 h-12 p-[0.3rem] rounded-[1rem] color-inherit transition-[background-color,transform,opacity] duration-180 hover:bg-surface-hover hover:-translate-y-px"
       to="/"
       aria-label="Foldergram home"
     >
+      <span
+        class="pointer-events-none absolute top-[0.16rem] left-1/2 -translate-x-1/2 text-[0.42rem] leading-none tracking-[0.08em] text-muted"
+        aria-hidden="true"
+      >
+        {{ appVersion }}
+      </span>
       <BrandMark />
     </RouterLink>
 
@@ -301,6 +307,7 @@
   import Avatar from "./Avatar.vue"
   import BrandMark from "./BrandMark.vue"
 
+  const appVersion = __APP_VERSION__
   const appStore = useAppStore()
   const likesStore = useLikesStore()
   const foldersStore = useFoldersStore()
