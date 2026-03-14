@@ -1,5 +1,8 @@
 <template>
-  <section class="desktop-content-compensation grid grid-cols-[minmax(0,39.375rem)_19.9375rem] gap-[4rem] items-start justify-center w-[min(100%,63.3125rem)] mx-auto max-md:grid-cols-1 max-md:w-full">
+  <section
+    class="grid grid-cols-[minmax(0,39.375rem)_19.9375rem] gap-[4rem] items-start justify-center w-[min(100%,63.3125rem)] mx-auto max-md:grid-cols-1 max-md:w-full md:relative"
+    style="left: calc(var(--desktop-content-compensation) * -1);"
+  >
     <!-- Main feed column -->
     <div class="min-w-0">
       <section
@@ -172,7 +175,7 @@
         Foldergram is open source.
         <a
           class="text-muted transition-colors duration-180 hover:text-text"
-          href="https://github.com/sajjadalis/forldergram"
+          href="https://github.com/foldergram/foldergram"
           target="_blank"
           rel="noreferrer"
         >

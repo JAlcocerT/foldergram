@@ -26,19 +26,22 @@
     <RouterLink v-if="!isHomeContext" custom :to="imageRoute" v-slot="{ href, navigate }">
       <a
         :href="href"
-        class="feed-media relative block bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
+        class="relative block overflow-hidden rounded-[0.5rem] border border-border bg-surface-alt"
         :style="{ aspectRatio: mediaAspectRatio }"
         @click="handleImageNavigation($event, navigate)"
       >
-        <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
+        <ResilientImage
+          :src="item.thumbnailUrl"
+          :alt="item.filename"
+          loading="lazy"
+          :retry-while="appStore.isScanning"
+          class="h-full w-full object-cover"
+        />
         <div
           v-if="item.mediaType === 'video'"
           class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-4 py-3 text-white pointer-events-none bg-[linear-gradient(180deg,rgba(10,14,24,0)_0%,rgba(10,14,24,0.82)_100%)]"
         >
-          <span class="inline-flex items-center gap-[0.4rem] text-[0.74rem] font-semibold tracking-[0.08em] uppercase">
-            <span class="i-fluent-video-16-filled w-[1.05rem] h-[1.05rem]" aria-hidden="true" />
-            Reel
-          </span>
+          <span class="i-fluent-play-circle-24-filled w-[1.15rem] h-[1.15rem] text-white" aria-hidden="true" />
           <span v-if="item.durationMs" class="rounded-full bg-black/55 px-[0.55rem] py-[0.18rem] text-[0.76rem] font-semibold">
             {{ formattedDuration }}
           </span>
@@ -48,22 +51,28 @@
 
     <div
       v-else-if="item.mediaType === 'image'"
-      class="feed-media relative block bg-surface-alt overflow-hidden border border-border rounded-[0.5rem] select-none"
+      class="relative block overflow-hidden rounded-[0.5rem] border border-border bg-surface-alt select-none"
       :style="{ aspectRatio: mediaAspectRatio, touchAction: 'manipulation' }"
       @click="handleHomeImageClick"
     >
-      <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
+      <ResilientImage
+        :src="item.thumbnailUrl"
+        :alt="item.filename"
+        loading="lazy"
+        :retry-while="appStore.isScanning"
+        class="h-full w-full object-cover"
+      />
     </div>
 
     <div
       v-else
       ref="homeVideoTarget"
-      class="feed-media relative block bg-surface-alt overflow-hidden border border-border rounded-[0.5rem]"
+      class="relative block overflow-hidden rounded-[0.5rem] border border-border bg-surface-alt"
       :style="{ aspectRatio: mediaAspectRatio }"
     >
       <video
         ref="homeVideoElement"
-        class="block bg-black"
+        class="block h-full w-full bg-black object-cover"
         :src="item.previewUrl"
         :poster="item.thumbnailUrl"
         :controls="isActiveVideo"
@@ -77,10 +86,7 @@
       <div
         class="absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 py-3 text-white pointer-events-none bg-[linear-gradient(180deg,rgba(10,14,24,0.82)_0%,rgba(10,14,24,0)_100%)]"
       >
-        <span class="inline-flex items-center gap-[0.4rem] text-[0.74rem] font-semibold tracking-[0.08em] uppercase">
-          <span class="i-fluent-video-16-filled w-[1.05rem] h-[1.05rem]" aria-hidden="true" />
-          Reel
-        </span>
+        <span class="i-fluent-play-circle-24-filled w-[1.15rem] h-[1.15rem] text-white" aria-hidden="true" />
         <span v-if="item.durationMs" class="rounded-full bg-black/55 px-[0.55rem] py-[0.18rem] text-[0.76rem] font-semibold">
           {{ formattedDuration }}
         </span>

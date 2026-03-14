@@ -62,7 +62,7 @@
     <div class="card grid grid-cols-[minmax(0,1.8fr)_minmax(20rem,0.9fr)] overflow-hidden max-md:grid-cols-1 viewer__card-wrapper" :class="isModal ? 'max-h-[calc(100vh-2rem)]' : ''">
       <!-- Media -->
       <div
-        class="viewer-media relative bg-surface-alt"
+        class="relative bg-surface-alt"
         :class="isModal ? 'h-[calc(100vh-2rem)] min-h-0' : 'min-h-[34rem] max-md:min-h-[18rem]'"
       >
         <video
@@ -79,7 +79,14 @@
           preload="metadata"
           @loadedmetadata="attemptVideoPlayback"
         />
-        <ResilientImage v-else :src="image.previewUrl" :alt="image.filename" loading="eager" :retry-while="appStore.isScanning" class="object-contain" />
+        <ResilientImage
+          v-else
+          :src="image.previewUrl"
+          :alt="image.filename"
+          loading="eager"
+          :retry-while="appStore.isScanning"
+          class="h-full w-full object-contain"
+        />
       </div>
 
       <!-- Sidebar -->

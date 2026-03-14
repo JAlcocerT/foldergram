@@ -160,7 +160,7 @@ pnpm start
 Notes:
 
 - The documented source workflow uses `pnpm`. This repository is a `pnpm` workspace.
-- `pnpm dev` starts the Vite client on `http://localhost:5173`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
+- `pnpm dev` starts the Vite client on `http://localhost:4175`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
 - `pnpm build` builds both the client and server, and `pnpm start` serves the built app from Express.
 
 Maintainer note:

@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="sidebar flex flex-col h-full w-[4.85rem] hover:w-60 overflow-visible px-[0.95rem] py-5 bg-bg text-text transition-[width] duration-220 ease"
+    class="sidebar group flex h-full w-[4.85rem] flex-col overflow-visible bg-bg px-[0.95rem] py-5 text-text transition-[width] duration-220 ease hover:w-60"
   >
     <RouterLink
       class="sidebar__brand inline-flex items-center justify-center w-12 h-12 p-[0.3rem] rounded-[1rem] color-inherit transition-[background-color,transform,opacity] duration-180 hover:bg-surface-hover hover:-translate-y-px"
@@ -14,78 +14,109 @@
       class="sidebar__nav flex flex-col flex-1 min-h-0 gap-[0.4rem] overflow-y-auto mt-5 [scrollbar-width:none]"
     >
       <RouterLink custom to="/" v-slot="{ href, navigate, isActive }">
-        <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
+        <a
+          :href="href"
+          class="sidebar__link sidebar-item"
+          :class="isActive ? sidebarActiveClass : ''"
+          @click="navigate"
+        >
           <span
             class="sidebar__icon flex-shrink-0 w-[1.45rem] h-[1.45rem]"
             :class="isActive ? 'i-fluent-home-16-filled' : 'i-fluent-home-16-regular'"
             aria-hidden="true"
           />
-          <span class="sidebar__label text-[0.9rem]">Home</span>
+          <span class="sidebar__label max-w-0 overflow-hidden whitespace-nowrap text-[0.9rem] opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100" style="transition: opacity 0.18s ease, max-width 0.22s ease;">Home</span>
         </a>
       </RouterLink>
 
       <RouterLink custom :to="{ name: 'explore' }" v-slot="{ href, navigate, isActive }">
-        <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
+        <a
+          :href="href"
+          class="sidebar__link sidebar-item"
+          :class="isActive ? sidebarActiveClass : ''"
+          @click="navigate"
+        >
           <span
             class="sidebar__icon flex-shrink-0 w-[1.45rem] h-[1.45rem]"
             :class="isActive ? 'i-fluent-search-16-filled' : 'i-fluent-search-16-regular'"
             aria-hidden="true"
           />
-          <span class="sidebar__label text-[0.9rem]">Search</span>
+          <span class="sidebar__label max-w-0 overflow-hidden whitespace-nowrap text-[0.9rem] opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100" style="transition: opacity 0.18s ease, max-width 0.22s ease;">Search</span>
         </a>
       </RouterLink>
 
       <RouterLink custom :to="{ name: 'library' }" v-slot="{ href, navigate, isActive }">
-        <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
+        <a
+          :href="href"
+          class="sidebar__link sidebar-item"
+          :class="isActive ? sidebarActiveClass : ''"
+          @click="navigate"
+        >
           <span
             class="sidebar__icon flex-shrink-0 w-[1.45rem] h-[1.45rem]"
             :class="isActive ? 'i-fluent-folder-16-filled' : 'i-fluent-folder-16-regular'"
             aria-hidden="true"
           />
-          <span class="sidebar__label text-[0.9rem]">Library</span>
+          <span class="sidebar__label max-w-0 overflow-hidden whitespace-nowrap text-[0.9rem] opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100" style="transition: opacity 0.18s ease, max-width 0.22s ease;">Library</span>
         </a>
       </RouterLink>
 
       <RouterLink custom :to="{ name: 'likes' }" v-slot="{ href, navigate, isActive }">
-        <a :href="href" class="sidebar__link sidebar-item" :class="{ 'router-link-active': isActive }" @click="navigate">
+        <a
+          :href="href"
+          class="sidebar__link sidebar-item"
+          :class="isActive ? sidebarActiveClass : ''"
+          @click="navigate"
+        >
           <span
             class="sidebar__icon flex-shrink-0 w-[1.58rem] h-[1.58rem]"
             :class="isActive ? 'i-fluent-heart-16-filled' : 'i-fluent-heart-16-regular'"
             aria-hidden="true"
           />
-          <span class="sidebar__label text-[0.9rem]">Likes</span>
+          <span class="sidebar__label max-w-0 overflow-hidden whitespace-nowrap text-[0.9rem] opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100" style="transition: opacity 0.18s ease, max-width 0.22s ease;">Likes</span>
           <small
-            class="sidebar__badge sidebar__meta ml-auto min-w-[1.5rem] px-[0.45rem] py-[0.1rem] rounded-full text-white/86 bg-white/12 text-[0.72rem] font-bold text-center"
+            class="sidebar__badge sidebar__meta ml-auto max-w-0 min-w-[1.5rem] overflow-hidden whitespace-nowrap rounded-full bg-white/12 px-[0.45rem] py-[0.1rem] text-center text-[0.72rem] font-bold text-white/86 opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100"
+            style="transition: opacity 0.18s ease, max-width 0.22s ease;"
             >{{ likesStore.items.length }}</small
           >
         </a>
       </RouterLink>
 
       <span
-        class="sidebar__section-label sidebar__meta mt-4 mb-[0.55rem] px-[0.75rem] text-muted text-[0.68rem] font-semibold tracking-[0.12em] uppercase"
+        class="sidebar__section-label sidebar__meta mt-4 mb-[0.55rem] max-w-0 overflow-hidden whitespace-nowrap px-[0.75rem] text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100"
+        style="transition: opacity 0.18s ease, max-width 0.22s ease;"
         >Folders Spotlight</span
       >
       <div class="flex min-h-0 flex-col gap-[0.2rem] max-h-[22.5rem] overflow-y-auto [scrollbar-width:none]">
         <RouterLink
           v-for="folder in featuredFolders"
           :key="folder.id"
-          class="sidebar__folder sidebar-item"
+          custom
           :to="{ name: 'folder', params: { slug: folder.slug } }"
-          :title="folder.breadcrumb ? `${folder.breadcrumb} / ${folder.name}` : folder.name"
+          v-slot="{ href, navigate, isActive }"
         >
-          <Avatar
-            :name="folder.name"
-            :src="folder.avatarUrl"
-            class="w-[1.75rem] h-[1.75rem]"
-          />
-          <span
-            class="sidebar__folder-copy sidebar__meta flex flex-col min-w-0 gap-[0.05rem]"
+          <a
+            :href="href"
+            class="sidebar__folder sidebar-item"
+            :class="isActive ? sidebarActiveClass : ''"
+            :title="folder.breadcrumb ? `${folder.breadcrumb} / ${folder.name}` : folder.name"
+            @click="navigate"
           >
-            <strong class="text-[0.82rem] truncate">{{ folder.name }}</strong>
-            <small class="text-muted text-[0.68rem] truncate"
-              >{{ folder.breadcrumb ?? `${folder.imageCount} posts` }}</small
+            <Avatar
+              :name="folder.name"
+              :src="folder.avatarUrl"
+              class="h-[1.75rem] w-[1.75rem]"
+            />
+            <span
+              class="sidebar__folder-copy sidebar__meta flex min-w-0 max-w-0 flex-col gap-[0.05rem] overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100"
+              style="transition: opacity 0.18s ease, max-width 0.22s ease;"
             >
-          </span>
+              <strong class="truncate text-[0.82rem]">{{ folder.name }}</strong>
+              <small class="truncate text-[0.68rem] text-muted"
+                >{{ folder.breadcrumb ?? `${folder.imageCount} posts` }}</small
+              >
+            </span>
+          </a>
         </RouterLink>
       </div>
     </nav>
@@ -149,7 +180,7 @@
           :class="'i-fluent-line-horizontal-3-20-filled'"
           aria-hidden="true"
         />
-        <span class="sidebar__label text-[0.9rem]">More</span>
+        <span class="sidebar__label max-w-0 overflow-hidden whitespace-nowrap text-[0.9rem] opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100" style="transition: opacity 0.18s ease, max-width 0.22s ease;">More</span>
       </button>
     </div>
   </aside>
@@ -178,6 +209,7 @@ const featuredFolders = computed(() =>
   selectSidebarFolders(foldersStore.items, likedCountByFolder.value, appStore.recentOpenedFolderSlugs)
 );
 const appearanceLabel = computed(() => (appStore.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'));
+const sidebarActiveClass = 'router-link-active bg-[color-mix(in_srgb,var(--surface)_92%,transparent_8%)] font-bold';
 
 function closeMoreMenu() {
   moreMenuOpen.value = false;

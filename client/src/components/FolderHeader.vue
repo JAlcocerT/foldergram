@@ -1,26 +1,26 @@
 <template>
-  <section class="grid grid-cols-[12rem_minmax(0,1fr)] gap-x-[2.75rem] items-center py-4 pb-10 max-sm:grid-cols-1 max-sm:gap-y-[1.4rem] max-sm:pb-7 max-sm:text-center">
+  <section class="grid grid-cols-[10.75rem_minmax(0,1fr)] items-start gap-x-[2.65rem] pt-[0.6rem] pb-[2.4rem] max-md:grid-cols-[9rem_minmax(0,1fr)] max-md:gap-x-[2rem] max-sm:grid-cols-1 max-sm:gap-y-[1.35rem] max-sm:pb-[1.85rem] max-sm:text-center">
     <div class="grid place-items-center">
-      <Avatar class="w-[9.25rem] h-[9.25rem] border border-border" :name="folder.name" :src="folder.avatarUrl" />
-    </div>
-    <div class="flex flex-col gap-[1.1rem]">
-      <div class="flex items-center justify-between gap-4 flex-wrap max-sm:justify-center">
-        <div class="flex items-center gap-[0.8rem] flex-wrap">
-          <div class="grid gap-[0.15rem]">
-            <p v-if="folder.breadcrumb" class="m-0 text-muted text-[0.82rem] tracking-[0.04em]">{{ folder.breadcrumb }}</p>
-            <h1 class="m-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">{{ folder.name }}</h1>
-          </div>
-          <span class="px-[0.65rem] py-[0.35rem] rounded-[0.55rem] bg-surface-hover text-muted text-[0.8rem] font-semibold">App folder</span>
+      <div class="rounded-full p-[0.22rem] shadow-[0_16px_34px_rgba(246,106,61,0.12)]" style="background: var(--story-ring);">
+        <div class="rounded-full bg-bg p-[0.22rem]">
+          <Avatar class="w-[9.35rem] h-[9.35rem] max-md:w-[7.75rem] max-md:h-[7.75rem]" :name="folder.name" :src="folder.avatarUrl" />
         </div>
       </div>
-      <div class="flex items-center gap-8 flex-wrap font-base max-sm:justify-center">
-        <span><strong class="mr-[0.35rem]">{{ folder.imageCount }}</strong>posts</span>
-        <span><strong class="mr-[0.35rem]">{{ folder.videoCount }}</strong>reels</span>
-        <span v-if="folder.latestImageMtimeMs"><strong class="mr-[0.35rem]">{{ formattedUpdatedDate }}</strong>updated</span>
+    </div>
+    <div class="grid gap-[1rem] pt-[0.35rem]">
+      <div class="flex items-center gap-[0.75rem] flex-wrap max-sm:justify-center">
+        <h1 class="m-0 text-[clamp(1.6rem,2.4vw,2rem)] font-medium leading-none tracking-[-0.04em]">{{ folder.name }}</h1>
+        <span class="inline-flex items-center rounded-full bg-surface-hover px-[0.72rem] py-[0.34rem] text-[0.78rem] font-semibold text-muted">App folder</span>
       </div>
-      <div class="grid gap-[0.2rem] max-w-[32rem] max-sm:max-w-none">
-        <strong class="text-[0.82rem]">Source folder path</strong>
-        <p class="m-0 text-muted font-mono text-[0.8rem] break-all">{{ folder.folderPath }}</p>
+      <p v-if="folder.breadcrumb" class="m-0 text-[0.84rem] font-medium tracking-[0.02em] text-muted">{{ folder.breadcrumb }}</p>
+      <div class="flex items-center gap-[1.6rem] flex-wrap text-[0.95rem] leading-none max-sm:justify-center">
+        <span><strong class="mr-[0.35rem] font-semibold">{{ folder.imageCount }}</strong>posts</span>
+        <span><strong class="mr-[0.35rem] font-semibold">{{ folder.videoCount }}</strong>reels</span>
+        <span v-if="folder.latestImageMtimeMs"><strong class="mr-[0.35rem] font-semibold">{{ formattedUpdatedDate }}</strong>updated</span>
+      </div>
+      <div class="grid max-w-[29rem] gap-[0.28rem] max-sm:max-w-none">
+        <span class="text-[0.74rem] font-bold tracking-[0.1em] text-muted uppercase">Library path</span>
+        <p class="m-0 font-mono text-[0.8rem] leading-[1.5] text-muted break-all">{{ folder.folderPath }}</p>
       </div>
     </div>
   </section>

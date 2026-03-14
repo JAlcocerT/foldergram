@@ -1,6 +1,13 @@
 <template>
-  <div class="avatar-base">
-    <ResilientImage v-if="src" :src="src" :alt="name" loading="lazy" :retry-while="appStore.isScanning" />
+  <div class="grid h-[2.65rem] w-[2.65rem] shrink-0 place-items-center overflow-hidden rounded-full font-bold text-white [background:var(--avatar-fallback)]">
+    <ResilientImage
+      v-if="src"
+      :src="src"
+      :alt="name"
+      loading="lazy"
+      :retry-while="appStore.isScanning"
+      class="h-full w-full object-cover"
+    />
     <span v-else>{{ initials }}</span>
   </div>
 </template>

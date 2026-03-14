@@ -11,7 +11,10 @@
     <ErrorState v-else-if="likesStore.error" title="Could not load likes" :message="likesStore.error" />
     <template v-else>
       <div class="flex justify-center py-[0.95rem] mb-[0.45rem] border-t border-border" aria-label="Likes sections">
-        <span class="relative pt-[0.1rem] text-text text-[0.78rem] font-bold tracking-[0.11em] uppercase folder-tabs__item--active">Liked posts</span>
+        <span class="relative pt-[0.1rem] text-text text-[0.78rem] font-bold tracking-[0.11em] uppercase">
+          <span class="absolute left-0 right-0 top-[-1.05rem] h-px bg-text" aria-hidden="true"></span>
+          Liked posts
+        </span>
       </div>
       <EmptyState
         v-if="!likesStore.loading && likesStore.items.length === 0"

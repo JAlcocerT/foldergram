@@ -5,7 +5,8 @@ import vue from '@vitejs/plugin-vue';
 export default defineConfig({
   plugins: [UnoCSS(), vue()],
   server: {
-    port: 5173,
+    host: '0.0.0.0',
+    port: 4175,
     proxy: {
       '/api': 'http://localhost:4173',
       '/thumbnails': 'http://localhost:4173',

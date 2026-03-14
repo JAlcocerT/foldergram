@@ -122,62 +122,6 @@ img[data-loaded="true"] {
   transition: opacity 0.22s ease;
 }
 
-/* ── Avatar default size (overridden by parent utility classes) ─ */
-.avatar-base {
-  width: 2.65rem;
-  height: 2.65rem;
-  /* gradient needs `background` shorthand — bg-[var()] only sets background-color */
-  background: var(--avatar-fallback);
-}
-
-/* ── Image fill rules per context ───────────────────────────── */
-/* All images rendered by ResilientImage should fill their container */
-.feed-media img,
-.feed-media video,
-.folder-grid__item img,
-.avatar-base img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Viewer uses contain so full image is visible */
-.viewer-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* ── Folder grid hover ─────────────────────────────────────── */
-.folder-grid__item img {
-  transition:
-    transform 0.22s ease,
-    opacity 0.22s ease;
-}
-
-.folder-grid__item:hover img {
-  transform: scale(1.03);
-  opacity: 0.9;
-}
-
-/* ── Sidebar label reveal on hover ──────────────────────────── */
-.sidebar__label,
-.sidebar__meta {
-  opacity: 0;
-  max-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  transition:
-    opacity 0.18s ease,
-    max-width 0.22s ease;
-}
-
-.sidebar:hover .sidebar__label,
-.sidebar:hover .sidebar__meta {
-  opacity: 1;
-  max-width: 12rem;
-}
-
 /* ── Scrollbar styles ───────────────────────────────────────── */
 .sidebar__nav::-webkit-scrollbar {
   display: none;
@@ -200,13 +144,6 @@ img[data-loaded="true"] {
   border-radius: 999px;
 }
 
-@media (min-width: 980px) {
-  .desktop-content-compensation {
-    position: relative;
-    left: calc(var(--desktop-content-compensation) * -1);
-  }
-}
-
 /* ── Keyframe animations ────────────────────────────────────── */
 @keyframes shimmer {
   0% {
@@ -225,35 +162,6 @@ img[data-loaded="true"] {
   50% {
     opacity: 0.92;
   }
-}
-
-/* ── Skeleton shimmer ───────────────────────────────────────── */
-.skeleton {
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-.skeleton__avatar,
-.skeleton__lines span,
-.skeleton__media {
-  background: linear-gradient(
-    90deg,
-    rgba(160, 160, 160, 0.14) 0%,
-    rgba(160, 160, 160, 0.24) 50%,
-    rgba(160, 160, 160, 0.14) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s linear infinite;
-}
-
-/* ── Router-link active states ──────────────────────────────── */
-.sidebar__link.router-link-active,
-.sidebar__folder.router-link-active {
-  background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
-  font-weight: 700;
-}
-
-.topbar__icon-link.router-link-active {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Explore shell mode ────────────────────────────────────── */
@@ -298,20 +206,4 @@ img[data-loaded="true"] {
 .app-shell--explore .sidebar__badge {
   background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
-}
-
-/* ── Settings progress bar fill transition ──────────────────── */
-.settings-progress__fill {
-  transition: width 0.24s ease;
-}
-
-/* ── Folder tabs active indicator ─────────────────────────── */
-.folder-tabs__item--active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -1.05rem;
-  height: 1px;
-  background: var(--text);
 }

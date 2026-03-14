@@ -1,13 +1,20 @@
 <template>
-  <section class="grid gap-[0.2rem]" :class="variant === 'portrait' ? 'grid-cols-4' : 'grid-cols-3'">
+  <section class="grid gap-[1px] grid-cols-3 md:grid-cols-4">
     <RouterLink v-for="item in items" :key="item.id" custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
       <a
         :href="href"
-        class="folder-grid__item relative overflow-hidden bg-surface-alt"
-        :class="variant === 'portrait' ? 'aspect-[9/16]' : 'aspect-square'"
+        class="group relative overflow-hidden bg-surface-alt"
+        :class="variant === 'reels' ? 'aspect-[9/14]' : variant === 'posts' ? 'aspect-[3/4]' : 'aspect-square'"
         @click="handleImageNavigation($event, navigate)"
       >
-        <ResilientImage :src="item.thumbnailUrl" :alt="item.filename" loading="lazy" :retry-while="appStore.isScanning" />
+        <ResilientImage
+          :src="item.thumbnailUrl"
+          :alt="item.filename"
+          loading="lazy"
+          :retry-while="appStore.isScanning"
+          class="h-full w-full object-cover group-hover:scale-[1.03] group-hover:opacity-90"
+          style="transition: transform 0.22s ease, opacity 0.22s ease;"
+        />
         <div v-if="item.mediaType === 'video'" class="absolute inset-x-0 top-0 flex items-center justify-between px-2 py-2 text-white pointer-events-none bg-[linear-gradient(180deg,rgba(10,14,24,0.72)_0%,rgba(10,14,24,0)_100%)]">
           <span class="i-fluent-play-circle-24-filled w-[1.15rem] h-[1.15rem] text-white" aria-hidden="true" />
           <span v-if="item.durationMs" class="rounded-full bg-black/55 px-[0.42rem] py-[0.12rem] text-[0.7rem] font-semibold">
@@ -30,7 +37,7 @@ import ResilientImage from './ResilientImage.vue';
 withDefaults(
   defineProps<{
     items: FeedItem[];
-    variant?: 'square' | 'portrait';
+    variant?: 'square' | 'posts' | 'reels';
   }>(),
   {
     variant: 'square'
