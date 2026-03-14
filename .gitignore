@@ -11,6 +11,9 @@ data/gallery.sqlite-wal
 coverage
 client/dist
 server/dist
+docs/.vitepress/dist
+docs/.vitepress/cache
+docs/.vitepress/.temp
 data/gallery/*
 !data/gallery/.gitkeep
 data/thumbnails/*
