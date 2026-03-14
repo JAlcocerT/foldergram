@@ -247,8 +247,7 @@ class ScannerService {
     return appSettingsRepository.get(LIBRARY_REBUILD_REQUIRED_SETTING_KEY) === '1';
   }
 
-  startStartupScan(reason = 'startup'): boolean {
-    const options = resolveFullScanOptions({ repairUnchangedDerivatives: false });
+  handleStartup(reason = 'startup'): boolean {
     const currentGalleryRoot = normalizePath(appConfig.galleryRoot);
     const storedGalleryRoot = appSettingsRepository.get(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
     const normalizedStoredGalleryRoot = storedGalleryRoot ? normalizePath(storedGalleryRoot) : null;
@@ -275,15 +274,11 @@ class ScannerService {
 
     log.info(
       joinLogParts([
-        'Startup scan queued',
+        'Startup scan skipped',
         formatStep('reason', reason),
-        formatStep('repair-derivatives', formatToggle(options.repairUnchangedDerivatives))
+        hasIndexedFolders ? 'using existing index' : 'manual scan required to build the initial index'
       ])
     );
-    void this.scanAll(reason, options).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      log.error(`Startup scan failed (${reason})`, message);
-    });
     return true;
   }
 
