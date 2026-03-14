@@ -1,6 +1,6 @@
 <template>
   <section class="grid gap-[1px] grid-cols-3 md:grid-cols-4">
-    <RouterLink v-for="item in items" :key="item.id" custom :to="`/image/${item.id}`" v-slot="{ href, navigate }">
+    <RouterLink v-for="item in items" :key="item.id" custom :to="buildImageRoute(item.id)" v-slot="{ href, navigate }">
       <a
         :href="href"
         class="group relative overflow-hidden bg-surface-alt"
@@ -46,6 +46,14 @@ withDefaults(
 
 const appStore = useAppStore();
 const route = useRoute();
+
+function buildImageRoute(id: number) {
+  return {
+    name: 'image',
+    params: { id: String(id) },
+    query: route.query
+  };
+}
 
 function handleImageNavigation(event: MouseEvent, navigate: () => void) {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
