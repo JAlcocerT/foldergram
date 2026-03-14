@@ -9,7 +9,7 @@ import {
 } from '../constants/app-setting-keys.js';
 import { appConfig } from '../config/env.js';
 import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
-import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType } from '../types/models.js';
+import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType, PlaybackStrategy } from '../types/models.js';
 import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBursts, listMonthDayKeysAroundDate } from '../utils/feed-utils.js';
 import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
@@ -52,6 +52,9 @@ const HIGHLIGHT_CAPSULE_MAX_ITEMS = 30;
 const HIGHLIGHT_FEED_OVERLAP_WINDOW = 18;
 const RAIL_COVER_CANDIDATE_LIMIT = 12;
 
+type IndexedFeedImage = FeedImage & { playbackStrategy?: PlaybackStrategy | null };
+type IndexedImageDetail = ImageDetail & { playbackStrategy?: PlaybackStrategy | null };
+
 function getThumbnailAssetVersion(): string | null {
   const lastCompletedScanId = scanRunRepository.latestCompleted()?.id ?? null;
   return lastCompletedScanId === null ? null : String(lastCompletedScanId);
@@ -68,6 +71,19 @@ function toPublicMediaUrl(basePath: '/thumbnails' | '/previews', relativePath: s
 
 function buildOriginalUrl(id: number): string {
   return `/api/originals/${id}`;
+}
+
+function buildPreviewUrl(image: {
+  id: number;
+  mediaType: MediaType;
+  previewUrl: string;
+  playbackStrategy?: PlaybackStrategy | null;
+}): string {
+  if (image.mediaType === 'video' && image.playbackStrategy === 'original') {
+    return buildOriginalUrl(image.id);
+  }
+
+  return toPublicMediaUrl('/previews', image.previewUrl);
 }
 
 function resolveWithinRoot(rootPath: string, targetPath: string): string | null {
@@ -130,22 +146,34 @@ function isSameOrDescendantFolderPath(rootFolderPath: string, candidateFolderPat
   return candidateFolderPath === rootFolderPath || candidateFolderPath.startsWith(`${rootFolderPath}/`);
 }
 
-function mapFeedImage(image: FeedImage, thumbnailVersion = getThumbnailAssetVersion()): FeedImage {
+function mapFeedImage(image: IndexedFeedImage, thumbnailVersion = getThumbnailAssetVersion()): FeedImage {
+  const { playbackStrategy, ...rest } = image;
   return {
-    ...image,
-    folderBreadcrumb: getPathBreadcrumb(image.folderPath),
-    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl, thumbnailVersion),
-    previewUrl: toPublicMediaUrl('/previews', image.previewUrl)
+    ...rest,
+    folderBreadcrumb: getPathBreadcrumb(rest.folderPath),
+    thumbnailUrl: toPublicMediaUrl('/thumbnails', rest.thumbnailUrl, thumbnailVersion),
+    previewUrl: buildPreviewUrl({
+      id: rest.id,
+      mediaType: rest.mediaType,
+      previewUrl: rest.previewUrl,
+      playbackStrategy
+    })
   };
 }
 
-function mapImageDetail(image: ImageDetail, thumbnailVersion = getThumbnailAssetVersion()): ImageDetail {
+function mapImageDetail(image: IndexedImageDetail, thumbnailVersion = getThumbnailAssetVersion()): ImageDetail {
+  const { playbackStrategy, ...rest } = image;
   return {
-    ...image,
-    folderBreadcrumb: getPathBreadcrumb(image.folderPath),
-    thumbnailUrl: toPublicMediaUrl('/thumbnails', image.thumbnailUrl, thumbnailVersion),
-    previewUrl: toPublicMediaUrl('/previews', image.previewUrl),
-    originalUrl: buildOriginalUrl(image.id)
+    ...rest,
+    folderBreadcrumb: getPathBreadcrumb(rest.folderPath),
+    thumbnailUrl: toPublicMediaUrl('/thumbnails', rest.thumbnailUrl, thumbnailVersion),
+    previewUrl: buildPreviewUrl({
+      id: rest.id,
+      mediaType: rest.mediaType,
+      previewUrl: rest.previewUrl,
+      playbackStrategy
+    }),
+    originalUrl: buildOriginalUrl(rest.id)
   };
 }
 
@@ -194,7 +222,7 @@ function formatMonthYear(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(date);
 }
 
-function mapFeedItems(items: FeedImage[], thumbnailVersion = getThumbnailAssetVersion()): FeedImage[] {
+function mapFeedItems(items: IndexedFeedImage[], thumbnailVersion = getThumbnailAssetVersion()): FeedImage[] {
   return items.map((item) => mapFeedImage(item, thumbnailVersion));
 }
 

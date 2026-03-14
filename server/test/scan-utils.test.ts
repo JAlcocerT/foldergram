@@ -11,7 +11,8 @@ import {
 describe('full scan options', () => {
   it('repairs unchanged derivatives by default for non-startup full scans', () => {
     expect(resolveFullScanOptions()).toEqual({
-      repairUnchangedDerivatives: true
+      repairUnchangedDerivatives: true,
+      forceNewFileDerivatives: true
     });
     expect(shouldQueueDerivativeJobForStatus('unchanged', resolveFullScanOptions())).toBe(true);
   });

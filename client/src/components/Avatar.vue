@@ -1,5 +1,5 @@
 <template>
-  <div class="grid h-[2.65rem] w-[2.65rem] shrink-0 place-items-center overflow-hidden rounded-full font-bold text-white [background:var(--avatar-fallback)]">
+  <div class="grid shrink-0 place-items-center overflow-hidden rounded-full font-bold text-white [background:var(--avatar-fallback)]">
     <ResilientImage
       v-if="src"
       :src="src"

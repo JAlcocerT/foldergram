@@ -8,6 +8,7 @@ import type {
   ImageRecord,
   LikeRecord,
   MediaType,
+  PlaybackStrategy,
   FolderRecord,
   FolderSummaryRecord,
   ScanRunRecord,
@@ -30,6 +31,7 @@ const FEED_IMAGE_SELECT_SQL = `
     images.duration_ms AS durationMs,
     images.thumbnail_path AS thumbnailUrl,
     images.preview_path AS previewUrl,
+    images.playback_strategy AS playbackStrategy,
     images.sort_timestamp AS sortTimestamp,
     images.taken_at AS takenAt
   FROM images
@@ -71,6 +73,7 @@ export interface UpsertImageInput {
   takenAtSource: TakenAtSource;
   thumbnailPath: string;
   previewPath: string;
+  playbackStrategy?: PlaybackStrategy | null;
 }
 
 export interface RefreshIndexedImageInput {
@@ -91,6 +94,7 @@ export interface RefreshIndexedImageInput {
   takenAtSource: TakenAtSource;
   thumbnailPath: string;
   previewPath: string;
+  playbackStrategy?: PlaybackStrategy | null;
 }
 
 export interface UpsertFolderScanStateInput {
@@ -236,9 +240,9 @@ export const imageRepository = {
       INSERT INTO images (
         folder_id, filename, extension, relative_path, absolute_path, file_size, width, height,
         media_type, mime_type, duration_ms, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp, taken_at, taken_at_source,
-        thumbnail_path, preview_path, is_deleted, updated_at
+        thumbnail_path, preview_path, playback_strategy, is_deleted, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
       ON CONFLICT(relative_path) DO UPDATE SET
         folder_id = excluded.folder_id,
         filename = excluded.filename,
@@ -256,6 +260,7 @@ export const imageRepository = {
         taken_at_source = excluded.taken_at_source,
         thumbnail_path = excluded.thumbnail_path,
         preview_path = excluded.preview_path,
+        playback_strategy = excluded.playback_strategy,
         is_deleted = 0,
         updated_at = excluded.updated_at
       `
@@ -279,6 +284,7 @@ export const imageRepository = {
       input.takenAtSource,
       input.thumbnailPath,
       input.previewPath,
+      input.playbackStrategy ?? 'preview',
       nowIso()
     );
 
@@ -306,6 +312,7 @@ export const imageRepository = {
         taken_at_source = ?,
         thumbnail_path = ?,
         preview_path = ?,
+        playback_strategy = ?,
         is_deleted = 0,
         updated_at = ?
       WHERE relative_path = ?
@@ -327,6 +334,7 @@ export const imageRepository = {
       input.takenAtSource,
       input.thumbnailPath,
       input.previewPath,
+      input.playbackStrategy ?? 'preview',
       nowIso(),
       input.relativePath
     );
@@ -549,6 +557,18 @@ export const imageRepository = {
     );
   },
 
+  countMissingPlaybackStrategyByFolder(folderId: number): number {
+    return Number(
+      (
+        database
+          .prepare(
+            "SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0 AND media_type = 'video' AND (playback_strategy IS NULL OR playback_strategy = '')"
+          )
+          .get(folderId) as { count: number }
+      ).count
+    );
+  },
+
   countByTakenAtSource(source: TakenAtSource): number {
     return Number(
       (
@@ -585,6 +605,7 @@ export const imageRepository = {
         images.file_size AS fileSize,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
+        images.playback_strategy AS playbackStrategy,
         images.absolute_path AS originalUrl,
         images.sort_timestamp AS sortTimestamp,
         images.taken_at AS takenAt
@@ -653,7 +674,15 @@ export const imageRepository = {
   },
 
   countWithPreview(): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND preview_path IS NOT NULL').get() as { count: number }).count);
+    return Number(
+      (
+        database
+          .prepare(
+            "SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND (media_type = 'image' OR COALESCE(playback_strategy, 'preview') = 'preview')"
+          )
+          .get() as { count: number }
+      ).count
+    );
   }
 };
 

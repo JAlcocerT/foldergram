@@ -62,6 +62,14 @@ class DatabaseManager {
     if (this.tableExists('images') && !this.tableHasColumn('images', 'taken_at_source')) {
       this.database.exec('ALTER TABLE images ADD COLUMN taken_at_source TEXT NULL');
     }
+
+    if (this.tableExists('images') && !this.tableHasColumn('images', 'playback_strategy')) {
+      this.database.exec("ALTER TABLE images ADD COLUMN playback_strategy TEXT NULL");
+    }
+
+    if (this.tableExists('images') && this.tableHasColumn('images', 'playback_strategy')) {
+      this.database.exec("UPDATE images SET playback_strategy = 'preview' WHERE media_type != 'video' AND playback_strategy IS NULL");
+    }
   }
 
   private applyCompatIndexes(): void {

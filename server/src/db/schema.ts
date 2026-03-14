@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS images (
   taken_at_source TEXT NULL,
   thumbnail_path TEXT NOT NULL,
   preview_path TEXT NOT NULL,
+  playback_strategy TEXT NOT NULL DEFAULT 'preview',
   is_deleted INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

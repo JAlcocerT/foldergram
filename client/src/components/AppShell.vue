@@ -145,7 +145,7 @@ const stickyScanSummary = computed(() => {
     }
 
     return scan.phase === 'derivatives'
-      ? 'Generating thumbnails and previews for the rebuilt library.'
+      ? 'Reusing existing thumbnails and previews where possible, then generating any missing derivatives.'
       : 'Rebuilding folders and indexed posts from the active gallery root.';
   }
 

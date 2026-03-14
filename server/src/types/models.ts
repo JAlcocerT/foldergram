@@ -1,5 +1,6 @@
 export type MediaType = 'image' | 'video';
 export type TakenAtSource = 'exif' | 'mtime' | 'first_seen' | 'sort_timestamp';
+export type PlaybackStrategy = 'preview' | 'original';
 
 export interface FolderRecord {
   id: number;
@@ -38,6 +39,7 @@ export interface ImageRecord {
   taken_at_source: TakenAtSource | null;
   thumbnail_path: string;
   preview_path: string;
+  playback_strategy: PlaybackStrategy | null;
   is_deleted: number;
   created_at: string;
   updated_at: string;

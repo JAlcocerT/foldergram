@@ -14,7 +14,7 @@
           <div class="grid gap-[0.2rem]">
             <strong>Library location changed</strong>
             <p class="m-0 text-muted">
-              The current index may still contain folders and cached media from a previous gallery location. Review the rebuild steps to reset the index and regenerate thumbnails and previews for the current library.
+              The current index may still contain folders and cached media from a previous gallery location. Review the rebuild steps to reset the index, reuse any matching thumbnails and previews, and generate only the missing derivatives for the current library.
             </p>
           </div>
           <RouterLink class="inline-flex items-center justify-center min-h-10 px-4 rounded-[0.8rem] text-[0.84rem] font-bold text-white bg-[#9f6a00] whitespace-nowrap" :to="{ name: 'settings', query: { action: 'rebuild' } }">

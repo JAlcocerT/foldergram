@@ -295,7 +295,10 @@ class ScannerService {
   }
 
   async rebuildLibraryIndex(reason = 'rebuild'): Promise<ScanRunRecord | undefined> {
-    const resolvedOptions = resolveFullScanOptions({ repairUnchangedDerivatives: false });
+    const resolvedOptions = resolveFullScanOptions({
+      repairUnchangedDerivatives: false,
+      forceNewFileDerivatives: false
+    });
 
     await this.enqueue(async () => this.performLibraryRebuild(reason, resolvedOptions));
     return scanRunRepository.latest();
@@ -454,10 +457,6 @@ class ScannerService {
 
   private async clearThumbnailCache(): Promise<void> {
     await this.resetDerivativeDirectory(appConfig.thumbnailsDir);
-  }
-
-  private async clearDerivedMediaCache(): Promise<void> {
-    await Promise.all([this.resetDerivativeDirectory(appConfig.thumbnailsDir), this.resetDerivativeDirectory(appConfig.previewsDir)]);
   }
 
   private isManagedGalleryPath(relativePath: string): boolean {
@@ -648,9 +647,11 @@ class ScannerService {
     );
     const storedFolderState = folderScanStates.get(sourceFolderPath);
     const hasCompleteTakenAtMetadata = imageRepository.countMissingTimestampMetadataByFolder(folder.id) === 0;
+    const hasCompletePlaybackStrategyMetadata = imageRepository.countMissingPlaybackStrategyByFolder(folder.id) === 0;
     const hasMatchingIndexedFiles =
       discoveredFiles.length > 0 &&
       hasCompleteTakenAtMetadata &&
+      hasCompletePlaybackStrategyMetadata &&
       imageRepository.countByFolder(folder.id) === discoveredFiles.length &&
       discoveredFiles.every((file) => {
         const existingImage = imageRepository.getByRelativePath(file.relativePath);
@@ -795,7 +796,6 @@ class ScannerService {
 
     maintenanceRepository.resetLibraryIndex();
     appSettingsRepository.remove(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
-    await this.clearDerivedMediaCache();
 
     const summary = await this.performFullScan(reason, options);
     if (summary.status !== 'failed' && summary.status !== 'skipped_unavailable') {
@@ -1372,6 +1372,7 @@ class ScannerService {
     const previewRelativePath = getPreviewRelativePath(file.relativePath, mediaType);
     const needsTakenAtBackfill = existing?.taken_at === null || existing?.taken_at_source === null;
     const needsMediaBackfill = existing?.media_type !== mediaType || (mediaType === 'video' && existing?.duration_ms === null);
+    const needsPlaybackStrategyBackfill = mediaType === 'video' && existing?.playback_strategy === null;
 
     if (existing && existing.checksum_or_fingerprint === fingerprint) {
       const refreshedIndexedRow = shouldRefreshUnchangedImage({
@@ -1385,16 +1386,20 @@ class ScannerService {
       let metadataDurationMs = existing.duration_ms;
       let metadataWidth = existing.width;
       let metadataHeight = existing.height;
+      let metadataPlaybackStrategy = existing.playback_strategy ?? 'preview';
 
-      if (needsTakenAtBackfill || needsMediaBackfill) {
-        const metadata = await readMediaMetadata(file.absolutePath, mediaType);
+      if (needsTakenAtBackfill || needsMediaBackfill || needsPlaybackStrategyBackfill) {
+        const metadata = await readMediaMetadata(file.absolutePath, mediaType, {
+          fileSize: file.stats.size
+        });
         metadataTakenAt = metadata.takenAt;
         metadataDurationMs = metadata.durationMs;
         metadataWidth = metadata.width;
         metadataHeight = metadata.height;
+        metadataPlaybackStrategy = metadata.playbackStrategy;
       }
 
-      if (refreshedIndexedRow || needsTakenAtBackfill || needsMediaBackfill) {
+      if (refreshedIndexedRow || needsTakenAtBackfill || needsMediaBackfill || needsPlaybackStrategyBackfill) {
         const resolvedTakenAt = resolveTakenAt({
           exifTakenAt: metadataTakenAt,
           existingTakenAt: existing.taken_at,
@@ -1424,13 +1429,14 @@ class ScannerService {
           takenAt: resolvedTakenAt.takenAt,
           takenAtSource: resolvedTakenAt.source,
           thumbnailPath: existing.thumbnail_path || thumbnailRelativePath,
-          previewPath: existing.preview_path || previewRelativePath
+          previewPath: existing.preview_path || previewRelativePath,
+          playbackStrategy: metadataPlaybackStrategy
         });
       }
 
       return {
         status: 'unchanged',
-        derivativeJob: shouldQueueDerivativeJobForStatus('unchanged', options)
+        derivativeJob: shouldQueueDerivativeJobForStatus('unchanged', options) || needsPlaybackStrategyBackfill
           ? {
               absolutePath: file.absolutePath,
               relativePath: file.relativePath,
@@ -1443,7 +1449,9 @@ class ScannerService {
       };
     }
 
-    const metadata = await readMediaMetadata(file.absolutePath, mediaType);
+    const metadata = await readMediaMetadata(file.absolutePath, mediaType, {
+      fileSize: file.stats.size
+    });
     const sortTimestamp = getStableSortTimestamp(
       existing
         ? {
@@ -1485,17 +1493,18 @@ class ScannerService {
       takenAt: resolvedTakenAt.takenAt,
       takenAtSource: resolvedTakenAt.source,
       thumbnailPath: thumbnailRelativePath,
-      previewPath: previewRelativePath
+      previewPath: previewRelativePath,
+      playbackStrategy: metadata.playbackStrategy
     });
 
-    return {
-      status: existing ? 'updated' : 'new',
-      derivativeJob: {
-        absolutePath: file.absolutePath,
-        relativePath: file.relativePath,
-        force: true,
-        kind: 'all'
-      },
+      return {
+        status: existing ? 'updated' : 'new',
+        derivativeJob: {
+          absolutePath: file.absolutePath,
+          relativePath: file.relativePath,
+          force: existing ? true : options.forceNewFileDerivatives,
+          kind: 'all'
+        },
       refreshedIndexedRow: false,
       relativePath: file.relativePath
     };

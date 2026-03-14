@@ -97,7 +97,7 @@
         <!-- Header -->
         <div class="flex items-center justify-between gap-4 border-b border-border px-5 pt-[1.1rem] pb-4">
           <RouterLink class="flex items-center gap-[0.85rem] min-w-0" :to="{ name: 'folder', params: { slug: image.folderSlug } }" aria-label="Open folder">
-            <Avatar :name="image.folderName" :src="folderAvatar" />
+            <Avatar class="h-[2.65rem] w-[2.65rem]" :name="image.folderName" :src="folderAvatar" />
             <div class="min-w-0">
               <h2 class="m-0 text-[0.9rem] font-semibold truncate">{{ image.folderName }}</h2>
               <p class="m-0 text-muted truncate">{{ folder?.breadcrumb ?? image.folderBreadcrumb ?? 'Top-level source folder' }}</p>
