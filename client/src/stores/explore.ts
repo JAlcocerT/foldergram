@@ -16,7 +16,7 @@ interface ExploreState {
   recentSearchesInitialized: boolean;
 }
 
-const RECENT_SEARCHES_STORAGE_KEY = 'insta-local-recent-searches';
+const RECENT_SEARCHES_STORAGE_KEY = 'foldergram-recent-searches';
 const RECENT_SEARCH_LIMIT = 12;
 
 function createRandomSeed(): number {

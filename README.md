@@ -59,7 +59,75 @@ FFmpeg and FFprobe must be available on your local machine for video metadata, t
 
 Nested subfolders are ignored by design.
 
-## Setup
+## Release-first quick start
+
+For GitHub users who want to run the app rather than work on the code, use Docker Compose first.
+
+1. Clone the repository.
+2. Put media under `data/gallery/<folder-name>/`.
+3. Start the app:
+
+```bash
+docker compose up -d --build
+```
+
+4. Open `http://localhost:4173`.
+
+Useful Docker commands:
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+Notes:
+
+- The Compose setup bind-mounts `./data` into the container, so your database, thumbnails, previews, and gallery files stay on your machine.
+- `restart: unless-stopped` means the container is suitable for an always-on homelab setup.
+- The current Compose file builds from the local repository. If you later publish a container image to Docker Hub or GHCR, you can switch from `build:` to `image:`.
+
+Maintainer note:
+
+- The repository includes a GitHub Actions workflow at `.github/workflows/publish-ghcr.yml` for publishing multi-arch images to GHCR.
+- The release checklist lives in `docs/release-checklist.md`.
+
+## Run from source
+
+Use this if you do not want Docker and you are comfortable installing local dependencies yourself.
+
+Requirements:
+
+- Node.js 22
+- `pnpm`
+- FFmpeg and FFprobe available on your system `PATH`
+
+1. Copy `.env.example` to `.env`.
+2. Keep the default paths unless you want custom directories.
+3. Add folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
+4. Add image or video files inside each folder.
+5. Install dependencies:
+
+```bash
+pnpm install
+```
+
+6. Build the app:
+
+```bash
+pnpm build
+```
+
+7. Start the production server:
+
+```bash
+pnpm start
+```
+
+Open `http://localhost:4173`.
+
+## Development setup
+
+`pnpm dev` is the contributor workflow. It starts the Vite client and the API server with watch mode.
 
 1. Copy `.env.example` to `.env`.
 2. Keep the default paths unless you want custom directories.
@@ -89,6 +157,14 @@ pnpm build
 ```
 
 This builds both the server and the client. In production mode the Express server will serve the built client if `client/dist` exists.
+
+## Run in production
+
+```bash
+pnpm start
+```
+
+This expects a previous `pnpm build`.
 
 ## Manual rescan
 
@@ -126,6 +202,11 @@ data/
 ```
 
 If you want to place the library on another drive, update `GALLERY_ROOT` or the other path variables in `.env`.
+
+Docker note:
+
+- The included `docker-compose.yml` uses `/app/data` inside the container and maps it to local `./data`.
+- If you want the gallery to live somewhere else on the host, change the volume mount and set `GALLERY_ROOT` to the matching in-container path.
 
 If you already have an older local setup using top-level `gallery/`, `thumbnails/`, `previews/`, or `data/gallery.sqlite`, either move those into the new `data/` layout or point `.env` at the existing locations.
 

@@ -15,9 +15,9 @@ interface AppState {
   statsPollTimer: ReturnType<typeof setInterval> | null;
 }
 
-const THEME_STORAGE_KEY = 'insta-local-theme';
-const LAST_OPENED_FOLDER_STORAGE_KEY = 'insta-local-last-opened-folder';
-const RECENT_OPENED_FOLDERS_STORAGE_KEY = 'insta-local-recent-opened-folders';
+const THEME_STORAGE_KEY = 'foldergram-theme';
+const LAST_OPENED_FOLDER_STORAGE_KEY = 'foldergram-last-opened-folder';
+const RECENT_OPENED_FOLDERS_STORAGE_KEY = 'foldergram-recent-opened-folders';
 const RECENT_OPENED_FOLDERS_LIMIT = 24;
 
 function parseStoredRecentFolderSlugs(value: string | null): string[] {

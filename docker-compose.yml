@@ -1,0 +1,19 @@
+services:
+  foldergram:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: foldergram:local
+    ports:
+      - "4173:4173"
+    environment:
+      PORT: 4173
+      NODE_ENV: production
+      DATA_ROOT: /app/data
+      GALLERY_ROOT: /app/data/gallery
+      DB_DIR: /app/data/db
+      THUMBNAILS_DIR: /app/data/thumbnails
+      PREVIEWS_DIR: /app/data/previews
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

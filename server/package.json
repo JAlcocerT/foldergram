@@ -1,5 +1,5 @@
 {
-  "name": "@insta-local/server",
+  "name": "@foldergram/server",
   "private": true,
   "version": "1.0.0",
   "type": "module",
