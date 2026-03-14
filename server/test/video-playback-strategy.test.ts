@@ -27,6 +27,7 @@ describe.sequential('video playback strategy mapping', () => {
   let folderRepository: RepositoriesModule['folderRepository'];
   let imageRepository: RepositoriesModule['imageRepository'];
   let maintenanceRepository: RepositoriesModule['maintenanceRepository'];
+  let scanRunRepository: RepositoriesModule['scanRunRepository'];
 
   beforeAll(async () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'insta-video-playback-'));
@@ -42,7 +43,7 @@ describe.sequential('video playback strategy mapping', () => {
 
     ({ appConfig } = await import('../src/config/env.js'));
     ({ galleryService } = await import('../src/services/gallery-service.js'));
-    ({ folderRepository, imageRepository, maintenanceRepository } = await import('../src/db/repositories.js'));
+    ({ folderRepository, imageRepository, maintenanceRepository, scanRunRepository } = await import('../src/db/repositories.js'));
   });
 
   afterAll(async () => {
@@ -53,6 +54,11 @@ describe.sequential('video playback strategy mapping', () => {
 
   beforeEach(async () => {
     maintenanceRepository.resetLibraryIndex();
+    await Promise.all([
+      fs.rm(appConfig.galleryRoot, { recursive: true, force: true }),
+      fs.rm(appConfig.thumbnailsDir, { recursive: true, force: true }),
+      fs.rm(appConfig.previewsDir, { recursive: true, force: true })
+    ]);
     await Promise.all([
       fs.mkdir(appConfig.galleryRoot, { recursive: true }),
       fs.mkdir(appConfig.thumbnailsDir, { recursive: true }),
@@ -87,6 +93,26 @@ describe.sequential('video playback strategy mapping', () => {
     expect(stats.previewCount).toBe(2);
   });
 
+  it('reports the latest completed scan in stats even when a newer run is still in progress', () => {
+    const completedRunId = scanRunRepository.start();
+    scanRunRepository.finish(completedRunId, {
+      finished_at: '2026-03-02T00:00:00.000Z',
+      status: 'completed',
+      scanned_files: 3,
+      new_files: 1,
+      updated_files: 1,
+      removed_files: 0,
+      error_text: null
+    });
+
+    scanRunRepository.start();
+
+    const stats = galleryService.getStats();
+    expect(stats.lastScan?.id).toBe(completedRunId);
+    expect(stats.lastScan?.status).toBe('completed');
+    expect(stats.scan.lastCompletedScan?.id).toBe(completedRunId);
+  });
+
   function createIndexedMedia(
     folder: FolderRecord,
     filename: string,
@@ -94,7 +120,7 @@ describe.sequential('video playback strategy mapping', () => {
     playbackStrategy: PlaybackStrategy,
     durationMs: number | null = null
   ) {
-    const relativePath = `clips/${filename}`;
+    const relativePath = `${folder.folder_path}/${filename}`;
     const absolutePath = path.join(appConfig.galleryRoot, relativePath);
     const extension = path.extname(filename).toLowerCase();
     const mediaType = getMediaTypeFromExtension(extension);
@@ -125,4 +151,5 @@ describe.sequential('video playback strategy mapping', () => {
       playbackStrategy
     });
   }
+
 });

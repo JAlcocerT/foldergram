@@ -724,8 +724,9 @@ export const galleryService = {
   },
 
   getStats() {
-    const lastScan = scanRunRepository.latest();
+    const lastCompletedScan = scanRunRepository.latestCompleted() ?? null;
     const storageState = storageService.getState();
+    const scanProgress = scannerService.getProgress();
     const currentGalleryRoot = appConfig.galleryRoot;
     const previousGalleryRoot = appSettingsRepository.get(PREVIOUS_GALLERY_ROOT_SETTING_KEY);
     const rebuildRequired = appSettingsRepository.get(LIBRARY_REBUILD_REQUIRED_SETTING_KEY) === '1';
@@ -738,8 +739,11 @@ export const galleryService = {
       deletedImages: storageState.libraryAvailable ? imageRepository.countDeleted() : 0,
       thumbnailCount: storageState.libraryAvailable ? imageRepository.countWithThumbnail() : 0,
       previewCount: storageState.libraryAvailable ? imageRepository.countWithPreview() : 0,
-      lastScan: lastScan ?? null,
-      scan: scannerService.getProgress(),
+      lastScan: lastCompletedScan,
+      scan: {
+        ...scanProgress,
+        lastCompletedScan
+      },
       storage: {
         available: storageState.libraryAvailable,
         reason: storageState.reason,

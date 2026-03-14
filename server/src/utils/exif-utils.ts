@@ -28,7 +28,14 @@ export function normalizeTakenAtValue(value: Date | string | number | null | und
 }
 
 export async function extractTakenAt(sourcePath: string): Promise<number | null> {
-  const metadata = (await exifr.parse(sourcePath, [...EXIF_DATE_TAGS])) as ExifDatePayload | null;
+  let metadata: ExifDatePayload | null;
+
+  try {
+    metadata = (await exifr.parse(sourcePath, [...EXIF_DATE_TAGS])) as ExifDatePayload | null;
+  } catch {
+    return null;
+  }
+
   if (!metadata) {
     return null;
   }

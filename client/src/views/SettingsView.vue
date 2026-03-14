@@ -8,6 +8,35 @@
       </div>
     </header>
 
+    <section
+      v-if="showScanErrorNotice"
+      class="card grid gap-[1rem] p-8 border-[color-mix(in_srgb,#d2a133_45%,var(--border)_55%)]"
+      style="background: radial-gradient(circle at top right, rgba(210,161,51,0.18), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, #fff4d1 8%) 0%, color-mix(in srgb, var(--surface) 86%, #ffeab1 14%) 100%);"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div class="grid gap-[0.35rem]">
+          <span class="eyebrow text-[#9f6a00]">Scan Needs Attention</span>
+          <h2 class="m-0 text-[1.1rem]">The last scan completed with errors</h2>
+          <p class="m-0 text-muted">{{ scanErrorNoticeMessage }}</p>
+        </div>
+        <button
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-[rgba(159,106,0,0.08)] text-[#9f6a00] cursor-pointer transition-colors duration-180 hover:bg-[rgba(159,106,0,0.14)]"
+          type="button"
+          aria-label="Dismiss scan warning"
+          @click="dismissScanErrorNotice"
+        >
+          <span class="i-fluent-dismiss-20-filled h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+        <button class="btn-primary min-w-[11.5rem]" type="button" :disabled="scanActionDisabled" @click="runManualScan">
+          {{ scanButtonLabel }}
+        </button>
+        <p class="m-0 text-muted">Run a new library scan to retry failed media and fill in any missing thumbnails or previews.</p>
+      </div>
+    </section>
+
     <section class="grid grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.95fr)] gap-6 items-start max-md:grid-cols-1">
       <!-- Left: Scan controls -->
       <div class="flex flex-col gap-[1.15rem]">
@@ -92,7 +121,7 @@
                   {{ rebuildButtonLabel }}
                 </button>
                 <p class="m-0 text-muted">
-                  Reset the library index and regenerate cached media from the current gallery root.
+                  Reset the library index, reuse matching cached media, and generate only missing derivatives from the current gallery root.
                 </p>
               </div>
               <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
@@ -127,10 +156,6 @@
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
               <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed videos</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedVideos ?? 0) }}</dd>
-            </div>
-            <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previews</dt>
-              <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.previewCount ?? 0) }}</dd>
             </div>
           </dl>
         </section>
@@ -215,6 +240,40 @@ const rebuilding = ref(false);
 const rebuildingThumbnails = ref(false);
 const confirmRebuildOpen = ref(false);
 const confirmThumbnailRebuildOpen = ref(false);
+const SCAN_ERROR_NOTICE_STORAGE_KEY = 'foldergram-scan-error-notice-dismissal';
+const SCAN_ERROR_NOTICE_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function loadDismissedScanErrorNotice(): { scanId: number; dismissedUntil: number } | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(SCAN_ERROR_NOTICE_STORAGE_KEY);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as { scanId?: unknown; dismissedUntil?: unknown };
+    if (
+      typeof parsed.scanId !== 'number' ||
+      !Number.isFinite(parsed.scanId) ||
+      typeof parsed.dismissedUntil !== 'number' ||
+      !Number.isFinite(parsed.dismissedUntil)
+    ) {
+      return null;
+    }
+
+    return {
+      scanId: parsed.scanId,
+      dismissedUntil: parsed.dismissedUntil
+    };
+  } catch {
+    return null;
+  }
+}
+
+const dismissedScanErrorNotice = ref(loadDismissedScanErrorNotice());
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -426,6 +485,46 @@ const lastScanChangeSummary = computed(() => {
 
   return `${lastCompletedScan.value.new_files} new\n${lastCompletedScan.value.updated_files} updated\n${lastCompletedScan.value.removed_files} removed`;
 });
+const showScanErrorNotice = computed(() => {
+  if (appStore.isLibraryUnavailable || appStore.isScanning) {
+    return false;
+  }
+
+  if (lastCompletedScan.value?.status !== 'completed_with_errors') {
+    return false;
+  }
+
+  const dismissed = dismissedScanErrorNotice.value;
+  if (!dismissed) {
+    return true;
+  }
+
+  if (dismissed.scanId !== lastCompletedScan.value.id) {
+    return true;
+  }
+
+  return Date.now() >= dismissed.dismissedUntil;
+});
+const scanErrorNoticeMessage = computed(() => {
+  return 'Some media failed during the last run. Scan the library again to retry any missed files and derivative generation.';
+});
+
+function dismissScanErrorNotice() {
+  const scanId = lastCompletedScan.value?.id;
+  if (!scanId) {
+    return;
+  }
+
+  const nextDismissal = {
+    scanId,
+    dismissedUntil: Date.now() + SCAN_ERROR_NOTICE_DISMISS_MS
+  };
+
+  dismissedScanErrorNotice.value = nextDismissal;
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(SCAN_ERROR_NOTICE_STORAGE_KEY, JSON.stringify(nextDismissal));
+  }
+}
 
 async function warmScanStatus() {
   for (let attempt = 0; attempt < 12; attempt += 1) {
