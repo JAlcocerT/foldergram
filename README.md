@@ -59,19 +59,61 @@ FFmpeg and FFprobe must be available on your local machine for video metadata, t
 
 Nested subfolders are ignored by design.
 
-## Release-first quick start
+## Installation
 
-For GitHub users who want to run the app rather than work on the code, use Docker Compose first.
+### Docker with the published GHCR image
 
-1. Clone the repository.
-2. Put media under `data/gallery/<folder-name>/`.
-3. Start the app:
+This is the recommended install path for most users.
+
+1. Create a `docker-compose.yml` file with the following content:
+
+```yaml
+services:
+  foldergram:
+    image: ghcr.io/sajjadalis/foldergram:latest
+    ports:
+      - "4173:4173"
+    environment:
+      PORT: 4173
+      NODE_ENV: production
+      DATA_ROOT: /app/data
+      GALLERY_ROOT: /app/data/gallery
+      DB_DIR: /app/data/db
+      THUMBNAILS_DIR: /app/data/thumbnails
+      PREVIEWS_DIR: /app/data/previews
+    volumes:
+      - ./data/gallery:/app/data/gallery
+      - ./data/db:/app/data/db
+      - ./data/thumbnails:/app/data/thumbnails
+      - ./data/previews:/app/data/previews
+    restart: unless-stopped
+```
+
+2. Put media under `./data/gallery/<folder-name>/`, or edit the left-hand side of the bind mounts to point at an existing library on another drive.
+3. Start Foldergram:
+
+```bash
+docker compose up -d
+```
+
+4. Open `http://localhost:4173`.
+
+Notes:
+
+- The published GHCR image path for this repository is `ghcr.io/sajjadalis/foldergram`.
+- Docker users do not need to create `.env`.
+- The bind mounts keep your gallery, database, thumbnails, and previews on the host machine.
+- Once a stable version is published, you can pin a release tag such as `ghcr.io/sajjadalis/foldergram:v1.0.0` instead of using `latest`.
+
+### Docker from a local checkout
+
+If you cloned the repository and want Docker to build the image locally instead of pulling from GHCR, use the included [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml):
 
 ```bash
 docker compose up -d --build
 ```
 
-4. Open `http://localhost:4173`.
+Open `http://localhost:4173`.
 
 Useful Docker commands:
 
@@ -80,91 +122,50 @@ docker compose logs -f
 docker compose down
 ```
 
-Notes:
+If you want Docker to use host paths outside the repo, edit the left-hand side of the bind mounts in [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml).
 
-- The Compose setup bind-mounts `./data` into the container, so your database, thumbnails, previews, and gallery files stay on your machine.
-- `restart: unless-stopped` means the container is suitable for an always-on homelab setup.
-- The current Compose file builds from the local repository. If you later publish a container image to Docker Hub or GHCR, you can switch from `build:` to `image:`.
+### Install from source without Docker
 
-Maintainer note:
-
-- The repository includes a GitHub Actions workflow at `.github/workflows/publish-ghcr.yml` for publishing multi-arch images to GHCR.
-- The release checklist lives in `docs/release-checklist.md`.
-
-## Run from source
-
-Use this if you do not want Docker and you are comfortable installing local dependencies yourself.
+Use this if you want to run Foldergram directly with Node.js.
 
 Requirements:
 
 - Node.js 22
-- `pnpm`
+- `pnpm` via Corepack or a global install
 - FFmpeg and FFprobe available on your system `PATH`
 
-1. Copy `.env.example` to `.env`.
-2. Keep the default paths unless you want custom directories.
-3. Add folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
-4. Add image or video files inside each folder.
-5. Install dependencies:
+1. Clone the repository.
+2. Copy `.env.example` to `.env`.
+3. Edit `.env` if you want custom gallery, thumbnail, preview, or database locations.
+4. Install dependencies:
 
 ```bash
+corepack enable
 pnpm install
 ```
 
-6. Build the app:
-
-```bash
-pnpm build
-```
-
-7. Start the production server:
-
-```bash
-pnpm start
-```
-
-Open `http://localhost:4173`.
-
-## Development setup
-
-`pnpm dev` is the contributor workflow. It starts the Vite client and the API server with watch mode.
-
-1. Copy `.env.example` to `.env`.
-2. Keep the default paths unless you want custom directories.
-3. Add folders under `data/gallery/`, or point `GALLERY_ROOT` to an existing library path.
-4. Add image or video files inside each folder.
-5. Install dependencies:
-
-```bash
-pnpm install
-```
-
-## Run in development
+5. Start development mode:
 
 ```bash
 pnpm dev
 ```
 
-- Client: `http://localhost:5173`
-- API: `http://localhost:4173`
-
-The server performs an initial scan on startup. In development mode it also watches the configured gallery root for changes.
-
-## Build
+6. Or build and run production mode locally:
 
 ```bash
 pnpm build
-```
-
-This builds both the server and the client. In production mode the Express server will serve the built client if `client/dist` exists.
-
-## Run in production
-
-```bash
 pnpm start
 ```
 
-This expects a previous `pnpm build`.
+Notes:
+
+- The documented source workflow uses `pnpm`. This repository is a `pnpm` workspace.
+- `pnpm dev` starts the Vite client on `http://localhost:5173`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
+- `pnpm build` builds both the client and server, and `pnpm start` serves the built app from Express.
+
+Maintainer note:
+
+- The repository includes a GitHub Actions workflow at [publish-ghcr.yml](/home/sa/apps/insta/.github/workflows/publish-ghcr.yml) for publishing multi-arch images to GHCR.
 
 ## Manual rescan
 
@@ -205,8 +206,14 @@ If you want to place the library on another drive, update `GALLERY_ROOT` or the 
 
 Docker note:
 
-- The included `docker-compose.yml` uses `/app/data` inside the container and maps it to local `./data`.
-- If you want the gallery to live somewhere else on the host, change the volume mount and set `GALLERY_ROOT` to the matching in-container path.
+- The included `docker-compose.yml` keeps fixed in-container paths under `/app/data`.
+- By default, Docker bind-mounts these host paths:
+  - `./data/gallery`
+  - `./data/db`
+  - `./data/thumbnails`
+  - `./data/previews`
+- If you want Docker to use locations like `/mnt/d/...`, edit only the left-hand side of the bind mounts in `docker-compose.yml`.
+- Do not change the app's in-container `GALLERY_ROOT`, `DB_DIR`, `THUMBNAILS_DIR`, or `PREVIEWS_DIR` values away from `/app/...`.
 
 If you already have an older local setup using top-level `gallery/`, `thumbnails/`, `previews/`, or `data/gallery.sqlite`, either move those into the new `data/` layout or point `.env` at the existing locations.
 

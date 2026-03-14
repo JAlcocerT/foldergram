@@ -15,5 +15,8 @@ services:
       THUMBNAILS_DIR: /app/data/thumbnails
       PREVIEWS_DIR: /app/data/previews
     volumes:
-      - ./data:/app/data
+      - ./data/gallery:/app/data/gallery
+      - ./data/db:/app/data/db
+      - ./data/thumbnails:/app/data/thumbnails
+      - ./data/previews:/app/data/previews
     restart: unless-stopped

@@ -2,19 +2,23 @@
   "name": "foldergram",
   "private": true,
   "version": "1.0.0",
+  "license": "AGPL-3.0-only",
   "packageManager": "pnpm@10.28.0",
   "workspaces": [
     "server",
-    "client"
+    "client",
+    "docs"
   ],
   "scripts": {
-    "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:client\"",
+    "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:client\" \"pnpm dev:docs\"",
     "dev:server": "pnpm --filter @foldergram/server dev",
     "dev:client": "pnpm --filter @foldergram/client dev",
+    "dev:docs": "pnpm --filter @foldergram/docs dev",
     "build": "pnpm build:server && pnpm build:client",
     "start": "cross-env NODE_ENV=production pnpm --filter @foldergram/server start",
     "build:server": "pnpm --filter @foldergram/server build",
     "build:client": "pnpm --filter @foldergram/client build",
+    "build:docs": "pnpm --filter @foldergram/docs build",
     "rescan": "pnpm --filter @foldergram/server rescan",
     "test": "pnpm --filter @foldergram/server test"
   },
