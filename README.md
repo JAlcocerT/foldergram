@@ -72,9 +72,9 @@ services:
   foldergram:
     image: ghcr.io/sajjadalis/foldergram:latest
     ports:
-      - "4173:4173"
+      - "4175:4175"
     environment:
-      PORT: 4173
+      PORT: 4175
       NODE_ENV: production
       DATA_ROOT: /app/data
       GALLERY_ROOT: /app/data/gallery
@@ -96,7 +96,7 @@ services:
 docker compose up -d
 ```
 
-4. Open `http://localhost:4173`.
+4. Open `http://localhost:4175`.
 
 Notes:
 
@@ -113,7 +113,7 @@ If you cloned the repository and want Docker to build the image locally instead 
 docker compose up -d --build
 ```
 
-Open `http://localhost:4173`.
+Open `http://localhost:4175`.
 
 Useful Docker commands:
 
@@ -131,7 +131,7 @@ Use this if you want to run Foldergram directly with Node.js.
 Requirements:
 
 - Node.js 22
-- `pnpm` via Corepack or a global install
+- npm included with Node.js
 - FFmpeg and FFprobe available on your system `PATH`
 
 1. Clone the repository.
@@ -140,28 +140,28 @@ Requirements:
 4. Install dependencies:
 
 ```bash
-corepack enable
-pnpm install
+npm install
 ```
 
 5. Start development mode:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 6. Or build and run production mode locally:
 
 ```bash
-pnpm build
-pnpm start
+npm run build
+npm start
 ```
 
 Notes:
 
-- The documented source workflow uses `pnpm`. This repository is a `pnpm` workspace.
-- `pnpm dev` starts the Vite client on `http://localhost:4175`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
-- `pnpm build` builds both the client and server, and `pnpm start` serves the built app from Express.
+- npm works out of the box for install and root scripts.
+- `npm run dev` starts the Vite client on `http://localhost:4175`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
+- `npm run build` builds both the client and server, and `npm start` serves the built app from Express.
+- `pnpm` remains supported if you prefer it. `pnpm install`, `pnpm run dev`, `pnpm run build`, and `pnpm start` use the same root scripts.
 
 Maintainer note:
 
@@ -170,13 +170,13 @@ Maintainer note:
 ## Manual rescan
 
 ```bash
-pnpm rescan
+npm run rescan
 ```
 
 ## Tests
 
 ```bash
-pnpm test
+npm test
 ```
 
 Current tests cover:

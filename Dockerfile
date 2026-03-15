@@ -23,6 +23,6 @@ ENV NODE_ENV=production
 
 RUN pnpm build
 
-EXPOSE 4173
+EXPOSE 4175
 
 CMD ["pnpm", "start"]
