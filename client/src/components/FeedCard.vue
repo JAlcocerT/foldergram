@@ -77,11 +77,11 @@
         :poster="item.thumbnailUrl"
         :controls="isActiveVideo"
         loop
-        muted
         playsinline
         preload="metadata"
         @loadedmetadata="syncHomeVideoPlayback"
         @play="handleHomeVideoPlay"
+        @volumechange="handleHomeVideoVolumeChange"
       />
       <div
         class="absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 py-3 text-white pointer-events-none bg-[linear-gradient(180deg,rgba(10,14,24,0.82)_0%,rgba(10,14,24,0)_100%)]"
@@ -294,6 +294,7 @@ const lastHomeImageTapAt = ref(0);
 
 let homeImageTapResetTimer: ReturnType<typeof setTimeout> | null = null;
 let homeVideoObserver: IntersectionObserver | null = null;
+let homeVideoMuteSyncToken = 0;
 
 const imageRoute = computed(() => `/image/${props.item.id}`);
 const isHomeContext = computed(() => props.context === 'home');
@@ -417,6 +418,17 @@ function startHomeVideoObserver() {
   homeVideoObserver.observe(homeVideoTarget.value);
 }
 
+function syncHomeVideoMuted(video: HTMLVideoElement, muted: boolean) {
+  const token = ++homeVideoMuteSyncToken;
+  video.muted = muted;
+
+  requestAnimationFrame(() => {
+    if (homeVideoMuteSyncToken === token) {
+      homeVideoMuteSyncToken = 0;
+    }
+  });
+}
+
 async function syncHomeVideoPlayback() {
   if (!isHomeContext.value || props.item.mediaType !== 'video') {
     return;
@@ -429,22 +441,45 @@ async function syncHomeVideoPlayback() {
 
   if (!props.isActiveVideo) {
     video.pause();
+    syncHomeVideoMuted(video, appStore.videoMuted);
     return;
   }
 
-  video.defaultMuted = true;
-  video.muted = true;
+  syncHomeVideoMuted(video, appStore.videoMuted);
+
+  try {
+    await video.play();
+    return;
+  } catch {
+    if (appStore.videoMuted) {
+      // Ignore autoplay rejections and leave manual controls available when focused.
+      return;
+    }
+  }
+
+  syncHomeVideoMuted(video, true);
 
   try {
     await video.play();
   } catch {
-    // Ignore autoplay rejections and leave controls available when focused.
+    // Ignore autoplay rejections and leave manual controls available when focused.
   }
 }
 
 function handleHomeVideoPlay() {
   if (!props.isActiveVideo) {
     homeVideoElement.value?.pause();
+  }
+}
+
+function handleHomeVideoVolumeChange() {
+  const video = homeVideoElement.value;
+  if (!video || homeVideoMuteSyncToken !== 0) {
+    return;
+  }
+
+  if (video.muted !== appStore.videoMuted) {
+    appStore.setVideoMuted(video.muted);
   }
 }
 
@@ -490,6 +525,18 @@ watch(
   () => props.isActiveVideo,
   () => {
     void syncHomeVideoPlayback();
+  }
+);
+
+watch(
+  () => appStore.videoMuted,
+  (videoMuted) => {
+    const video = homeVideoElement.value;
+    if (!video) {
+      return;
+    }
+
+    syncHomeVideoMuted(video, videoMuted);
   }
 );
 

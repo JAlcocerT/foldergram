@@ -144,6 +144,107 @@ img[data-loaded="true"] {
   border-radius: 999px;
 }
 
+.viewer__card-wrapper {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(20rem, 0.9fr);
+  overflow: hidden;
+}
+
+.viewer__card-wrapper--modal {
+  max-height: calc(100vh - 2rem);
+}
+
+.viewer__card-wrapper--compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.viewer__media {
+  position: relative;
+  background: var(--surface-alt);
+}
+
+.viewer__media--modal {
+  height: calc(100vh - 2rem);
+  min-height: 0;
+}
+
+.viewer__media--page {
+  min-height: 34rem;
+}
+
+.viewer__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.viewer__sidebar--modal {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.viewer__sidebar--drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  width: min(24rem, calc(100vw - 4rem));
+  max-width: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 20px 48px rgba(15, 20, 25, 0.24);
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+.viewer__sidebar--drawer-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.viewer__drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border: 0;
+  background: rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.viewer__sidebar-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  opacity: 0.7;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.viewer__sidebar-toggle:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .viewer__card-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .viewer__media--page {
+    min-height: 18rem;
+  }
+}
+
 /* ── Keyframe animations ────────────────────────────────────── */
 @keyframes shimmer {
   0% {

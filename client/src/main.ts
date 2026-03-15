@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+
 import App from './App.vue';
 import { router } from './router';
 import { useAppStore } from './stores/app';
@@ -6,28 +7,71 @@ import { pinia } from './stores/pinia';
 import './styles/base.css';
 import 'virtual:uno.css';
 
-const app = createApp(App);
+const DEV_SERVICE_WORKER_RESET_KEY = 'foldergram-dev-service-worker-reset';
 
-app.use(pinia);
-app.use(router);
-
-const appStore = useAppStore(pinia);
-
-appStore.initializeTheme();
-appStore.initializeLastOpenedFolder();
-
-router.afterEach((to) => {
-  if (to.name === 'folder' && typeof to.params.slug === 'string') {
-    appStore.recordOpenedFolder(to.params.slug);
+async function disableServiceWorkerInDevelopment(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) {
+    return false;
   }
-});
 
-app.mount('#app');
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  if (registrations.length === 0) {
+    window.sessionStorage.removeItem(DEV_SERVICE_WORKER_RESET_KEY);
+    return false;
+  }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Ignore registration failures and keep the app usable without PWA features.
-    });
-  });
+  await Promise.all(registrations.map((registration) => registration.unregister()));
+
+  if ('caches' in window) {
+    const cacheKeys = await window.caches.keys();
+    await Promise.all(cacheKeys.filter((key) => key.startsWith('foldergram-')).map((key) => window.caches.delete(key)));
+  }
+
+  if (navigator.serviceWorker.controller && window.sessionStorage.getItem(DEV_SERVICE_WORKER_RESET_KEY) !== '1') {
+    window.sessionStorage.setItem(DEV_SERVICE_WORKER_RESET_KEY, '1');
+    window.location.reload();
+    return true;
+  }
+
+  window.sessionStorage.removeItem(DEV_SERVICE_WORKER_RESET_KEY);
+  return false;
 }
+
+async function bootstrap() {
+  if (import.meta.env.DEV && (await disableServiceWorkerInDevelopment())) {
+    return;
+  }
+
+  const app = createApp(App);
+
+  app.use(pinia);
+  app.use(router);
+
+  const appStore = useAppStore(pinia);
+
+  appStore.initializeTheme();
+
+  if (typeof appStore.initializeVideoMuted === 'function') {
+    appStore.initializeVideoMuted();
+  }
+
+  appStore.initializeLastOpenedFolder();
+
+  router.afterEach((to) => {
+    if (to.name === 'folder' && typeof to.params.slug === 'string') {
+      appStore.recordOpenedFolder(to.params.slug);
+    }
+  });
+
+  app.mount('#app');
+
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Ignore registration failures and keep the app usable without PWA features.
+      });
+    });
+  }
+}
+
+void bootstrap();

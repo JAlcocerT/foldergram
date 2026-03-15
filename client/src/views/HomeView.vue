@@ -1,7 +1,17 @@
 <template>
   <section
-    class="grid grid-cols-[minmax(0,39.375rem)_19.9375rem] gap-[4rem] items-start justify-center w-[min(100%,63.3125rem)] mx-auto max-md:grid-cols-1 max-md:w-full md:relative"
-    style="left: calc(var(--desktop-content-compensation) * -1);"
+    ref="homeLayoutElement"
+    :class="[
+      'grid gap-[4rem] items-start justify-center mx-auto',
+      isCompactHomeLayout
+        ? 'grid-cols-1 w-full'
+        : 'grid-cols-[minmax(0,39.375rem)_19.9375rem] w-[min(100%,63.3125rem)] md:relative',
+    ]"
+    :style="
+      isCompactHomeLayout
+        ? undefined
+        : { left: 'calc(var(--desktop-content-compensation) * -1)' }
+    "
   >
     <!-- Main feed column -->
     <div class="min-w-0">
@@ -47,8 +57,8 @@
           </div>
         </section>
 
-        <div class="w-full max-w-[29.375rem] mx-auto flex items-center justify-between gap-[0.8rem]">
-          <div class="flex flex-wrap gap-[0.35rem]">
+        <div class="w-full max-w-[29.375rem] mx-auto flex items-center justify-between gap-[0.8rem] max-sm:flex-col max-sm:items-center">
+          <div class="flex flex-wrap gap-[0.35rem] max-sm:w-full max-sm:justify-center">
             <button
               v-for="mode in feedModes"
               :key="mode.id"
@@ -70,7 +80,7 @@
 
           <div
             v-if="appStore.stats"
-            class="m-0 shrink-0 flex items-center gap-[0.75rem] whitespace-nowrap text-[0.85rem] text-muted"
+            class="m-0 shrink-0 flex items-center gap-[0.75rem] whitespace-nowrap text-[0.85rem] text-muted max-sm:mt-[3px] max-sm:justify-center"
             :aria-label="indexedSummaryLabel"
             role="status"
           >
@@ -140,7 +150,15 @@
     </div>
 
     <!-- Right rail (suggestions) — hidden on mobile -->
-    <aside v-if="!appStore.isLibraryUnavailable && homeSummaryFolder" class="sticky top-8 grid gap-[1.15rem] w-[19.9375rem] text-muted max-md:hidden" aria-label="Folder recommendations">
+    <aside
+      v-if="
+        !appStore.isLibraryUnavailable &&
+        homeSummaryFolder &&
+        !isCompactHomeLayout
+      "
+      class="sticky top-8 grid gap-[1.15rem] w-[19.9375rem] text-muted"
+      aria-label="Folder recommendations"
+    >
       <div class="flex items-center gap-[0.8rem]">
         <Avatar class="w-11 h-11" :name="homeSummaryFolder.name" :src="homeSummaryFolder.avatarUrl" />
         <div class="flex-1 min-w-0">
@@ -187,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import Avatar from '../components/Avatar.vue';
@@ -216,6 +234,11 @@ const homeRecommendations = computed(() =>
 const homeSummaryFolder = computed(() => homeRecommendations.value.homeSummaryFolder);
 const recommendedFolders = computed(() => homeRecommendations.value.recommendedFolders);
 const activeRailViewerId = ref<string | null>(null);
+const homeLayoutElement = ref<HTMLElement | null>(null);
+const isCompactHomeLayout = ref(false);
+
+const HOME_RIGHT_RAIL_BREAKPOINT = 960;
+let homeLayoutResizeObserver: ResizeObserver | null = null;
 
 function formatCount(value: number) {
   return new Intl.NumberFormat().format(value);
@@ -285,7 +308,23 @@ function closeRailViewer() {
   activeRailViewerId.value = null;
 }
 
+function updateHomeLayout() {
+  const layoutWidth = homeLayoutElement.value?.clientWidth ?? window.innerWidth;
+  isCompactHomeLayout.value = layoutWidth <= HOME_RIGHT_RAIL_BREAKPOINT;
+}
+
 onMounted(async () => {
+  updateHomeLayout();
+
+  if (typeof ResizeObserver !== 'undefined' && homeLayoutElement.value) {
+    homeLayoutResizeObserver = new ResizeObserver(() => {
+      updateHomeLayout();
+    });
+    homeLayoutResizeObserver.observe(homeLayoutElement.value);
+  } else {
+    window.addEventListener('resize', updateHomeLayout);
+  }
+
   if (appStore.isLibraryUnavailable) {
     return;
   }
@@ -339,4 +378,10 @@ watch(
     }
   }
 );
+
+onUnmounted(() => {
+  homeLayoutResizeObserver?.disconnect();
+  homeLayoutResizeObserver = null;
+  window.removeEventListener('resize', updateHomeLayout);
+});
 </script>

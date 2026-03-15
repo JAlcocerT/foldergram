@@ -13,7 +13,7 @@
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4fc08d?style=flat-square&logo=vuedotjs)](https://vuejs.org/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 
-[Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Tech Stack](#-tech-stack)
+[Features](#-features) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Tech Stack](#-tech-stack)
 
 </div>
 

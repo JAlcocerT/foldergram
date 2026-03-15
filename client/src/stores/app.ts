@@ -8,6 +8,7 @@ interface AppState {
   loadingStats: boolean;
   error: string | null;
   theme: 'light' | 'dark';
+  videoMuted: boolean;
   lastOpenedFolderSlug: string | null;
   recentOpenedFolderSlugs: string[];
   imageModalBackgroundPath: string | null;
@@ -16,6 +17,7 @@ interface AppState {
 }
 
 const THEME_STORAGE_KEY = 'foldergram-theme';
+const VIDEO_MUTED_STORAGE_KEY = 'foldergram-video-muted';
 const LAST_OPENED_FOLDER_STORAGE_KEY = 'foldergram-last-opened-folder';
 const RECENT_OPENED_FOLDERS_STORAGE_KEY = 'foldergram-recent-opened-folders';
 const RECENT_OPENED_FOLDERS_LIMIT = 24;
@@ -47,6 +49,7 @@ export const useAppStore = defineStore('app', {
     loadingStats: false,
     error: null,
     theme: 'light',
+    videoMuted: true,
     lastOpenedFolderSlug: null,
     recentOpenedFolderSlugs: [],
     imageModalBackgroundPath: null,
@@ -108,6 +111,16 @@ export const useAppStore = defineStore('app', {
 
     toggleTheme() {
       this.setTheme(this.theme === 'light' ? 'dark' : 'light');
+    },
+
+    initializeVideoMuted() {
+      const savedPreference = window.localStorage.getItem(VIDEO_MUTED_STORAGE_KEY);
+      this.videoMuted = savedPreference === 'false' ? false : true;
+    },
+
+    setVideoMuted(videoMuted: boolean) {
+      this.videoMuted = videoMuted;
+      window.localStorage.setItem(VIDEO_MUTED_STORAGE_KEY, String(videoMuted));
     },
 
     recordOpenedFolder(slug: string) {
