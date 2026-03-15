@@ -25,13 +25,15 @@ async function bootstrap(): Promise<void> {
 
   server.listen(appConfig.port, () => {
     log.info(`HTTP server listening on http://localhost:${appConfig.port}`);
-    const startupReady = scannerService.handleStartup('startup');
-    if (!startupReady) {
+    const startupAction = scannerService.handleStartup('startup');
+    if (startupAction === 'blocked') {
       log.info('Gallery watcher deferred until the library rebuild completes');
       return;
     }
 
-    log.info('Gallery watcher idle until a user-triggered scan or rebuild starts it');
+    if (startupAction === 'idle' && appConfig.isDevelopment) {
+      log.info('Gallery watcher idle until a user-triggered scan or rebuild starts it');
+    }
   });
 
   async function shutdown(signal: string): Promise<void> {

@@ -135,6 +135,7 @@ interface DerivativeProcessingSummary {
 }
 
 type ScanPhase = 'idle' | 'discovery' | 'derivatives';
+type StartupAction = 'scan' | 'idle' | 'blocked';
 
 export interface ScanProgressSnapshot {
   isScanning: boolean;
@@ -247,7 +248,8 @@ class ScannerService {
     return appSettingsRepository.get(LIBRARY_REBUILD_REQUIRED_SETTING_KEY) === '1';
   }
 
-  handleStartup(reason = 'startup'): boolean {
+  handleStartup(reason = 'startup'): StartupAction {
+    const options = resolveFullScanOptions({ repairUnchangedDerivatives: false });
     const currentGalleryRoot = normalizePath(appConfig.galleryRoot);
     const storedGalleryRoot = appSettingsRepository.get(LAST_SUCCESSFUL_GALLERY_ROOT_SETTING_KEY);
     const normalizedStoredGalleryRoot = storedGalleryRoot ? normalizePath(storedGalleryRoot) : null;
@@ -265,21 +267,36 @@ class ScannerService {
           formatStep('current', currentGalleryRoot)
         ])
       );
-      return false;
+      return 'blocked';
     }
 
     if (!galleryRootChanged || !hasStoredGalleryRoot || !hasIndexedFolders) {
       this.clearLibraryRebuildRequirement();
     }
 
+    if (!hasIndexedFolders) {
+      log.info(
+        joinLogParts([
+          'Startup scan queued',
+          formatStep('reason', reason),
+          formatStep('repair-derivatives', formatToggle(options.repairUnchangedDerivatives))
+        ])
+      );
+      void this.scanAll(reason, options).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log.error(`Startup scan failed (${reason})`, message);
+      });
+      return 'scan';
+    }
+
     log.info(
       joinLogParts([
         'Startup scan skipped',
         formatStep('reason', reason),
-        hasIndexedFolders ? 'using existing index' : 'manual scan required to build the initial index'
+        'using existing index'
       ])
     );
-    return true;
+    return 'idle';
   }
 
   async scanAll(reason = 'manual', options: Partial<FullScanOptions> = {}): Promise<ScanRunRecord | undefined> {
