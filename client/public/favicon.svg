@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="favicon-bg" x1="10" x2="54" y1="8" y2="56" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4c1d95" />
+      <stop offset="0" stop-color="#4f46e5" />
       <stop offset="1" stop-color="#ec4899" />
     </linearGradient>
   </defs>

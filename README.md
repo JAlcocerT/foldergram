@@ -1,11 +1,10 @@
 # Foldergram
 
-Foldergram is a local-only photo and video gallery app for browsing folders in an Instagram-inspired layout. It indexes media from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews, and serves a Vue 3 SPA over localhost.
+Foldergram is a local-only photo and video gallery app for browsing folders in an Instagram-inspired layout. It indexes media from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews, and serves a Vue 3 SPA over localhost. The client also supports installation as a PWA on compatible desktop and mobile browsers.
 
 ## Stack
 
 - Node.js 22 LTS
-- `pnpm` workspace monorepo
 - Express 5 + TypeScript
 - Vue 3 + Vite + Vue Router 4 + Pinia
 - built-in `node:sqlite`
@@ -42,6 +41,7 @@ Foldergram is a local-only photo and video gallery app for browsing folders in a
 ## Supported media formats
 
 Images:
+
 - `.jpg`
 - `.jpeg`
 - `.png`
@@ -49,6 +49,7 @@ Images:
 - `.gif` as static preview/thumbnail
 
 Videos:
+
 - `.mp4`
 - `.mov`
 - `.m4v`
@@ -59,18 +60,29 @@ FFmpeg and FFprobe must be available on your local machine for video metadata, t
 
 Nested subfolders are ignored by design.
 
+## Resource expectations
+
+Foldergram does not need a large server for small libraries, but the first scan can be CPU-heavy because it generates thumbnails and video previews.
+
+- Small libraries with mostly images: a modern 2-core CPU and 2-4 GB RAM is usually enough.
+- Larger libraries or video-heavy libraries benefit from more CPU cores because preview generation is the slowest part.
+- Fast SSD storage improves scan time and derivative generation more than raw RAM once you are above a modest baseline.
+- Storage usage grows beyond the original media library because Foldergram also writes SQLite data, thumbnails, and previews.
+- The initial import is the heaviest phase. After that, normal browsing is much lighter unless many new files are added at once.
+
 ## Installation
 
 ### Docker with the published GHCR image
 
 This is the recommended install path for most users.
+Docker users following this path do not use the repository's included `docker-compose.yml`; they create their own compose file that pulls the published image from GHCR.
 
 1. Create a `docker-compose.yml` file with the following content:
 
 ```yaml
 services:
   foldergram:
-    image: ghcr.io/sajjadalis/foldergram:latest
+    image: ghcr.io/foldergram/foldergram:latest
     ports:
       - "4175:4175"
     environment:
@@ -98,16 +110,16 @@ docker compose up -d
 
 4. Open `http://localhost:4175`.
 
-Notes:
+5. On a compatible browser, you can install Foldergram to your home screen or app launcher.
 
-- The published GHCR image path for this repository is `ghcr.io/sajjadalis/foldergram`.
+- The published GHCR image path for this repository is `ghcr.io/foldergram/foldergram`.
 - Docker users do not need to create `.env`.
 - The bind mounts keep your gallery, database, thumbnails, and previews on the host machine.
-- Once a stable version is published, you can pin a release tag such as `ghcr.io/sajjadalis/foldergram:v1.0.0` instead of using `latest`.
+- Once a stable version is published, you can pin a release tag such as `ghcr.io/foldergram/foldergram:v1.0.0` instead of using `latest`.
 
 ### Docker from a local checkout
 
-If you cloned the repository and want Docker to build the image locally instead of pulling from GHCR, use the included [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml):
+If you cloned the repository and want Docker to build the image locally instead of pulling from GHCR, use the included [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml). That file is intentionally a local-build compose file with `build: .` and `image: foldergram:local`:
 
 ```bash
 docker compose up -d --build
@@ -156,16 +168,12 @@ npm run build
 npm start
 ```
 
-Notes:
+On a compatible browser, you can install Foldergram to your home screen or app launcher.
 
 - npm works out of the box for install and root scripts.
 - `npm run dev` starts the Vite client on `http://localhost:4175`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
 - `npm run build` builds both the client and server, and `npm start` serves the built app from Express.
 - `pnpm` remains supported if you prefer it. `pnpm install`, `pnpm run dev`, `pnpm run build`, and `pnpm start` use the same root scripts.
-
-Maintainer note:
-
-- The repository includes a GitHub Actions workflow at [publish-ghcr.yml](/home/sa/apps/insta/.github/workflows/publish-ghcr.yml) for publishing multi-arch images to GHCR.
 
 ## Manual rescan
 
@@ -204,8 +212,6 @@ data/
 
 If you want to place the library on another drive, update `GALLERY_ROOT` or the other path variables in `.env`.
 
-Docker note:
-
 - The included `docker-compose.yml` keeps fixed in-container paths under `/app/data`.
 - By default, Docker bind-mounts these host paths:
   - `./data/gallery`
@@ -227,9 +233,7 @@ PREVIEWS_DIR=./data/previews
 NODE_ENV=development
 ```
 
-WSL note:
-
-- if the server runs inside WSL, use WSL paths like `/mnt/d/...` instead of raw Windows paths like `D:\...`
+If the server runs inside WSL, use WSL paths like `/mnt/d/...` instead of raw Windows paths like `D:\...`.
 
 ## API endpoints
 
@@ -277,16 +281,3 @@ Edit these constants in `server/src/utils/image-utils.ts`:
 
 - `THUMBNAIL_SIZE`
 - `PREVIEW_MAX_WIDTH`
-
-## Where to customize the UI theme later
-
-Edit `client/src/styles/main.css`.
-
-The main theme tokens are declared near the top of that file:
-
-- `--surface`
-- `--border`
-- `--shadow`
-- `--accent`
-- `--accent-soft`
-- `--muted`
