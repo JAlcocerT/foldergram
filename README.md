@@ -1,83 +1,61 @@
+<div align="center">
+
+<img src="client/public/github_banner.png" alt="Foldergram" />
+<br /><br />
+<img src="client/public/favicon.svg" width="80" alt="Foldergram Logo" />
+
 # Foldergram
 
-Foldergram is a local-only photo and video gallery app for browsing folders in an Instagram-inspired layout. It indexes media from the configured gallery root, stores metadata in SQLite, generates thumbnails and previews, and serves a Vue 3 SPA over localhost. The client also supports installation as a PWA on compatible desktop and mobile browsers.
+**A blazing-fast, local-only photo and video gallery app for your folders, inspired by the Instagram layout.**
 
-## Stack
+[![Available on GHCR](https://img.shields.io/badge/GHCR-foldergram-blue?style=flat-square&logo=docker)](https://github.com/foldergram/foldergram/pkgs/container/foldergram)
+[![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
+[![Vue 3](https://img.shields.io/badge/Vue.js-3-4fc08d?style=flat-square&logo=vuedotjs)](https://vuejs.org/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 
-- Node.js 22 LTS
-- Express 5 + TypeScript
-- Vue 3 + Vite + Vue Router 4 + Pinia
-- built-in `node:sqlite`
-- Sharp
-- FFmpeg / FFprobe
-- Chokidar
-- Zod
-- `p-limit`
+[Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Tech Stack](#-tech-stack)
 
-## Project layout
+</div>
 
-```text
-.
-├─ client/
-├─ data/
-├─ server/
-├─ .env.example
-└─ README.md
-```
+---
 
-## How it works
+Foldergram is a privacy-first, self-hosted web application that turns your local folders into a beautiful, feed-style gallery. It indexes media from a configured root directory, generates optimized thumbnails and previews, stores metadata in SQLite, and serves a lightning-fast Progressive Web App (PWA).
 
-- Each direct child folder inside the configured `GALLERY_ROOT` becomes one indexed folder.
-- Each supported image or video file inside that folder becomes one indexed post.
-- Images placed directly inside the gallery root are ignored.
-- The backend scans the configured gallery root on startup, writes metadata to `data/db/gallery.sqlite` by default, and generates:
-  - square feed/grid thumbnails in `data/thumbnails/`
-  - larger detail previews in `data/previews/`
-- Feed and folder requests read from SQLite only. They do not scan the filesystem during API requests.
-- In development mode, Chokidar watches the configured gallery root and batches file changes before re-indexing.
-- If the configured storage is unavailable, the app shows a library-unavailable state instead of soft-deleting indexed content.
-- Folder pages include a `Posts` tab for all media and a `Reels` tab that filters to videos only.
+## ✨ Features
 
-## Supported media formats
+- **Instagram-Inspired UI:** Enjoy a familiar feed layout, dedicated folder pages, and a media viewer.
+- **Reels & Video Support:** Seamless playback for videos with auto-generated previews.
+- **Local-First & Private:** No cloud uploads, no tracking. Everything stays on your machine.
+- **PWA Ready:** Install it on your desktop or mobile browser as a native-feeling app.
+- **Auto-Sync:** Watch mode intelligently batches filesystem changes and updates the index automatically.
+- **Resilient:** gracefully handles missing storage without soft-deleting your indexed content.
 
-Images:
+---
 
-- `.jpg`
-- `.jpeg`
-- `.png`
-- `.webp`
-- `.gif` as static preview/thumbnail
+## 📂 How It Works
 
-Videos:
+Foldergram maps directly to your filesystem with a simple, predictable structure:
 
-- `.mp4`
-- `.mov`
-- `.m4v`
-- `.webm`
-- `.mkv`
+1. **Albums as Folders:** Each _direct child folder_ inside the configured `GALLERY_ROOT` becomes one indexed album.
+2. **Posts as Files:** Each supported image or video inside those folders becomes one indexed post.
+3. **No Nested Clutter:** Nested subfolders and images placed directly in the root are intentionally ignored to keep the feed clean.
 
-FFmpeg and FFprobe must be available on your local machine for video metadata, thumbnails, and preview MP4 generation.
+Upon startup, the backend scans your gallery, writes metadata to a local SQLite database, and generates square thumbnails and high-res previews for fast loading. Read-operations hit SQLite directly, meaning your filesystem isn't bottlenecked during API requests.
 
-Nested subfolders are ignored by design.
+### Supported Formats
 
-## Resource expectations
+- **Images:** `.jpg`, `.jpeg`, `.png`, `.webp` (and `.gif` as static previews)
+- **Videos:** `.mp4`, `.mov`, `.m4v`, `.webm`, `.mkv` _(Requires FFmpeg/FFprobe on your system)_
 
-Foldergram does not need a large server for small libraries, but the first scan can be CPU-heavy because it generates thumbnails and video previews.
+---
 
-- Small libraries with mostly images: a modern 2-core CPU and 2-4 GB RAM is usually enough.
-- Larger libraries or video-heavy libraries benefit from more CPU cores because preview generation is the slowest part.
-- Fast SSD storage improves scan time and derivative generation more than raw RAM once you are above a modest baseline.
-- Storage usage grows beyond the original media library because Foldergram also writes SQLite data, thumbnails, and previews.
-- The initial import is the heaviest phase. After that, normal browsing is much lighter unless many new files are added at once.
+## 🚀 Installation
 
-## Installation
+### 🐳 The Easy Way (Docker - Recommended)
 
-### Docker with the published GHCR image
+This is the recommended path for most users. It uses the pre-built GitHub Container Registry (GHCR) image.
 
-This is the recommended install path for most users.
-Docker users following this path do not use the repository's included `docker-compose.yml`; they create their own compose file that pulls the published image from GHCR.
-
-1. Create a `docker-compose.yml` file with the following content:
+1. Create a `docker-compose.yml` file:
 
 ```yaml
 services:
@@ -88,12 +66,14 @@ services:
     environment:
       PORT: 4175
       NODE_ENV: production
+      # Internal container paths (do not change)
       DATA_ROOT: /app/data
       GALLERY_ROOT: /app/data/gallery
       DB_DIR: /app/data/db
       THUMBNAILS_DIR: /app/data/thumbnails
       PREVIEWS_DIR: /app/data/previews
     volumes:
+      # Change the left side to point to your media/data
       - ./data/gallery:/app/data/gallery
       - ./data/db:/app/data/db
       - ./data/thumbnails:/app/data/thumbnails
@@ -101,183 +81,113 @@ services:
     restart: unless-stopped
 ```
 
-2. Put media under `./data/gallery/<folder-name>/`, or edit the left-hand side of the bind mounts to point at an existing library on another drive.
-3. Start Foldergram:
+2. Place your media under your configured gallery mount (e.g., `./data/gallery/<folder-name>/`).
+3. Start the container:
 
 ```bash
 docker compose up -d
 ```
 
-4. Open `http://localhost:4175`.
+4. Open [http://localhost:4175](https://www.google.com/search?q=http://localhost:4175) in your browser!
 
-5. On a compatible browser, you can install Foldergram to your home screen or app launcher.
+### 💻 Build from Source
 
-- The published GHCR image path for this repository is `ghcr.io/foldergram/foldergram`.
-- Docker users do not need to create `.env`.
-- The bind mounts keep your gallery, database, thumbnails, and previews on the host machine.
-- Once a stable version is published, you can pin a release tag such as `ghcr.io/foldergram/foldergram:v1.0.0` instead of using `latest`.
+If you prefer to run it bare-metal, ensure you have **Node.js 22 LTS** and **FFmpeg/FFprobe** installed.
 
-### Docker from a local checkout
+> **💡 Note:** This repository is set up as a workspace. **`pnpm` is highly preferred** for the best development experience, but standard `npm` is fully supported and works out of the box as a default.
 
-If you cloned the repository and want Docker to build the image locally instead of pulling from GHCR, use the included [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml). That file is intentionally a local-build compose file with `build: .` and `image: foldergram:local`:
+1. Clone the repository:
 
 ```bash
-docker compose up -d --build
+git clone https://github.com/foldergram/foldergram.git
+cd foldergram
 ```
 
-Open `http://localhost:4175`.
-
-Useful Docker commands:
+2. Setup environment variables:
 
 ```bash
-docker compose logs -f
-docker compose down
+cp .env.example .env
 ```
 
-If you want Docker to use host paths outside the repo, edit the left-hand side of the bind mounts in [docker-compose.yml](/home/sa/apps/insta/docker-compose.yml).
-
-### Install from source without Docker
-
-Use this if you want to run Foldergram directly with Node.js.
-
-Requirements:
-
-- Node.js 22
-- npm included with Node.js
-- FFmpeg and FFprobe available on your system `PATH`
-
-1. Clone the repository.
-2. Copy `.env.example` to `.env`.
-3. Edit `.env` if you want custom gallery, thumbnail, preview, or database locations.
-4. Install dependencies:
+3. Install dependencies:
 
 ```bash
-npm install
+pnpm install    # Preferred
+# OR
+npm install     # Default fallback
 ```
 
-5. Start development mode:
+4. Start the development server (runs Vite, Express, and VitePress):
 
 ```bash
-npm run dev
+pnpm dev    # Preferred
+# OR
+npm run dev     # Default fallback
+
 ```
 
-6. Or build and run production mode locally:
+_Or build for production:_
 
 ```bash
-npm run build
-npm start
+pnpm build && pnpm start
+# OR:
+npm run build && npm start
+
 ```
 
-On a compatible browser, you can install Foldergram to your home screen or app launcher.
+---
 
-- npm works out of the box for install and root scripts.
-- `npm run dev` starts the Vite client on `http://localhost:4175`, the API server on `http://localhost:4173`, and the VitePress docs site on `http://localhost:4174`.
-- `npm run build` builds both the client and server, and `npm start` serves the built app from Express.
-- `pnpm` remains supported if you prefer it. `pnpm install`, `pnpm run dev`, `pnpm run build`, and `pnpm start` use the same root scripts.
+## ⚙️ Configuration
 
-## Manual rescan
-
-```bash
-npm run rescan
-```
-
-## Tests
-
-```bash
-npm test
-```
-
-Current tests cover:
-
-- scanner utility fingerprinting
-- stable feed sort timestamp behavior
-- folder slug generation
-- derivative path generation
-- path normalization for Windows-style separators
-
-## Configuration
-
-The app uses `.env` for local storage and runtime configuration.
-
-With the default config, Foldergram creates and uses:
+Foldergram relies on `.env` variables for path configuration. By default, it creates a `data/` directory at the project root:
 
 ```text
 data/
-  gallery/
-  db/
-    gallery.sqlite
-  thumbnails/
-  previews/
+  ├─ gallery/          # Your original media
+  ├─ db/
+  │   └─ gallery.sqlite
+  ├─ thumbnails/       # Auto-generated
+  └─ previews/         # Auto-generated
+
 ```
 
-If you want to place the library on another drive, update `GALLERY_ROOT` or the other path variables in `.env`.
+**Environment Variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `4173` | The port the Express server runs on. |
+| `GALLERY_ROOT` | `./data/gallery` | Where your raw media folders live. |
+| `DB_DIR` | `./data/db` | Where the SQLite database is stored. |
+| `THUMBNAILS_DIR`| `./data/thumbnails` | Output for square grid images. |
+| `PREVIEWS_DIR` | `./data/previews` | Output for detail-view images/videos. |
 
-- The included `docker-compose.yml` keeps fixed in-container paths under `/app/data`.
-- By default, Docker bind-mounts these host paths:
-  - `./data/gallery`
-  - `./data/db`
-  - `./data/thumbnails`
-  - `./data/previews`
-- If you want Docker to use locations like `/mnt/d/...`, edit only the left-hand side of the bind mounts in `docker-compose.yml`.
-- Do not change the app's in-container `GALLERY_ROOT`, `DB_DIR`, `THUMBNAILS_DIR`, or `PREVIEWS_DIR` values away from `/app/...`.
+_Note: If running in WSL, use WSL paths (e.g., `/mnt/d/images`) rather than raw Windows paths (`D:\images`)._
 
-If you already have an older local setup using top-level `gallery/`, `thumbnails/`, `previews/`, or `data/gallery.sqlite`, either move those into the new `data/` layout or point `.env` at the existing locations.
+---
 
-```env
-PORT=4173
-DATA_ROOT=./data
-GALLERY_ROOT=./data/gallery
-DB_DIR=./data/db
-THUMBNAILS_DIR=./data/thumbnails
-PREVIEWS_DIR=./data/previews
-NODE_ENV=development
-```
+## 🛠 Tech Stack & Architecture
 
-If the server runs inside WSL, use WSL paths like `/mnt/d/...` instead of raw Windows paths like `D:\...`.
+Foldergram is built to be lightweight where it matters, and robust where it counts.
 
-## API endpoints
+**Backend:**
 
-- `GET /api/health`
-- `GET /api/feed?page=1&limit=24`
-- `GET /api/folders`
-- `GET /api/folders/:slug`
-- `GET /api/folders/:slug/images?page=1&limit=24`
-- `GET /api/folders/:slug/images?page=1&limit=24&mediaType=video`
-- `GET /api/likes`
-- `GET /api/images/:id`
-- `POST /api/images/:id/like`
-- `DELETE /api/images/:id/like`
-- `DELETE /api/images/:id`
-- `GET /api/admin/stats`
-- `POST /api/admin/rescan`
-- `POST /api/admin/rebuild-index`
-- `POST /api/admin/rebuild-thumbnails`
-- `GET /api/originals/:id`
+- **Node.js 22 LTS & Express 5:** Fast, modern backend foundation.
+- **SQLite (`node:sqlite`):** Zero-config, built-in database for blazing-fast feed queries.
+- **Sharp & FFmpeg:** High-performance media derivative generation.
+- **Chokidar:** Reliable filesystem watching and debouncing.
+- **Zod:** Runtime type validation.
 
-## Architecture summary
+**Frontend:**
 
-- `server/src/config`: environment and runtime directory setup
-- `server/src/db`: schema and SQL repositories
-- `server/src/services/scanner-service.ts`: startup scans, incremental scans, deletion handling
-- `server/src/services/storage-service.ts`: configured storage availability and startup path handling
-- `server/src/services/derivative-service.ts`: Sharp image derivatives plus FFmpeg video thumbnails and preview generation
-- `server/src/services/watcher-service.ts`: debounced Chokidar watch mode
-- `client/src/stores`: Pinia state for feed, folders, likes, viewer, and app stats
-- `client/src/views`: home feed, folder page, likes page, and image detail page
-- `client/src/components`: reusable UI shell and gallery components
+- **Vue 3 & Vite:** Snappy, reactive UI and lightning-fast HMR.
+- **Pinia & Vue Router 4:** State management and SPA routing.
 
-## Why this scan/index strategy
+**Performance Note:** Small libraries run well on a 2-core / 2GB RAM setup. Large or video-heavy libraries will benefit significantly from faster SSDs and multi-core CPUs during the initial indexing phase.
 
-- Full scans are idempotent and safe to rerun.
-- Request-time performance stays fast because the API reads only from SQLite.
-- The scanner uses a lightweight fingerprint of `relative_path + file_size + mtime_ms` to avoid unnecessary heavy hashing.
-- `sort_timestamp` stays stable across rescans by preserving persisted sort data once an image is known.
-- Dev watching batches filesystem bursts so one copy operation does not trigger repeated expensive media work.
-- The current startup scan runs before the server starts listening, so very large libraries can delay first response until indexing finishes.
+---
 
-## Where to change thumbnail sizes later
+## ⌨️ Scripts & Development
 
-Edit these constants in `server/src/utils/image-utils.ts`:
+- **Manual Rescan:** `npm run rescan`
+- **Run Tests:** `npm test` (Covers scanner fingerprinting, slug generation, path normalization, etc.)
 
-- `THUMBNAIL_SIZE`
-- `PREVIEW_MAX_WIDTH`
+For advanced tweaks, thumbnail sizes can be adjusted in `server/src/utils/image-utils.ts` (`THUMBNAIL_SIZE` & `PREVIEW_MAX_WIDTH`).
