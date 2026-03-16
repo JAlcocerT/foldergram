@@ -12,7 +12,8 @@ export const repositoryRoot = path.resolve(moduleDirectory, '../../..');
 dotenv.config({ path: path.join(repositoryRoot, '.env') });
 
 const envSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(4173),
+  SERVER_PORT: z.coerce.number().int().positive().optional(),
+  DEV_CLIENT_PORT: z.coerce.number().int().positive().optional(),
   DATA_ROOT: z.string().default('./data'),
   DATA_DIR: z.string().optional(),
   GALLERY_ROOT: z.string().optional(),
@@ -26,6 +27,8 @@ const envSchema = z.object({
 });
 
 const parsed = envSchema.parse(process.env);
+const serverPort = parsed.SERVER_PORT ?? 4141;
+const devClientPort = parsed.DEV_CLIENT_PORT ?? 4142;
 
 function resolveFromRoot(value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(repositoryRoot, value);
@@ -73,7 +76,8 @@ const managedGalleryRelativeIgnores = uniq(
 );
 
 export const appConfig = {
-  port: parsed.PORT,
+  port: serverPort,
+  devClientPort,
   nodeEnv: parsed.NODE_ENV,
   isDevelopment: parsed.NODE_ENV === 'development',
   dataRoot,

@@ -62,9 +62,9 @@ services:
   foldergram:
     image: ghcr.io/foldergram/foldergram:latest
     ports:
-      - "4175:4175"
+      - "${SERVER_PORT:-4141}:${SERVER_PORT:-4141}"
     environment:
-      PORT: 4175
+      SERVER_PORT: ${SERVER_PORT:-4141}
       NODE_ENV: production
       # Internal container paths (do not change)
       DATA_ROOT: /app/data
@@ -88,7 +88,7 @@ services:
 docker compose up -d
 ```
 
-4. Open [http://localhost:4175](https://www.google.com/search?q=http://localhost:4175) in your browser!
+4. Open [http://localhost:4141](https://www.google.com/search?q=http://localhost:4141) in your browser!
 
 ### 💻 Build from Source
 
@@ -154,7 +154,8 @@ data/
 **Environment Variables:**
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `4173` | The port the Express server runs on. |
+| `SERVER_PORT` | `4141` | The port the Express server runs on. |
+| `DEV_CLIENT_PORT` | `4142` | The Vite dev server port used by `pnpm dev`. |
 | `GALLERY_ROOT` | `./data/gallery` | Where your raw media folders live. |
 | `DB_DIR` | `./data/db` | Where the SQLite database is stored. |
 | `THUMBNAILS_DIR`| `./data/thumbnails` | Output for square grid images. |
@@ -189,5 +190,6 @@ Foldergram is built to be lightweight where it matters, and robust where it coun
 
 - **Manual Rescan:** `npm run rescan`
 - **Run Tests:** `npm test` (Covers scanner fingerprinting, slug generation, path normalization, etc.)
+- **Default dev ports:** app server `4141`, Vite client `4142`, VitePress docs `4143`
 
 For advanced tweaks, thumbnail sizes can be adjusted in `server/src/utils/image-utils.ts` (`THUMBNAIL_SIZE` & `PREVIEW_MAX_WIDTH`).

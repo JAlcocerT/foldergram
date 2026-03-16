@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
     if (error.code === "EADDRINUSE") {
       log.error(
         `Port ${appConfig.port} is already in use`,
-        "Another server is already listening on that port. Stop it first or change PORT in .env.",
+        "Another server is already listening on that port. Stop it first or change SERVER_PORT in .env.",
       );
     } else {
       log.error("HTTP server failed to start", error.message);

@@ -19,10 +19,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    SERVER_PORT=4141
 
 RUN pnpm build
 
-EXPOSE 4175
+EXPOSE 4141
 
 CMD ["pnpm", "start"]

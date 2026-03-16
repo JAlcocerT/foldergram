@@ -1,22 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import cors from 'cors';
 import express from 'express';
 
 import { appConfig, repositoryRoot } from './config/env.js';
+import { requireTrustedMutationRequest } from './middleware/csrf-protection.js';
 import { apiRouter } from './routes/api.js';
 
 export function createApp() {
   const app = express();
 
-  app.use(cors());
   app.use(express.json());
 
   app.use('/thumbnails', express.static(appConfig.thumbnailsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
   app.use('/previews', express.static(appConfig.previewsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
 
-  app.use('/api', apiRouter);
+  app.use('/api', requireTrustedMutationRequest, apiRouter);
 
   if (appConfig.nodeEnv === 'production') {
     const clientDist = path.join(repositoryRoot, 'client', 'dist');

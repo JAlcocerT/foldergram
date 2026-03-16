@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile
     image: foldergram:local
     ports:
-      - "4175:4175"
+      - "${SERVER_PORT:-4141}:${SERVER_PORT:-4141}"
     environment:
-      PORT: 4175
+      SERVER_PORT: ${SERVER_PORT:-4141}
       NODE_ENV: production
       DATA_ROOT: /app/data
       GALLERY_ROOT: /app/data/gallery
