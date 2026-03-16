@@ -1,0 +1,71 @@
+import { defineConfig } from 'vitepress';
+
+const guideItems = [
+  { text: 'Quick Start', link: '/quick-start' },
+  { text: 'Installation', link: '/installation' },
+  { text: 'Configuration', link: '/configuration' }
+];
+
+const productItems = [
+  { text: 'How It Works', link: '/how-it-works' },
+  { text: 'Features', link: '/features' },
+  { text: 'Media Processing', link: '/media-processing' },
+  { text: 'Security', link: '/security' }
+];
+
+const referenceItems = [
+  { text: 'API', link: '/api' },
+  { text: 'Development', link: '/development' },
+  { text: 'Troubleshooting', link: '/troubleshooting' },
+  { text: 'FAQ', link: '/faq' }
+];
+
+export default defineConfig({
+  title: 'Foldergram',
+  description: 'Documentation for Foldergram, the local-first photo and video gallery.',
+  lang: 'en-US',
+  cleanUrls: true,
+  lastUpdated: true,
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
+    ['meta', { name: 'theme-color', content: '#6366f1' }]
+  ],
+  themeConfig: {
+    logo: '/logo.svg',
+    siteTitle: 'Foldergram',
+    search: {
+      provider: 'local'
+    },
+    nav: [
+      { text: 'Quick Start', link: '/quick-start' },
+      { text: 'Installation', link: '/installation' },
+      { text: 'Configuration', link: '/configuration' },
+      { text: 'How It Works', link: '/how-it-works' },
+      { text: 'API', link: '/api' },
+      { text: 'Security', link: '/security' }
+    ],
+    sidebar: [
+      {
+        text: 'Guide',
+        items: guideItems
+      },
+      {
+        text: 'Product',
+        items: productItems
+      },
+      {
+        text: 'Reference',
+        items: referenceItems
+      }
+    ],
+    outline: {
+      level: [2, 3],
+      label: 'On this page'
+    },
+    footer: {
+      message: 'Local-first docs for a local-first gallery.',
+      copyright: 'AGPL-3.0-only'
+    }
+  }
+});

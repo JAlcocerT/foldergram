@@ -36,9 +36,9 @@ Foldergram is a privacy-first, self-hosted web application that turns your local
 
 Foldergram maps directly to your filesystem with a simple, predictable structure:
 
-1. **Albums as Folders:** Each _direct child folder_ inside the configured `GALLERY_ROOT` becomes one indexed album.
-2. **Posts as Files:** Each supported image or video inside those folders becomes one indexed post.
-3. **No Nested Clutter:** Nested subfolders and images placed directly in the root are intentionally ignored to keep the feed clean.
+1. **Albums as Folders:** Any non-hidden folder under the configured `GALLERY_ROOT` that directly contains supported media becomes one indexed album.
+2. **Posts as Files:** Each supported image or video directly inside that folder becomes one indexed post for that album.
+3. **Nested Folders Stay Separate:** Nested folders are not merged into their parent album. If a nested folder directly contains supported media, it becomes its own album. Files placed directly in `GALLERY_ROOT` are still ignored.
 
 Upon startup, the backend scans your gallery, writes metadata to a local SQLite database, and generates square thumbnails and high-res previews for fast loading. Read-operations hit SQLite directly, meaning your filesystem isn't bottlenecked during API requests.
 
