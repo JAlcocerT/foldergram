@@ -207,7 +207,7 @@ router.get('/originals/:id', (request, response) => {
   response.sendFile(originalPath);
 });
 
-const adminRateLimiter = createRateLimiter({
+const adminMutationRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   max: 10,
   message: 'Too many administrative requests. Please try again in a minute.'
@@ -223,7 +223,7 @@ const requireNoScanInProgress = (_request: express.Request, response: express.Re
   next();
 };
 
-router.post('/admin/rescan', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
+router.post('/admin/rescan', adminMutationRateLimiter, requireNoScanInProgress, async (_request, response) => {
   try {
     if (scannerService.isLibraryRebuildRequired()) {
       response.status(409).json({
@@ -245,7 +245,7 @@ router.post('/admin/rescan', adminRateLimiter, requireNoScanInProgress, async (_
   }
 });
 
-router.post('/admin/rebuild-index', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
+router.post('/admin/rebuild-index', adminMutationRateLimiter, requireNoScanInProgress, async (_request, response) => {
   await watcherService.stop();
 
   try {
@@ -259,7 +259,7 @@ router.post('/admin/rebuild-index', adminRateLimiter, requireNoScanInProgress, a
   }
 });
 
-router.post('/admin/rebuild-thumbnails', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
+router.post('/admin/rebuild-thumbnails', adminMutationRateLimiter, requireNoScanInProgress, async (_request, response) => {
   if (scannerService.isLibraryRebuildRequired()) {
     response.status(409).json({
       message: LIBRARY_REBUILD_REQUIRED_MESSAGE
@@ -284,7 +284,7 @@ router.post('/admin/rebuild-thumbnails', adminRateLimiter, requireNoScanInProgre
   }
 });
 
-router.get('/admin/stats', adminRateLimiter, (_request, response) => {
+router.get('/admin/stats', (_request, response) => {
   response.json(galleryService.getStats());
 });
 
