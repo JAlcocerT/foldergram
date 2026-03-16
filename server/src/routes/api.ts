@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 
 import { galleryService } from '../services/gallery-service.js';
+import { createRateLimiter } from '../middleware/rate-limit.js';
 import { LIBRARY_REBUILD_REQUIRED_MESSAGE, scannerService } from '../services/scanner-service.js';
 import { storageService } from '../services/storage-service.js';
 import { watcherService } from '../services/watcher-service.js';
@@ -206,7 +207,23 @@ router.get('/originals/:id', (request, response) => {
   response.sendFile(originalPath);
 });
 
-router.post('/admin/rescan', async (_request, response) => {
+const adminRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: 'Too many administrative requests. Please try again in a minute.'
+});
+
+const requireNoScanInProgress = (_request: express.Request, response: express.Response, next: express.NextFunction) => {
+  if (scannerService.getProgress().isScanning) {
+    response.status(429).json({
+      message: 'A scan or rebuild is already in progress.'
+    });
+    return;
+  }
+  next();
+};
+
+router.post('/admin/rescan', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
   try {
     if (scannerService.isLibraryRebuildRequired()) {
       response.status(409).json({
@@ -228,7 +245,7 @@ router.post('/admin/rescan', async (_request, response) => {
   }
 });
 
-router.post('/admin/rebuild-index', async (_request, response) => {
+router.post('/admin/rebuild-index', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
   await watcherService.stop();
 
   try {
@@ -242,7 +259,7 @@ router.post('/admin/rebuild-index', async (_request, response) => {
   }
 });
 
-router.post('/admin/rebuild-thumbnails', async (_request, response) => {
+router.post('/admin/rebuild-thumbnails', adminRateLimiter, requireNoScanInProgress, async (_request, response) => {
   if (scannerService.isLibraryRebuildRequired()) {
     response.status(409).json({
       message: LIBRARY_REBUILD_REQUIRED_MESSAGE
@@ -267,7 +284,7 @@ router.post('/admin/rebuild-thumbnails', async (_request, response) => {
   }
 });
 
-router.get('/admin/stats', (_request, response) => {
+router.get('/admin/stats', adminRateLimiter, (_request, response) => {
   response.json(galleryService.getStats());
 });
 
