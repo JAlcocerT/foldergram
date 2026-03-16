@@ -32,8 +32,8 @@ Allowed hostnames are:
 
 Allowed ports are:
 
-- `SERVER_PORT`
-- `DEV_CLIENT_PORT`
+- `DEV_SERVER_PORT` and `DEV_CLIENT_PORT` in development or test
+- `SERVER_PORT` in production
 
 ## What this protects against
 

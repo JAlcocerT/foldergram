@@ -134,6 +134,11 @@ cp .env.example .env
 pnpm dev
 ```
 
+The shipped `.env.example` keeps the development ports aligned like this:
+
+- `DEV_CLIENT_PORT=4141`
+- `DEV_SERVER_PORT=4142`
+
 ## Runtime requirements for source installs
 
 | Requirement | Why it matters |
@@ -180,6 +185,8 @@ Foldergram resolves relative paths from the repository root.
 ### Docker
 
 The Docker Compose install already runs the app in production mode.
+It continues to use `SERVER_PORT`, with the compose file defaulting that to
+`4141`.
 
 ### Source
 

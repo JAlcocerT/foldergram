@@ -14,8 +14,8 @@ const repositoryRoot = path.resolve(configDirectory, '..');
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, repositoryRoot, '');
-  const serverPort = Number.parseInt(env.SERVER_PORT ?? '4141', 10);
-  const devClientPort = Number.parseInt(env.DEV_CLIENT_PORT ?? '4142', 10);
+  const devServerPort = Number.parseInt(env.DEV_SERVER_PORT ?? '4142', 10);
+  const devClientPort = Number.parseInt(env.DEV_CLIENT_PORT ?? '4141', 10);
 
   return {
     envDir: repositoryRoot,
@@ -27,9 +27,9 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: devClientPort,
       proxy: {
-        '/api': `http://localhost:${serverPort}`,
-        '/thumbnails': `http://localhost:${serverPort}`,
-        '/previews': `http://localhost:${serverPort}`
+        '/api': `http://localhost:${devServerPort}`,
+        '/thumbnails': `http://localhost:${devServerPort}`,
+        '/previews': `http://localhost:${devServerPort}`
       }
     }
   };

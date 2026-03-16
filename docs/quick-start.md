@@ -94,8 +94,8 @@ pnpm dev
 
 This runs:
 
-- the Express server on `http://localhost:4141`
-- the Vite client on `http://localhost:4142`
+- the Vite client on `http://localhost:4141`
+- the Express server on `http://localhost:4142`
 - the VitePress docs site on `http://localhost:4143`
 
 ## Useful commands

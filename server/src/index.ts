@@ -27,12 +27,13 @@ import { watcherService } from "./services/watcher-service.js";
 async function bootstrap(): Promise<void> {
   const app = createApp();
   const server = createServer(app);
+  const portVariableName = appConfig.nodeEnv === "production" ? "SERVER_PORT" : "DEV_SERVER_PORT";
 
   server.on("error", (error: NodeJS.ErrnoException) => {
     if (error.code === "EADDRINUSE") {
       log.error(
         `Port ${appConfig.port} is already in use`,
-        "Another server is already listening on that port. Stop it first or change SERVER_PORT in .env.",
+        `Another server is already listening on that port. Stop it first or change ${portVariableName} for this runtime.`,
       );
     } else {
       log.error("HTTP server failed to start", error.message);

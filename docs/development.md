@@ -36,8 +36,8 @@ description: Workspace scripts, local ports, watcher behavior, tests, and docs d
 
 | Service | Port |
 | --- | --- |
-| API server | `4141` |
-| Vite client | `4142` |
+| Vite client | `4141` |
+| API server | `4142` |
 | VitePress docs | `4143` |
 
 ## Dev proxy behavior
@@ -56,7 +56,7 @@ come from Express.
 At boot, the server:
 
 1. creates the Express app
-2. listens on `SERVER_PORT`
+2. listens on `DEV_SERVER_PORT`
 3. asks the scanner whether startup should scan, stay idle, or block for rebuild
 
 If the scanner decides startup should be blocked because the gallery root

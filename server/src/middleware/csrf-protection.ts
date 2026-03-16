@@ -13,7 +13,13 @@ function normalizeHostname(hostname: string): string {
 }
 
 function getAllowedPortSet(): Set<string> {
-  return new Set([String(appConfig.port), String(appConfig.devClientPort)]);
+  const allowedPorts = new Set([String(appConfig.port)]);
+
+  if (appConfig.nodeEnv !== 'production') {
+    allowedPorts.add(String(appConfig.devClientPort));
+  }
+
+  return allowedPorts;
 }
 
 export function isAllowedLocalOrigin(origin: string): boolean {

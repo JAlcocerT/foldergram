@@ -12,8 +12,9 @@ Foldergram reads `.env` from the repository root and validates it in
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `SERVER_PORT` | `4141` | Express server port. |
-| `DEV_CLIENT_PORT` | `4142` | Vite dev server port. Also used in local-origin mutation checks. |
+| `SERVER_PORT` | `4141` | Production Express port. Used by Docker and `pnpm start`. |
+| `DEV_SERVER_PORT` | `4142` | Express server port during `pnpm dev`. |
+| `DEV_CLIENT_PORT` | `4141` | Vite dev server port during `pnpm dev`. Also used in non-production local-origin mutation checks. |
 | `DATA_ROOT` | `./data` | Base directory used when specific paths are not set. |
 | `DATA_DIR` | unset | Optional alias that falls back into `DATA_ROOT` resolution when `DATA_ROOT` is absent. |
 | `GALLERY_ROOT` | `./data/gallery` | Source media root. Foldergram scans below this path. |
@@ -44,9 +45,13 @@ discovery. That prevents generated files from being re-indexed as source media.
 
 ## Recommended local `.env`
 
+`.env.example` intentionally keeps only the development ports. Production
+runtimes still use `SERVER_PORT`, which defaults to `4141` unless you override
+it in Docker Compose or at process start.
+
 ```bash
-SERVER_PORT=4141
-DEV_CLIENT_PORT=4142
+DEV_CLIENT_PORT=4141
+DEV_SERVER_PORT=4142
 DATA_ROOT=./data
 GALLERY_ROOT=./data/gallery
 DB_DIR=./data/db

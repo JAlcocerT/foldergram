@@ -13,6 +13,7 @@ dotenv.config({ path: path.join(repositoryRoot, '.env') });
 
 const envSchema = z.object({
   SERVER_PORT: z.coerce.number().int().positive().optional(),
+  DEV_SERVER_PORT: z.coerce.number().int().positive().optional(),
   DEV_CLIENT_PORT: z.coerce.number().int().positive().optional(),
   DATA_ROOT: z.string().default('./data'),
   DATA_DIR: z.string().optional(),
@@ -27,8 +28,11 @@ const envSchema = z.object({
 });
 
 const parsed = envSchema.parse(process.env);
-const serverPort = parsed.SERVER_PORT ?? 4141;
-const devClientPort = parsed.DEV_CLIENT_PORT ?? 4142;
+const isProduction = parsed.NODE_ENV === 'production';
+const serverPort = isProduction
+  ? parsed.SERVER_PORT ?? 4141
+  : parsed.DEV_SERVER_PORT ?? 4142;
+const devClientPort = parsed.DEV_CLIENT_PORT ?? 4141;
 
 function resolveFromRoot(value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(repositoryRoot, value);
