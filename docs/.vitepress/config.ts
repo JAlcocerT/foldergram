@@ -45,6 +45,9 @@ export default defineConfig({
       { text: 'API', link: '/api' },
       { text: 'Security', link: '/security' }
     ],
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/foldergram/foldergram' }
+    ],
     sidebar: [
       {
         text: 'Guide',
