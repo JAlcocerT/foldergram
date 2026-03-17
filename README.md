@@ -9,11 +9,14 @@
 **Local-only photo and video gallery for folders, with an Instagram-inspired browsing pattern.**
 
 [![Available on GHCR](https://img.shields.io/badge/GHCR-foldergram-blue?style=flat-square&logo=docker)](https://github.com/foldergram/foldergram/pkgs/container/foldergram)
+[![LIVE DEMO](https://img.shields.io/badge/LIVE%20DEMO-FOLDERGRAM-0f172a?style=flat-square&logo=googlechrome&logoColor=white)](https://foldergram.intentdeep.com/)
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4fc08d?style=flat-square&logo=vuedotjs)](https://vuejs.org/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 
-[Features](#features) • [Installation](#installation) • [Configuration](#configuration) • [Tech Stack](#tech-stack)
+[Live Demo](https://foldergram.intentdeep.com/) • [Features](#features) • [Installation](#installation) • [Configuration](#configuration) • [Tech Stack](#tech-stack)
+
+**Try the public demo:** [foldergram.intentdeep.com](https://foldergram.intentdeep.com/)
 
 </div>
 

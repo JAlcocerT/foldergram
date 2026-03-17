@@ -16,6 +16,9 @@ hero:
     - theme: alt
       text: How It Works
       link: /how-it-works
+    - theme: alt
+      text: Live Demo
+      link: https://foldergram.intentdeep.com/
 features:
   - title: Local-first
     details: Originals stay in your configured gallery root. Indexed metadata lives in SQLite and derivatives stay on disk next to the app's local storage paths.

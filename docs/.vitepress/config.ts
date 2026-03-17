@@ -43,7 +43,8 @@ export default defineConfig({
       { text: 'Configuration', link: '/configuration' },
       { text: 'How It Works', link: '/how-it-works' },
       { text: 'API', link: '/api' },
-      { text: 'Security', link: '/security' }
+      { text: 'Security', link: '/security' },
+      { text: 'Demo', link: 'https://foldergram.intentdeep.com/' }
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/foldergram/foldergram' }
