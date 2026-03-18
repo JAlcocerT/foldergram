@@ -203,11 +203,29 @@ data/
 | `PREVIEWS_DIR`                | `./data/previews`   | Generated preview output directory.                                       |
 | `SCAN_DISCOVERY_CONCURRENCY`  | `4`                 | Folder discovery concurrency.                                             |
 | `SCAN_DERIVATIVE_CONCURRENCY` | `4`                 | Derivative generation concurrency.                                        |
+| `PUBLIC_DEMO_MODE`            | `0`                 | When enabled, all API mutations become read-only and return `403`.        |
+| `CSRF_TRUSTED_ORIGINS`        | empty               | Comma-separated extra browser origins allowed for mutating API requests.  |
 | `NODE_ENV`                    | `development`       | Runtime mode.                                                             |
 
 The shipped `.env.example` only includes the `DEV_*` port values. Docker uses
 the fixed internal container port `4141`, and other production runtimes
 continue to use `SERVER_PORT`, which defaults to `4141` in the Docker image.
+
+### Public Demo Deployments
+
+If you run a public read-only demo, keep the repository unchanged on the server
+and set the behavior in `.env` instead:
+
+```env
+NODE_ENV=production
+PUBLIC_DEMO_MODE=1
+CSRF_TRUSTED_ORIGINS=https://foldergram.intentdeep.com
+```
+
+`PUBLIC_DEMO_MODE=1` blocks every `POST`, `PUT`, `PATCH`, and `DELETE` request
+under `/api`, including future routes you add later. `CSRF_TRUSTED_ORIGINS` is
+only needed when the browser-visible origin differs from the upstream Node host
+seen by Express, such as behind a reverse proxy or HTTPS terminator.
 
 ## Tech Stack
 

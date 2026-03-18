@@ -148,6 +148,50 @@ describe.sequential('production mutation origin checks', () => {
     vi.unstubAllEnvs();
   });
 
+  it('allows production mutations from the forwarded public https origin', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SERVER_PORT', '4141');
+
+    const middleware = await import('../src/middleware/csrf-protection.js');
+    const request = createRequest('DELETE', {
+      [middleware.CSRF_INTENT_HEADER]: middleware.CSRF_INTENT_VALUE,
+      'x-forwarded-host': 'foldergram.intentdeep.com',
+      'x-forwarded-proto': 'https',
+      origin: 'https://foldergram.intentdeep.com'
+    });
+    const response = createResponse();
+    const next = vi.fn();
+
+    middleware.requireTrustedMutationRequest(request, response, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(response.status).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it('allows production mutations from a configured trusted origin', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SERVER_PORT', '4141');
+    vi.stubEnv('CSRF_TRUSTED_ORIGINS', 'https://foldergram.intentdeep.com');
+
+    const middleware = await import('../src/middleware/csrf-protection.js');
+    const request = createRequest('DELETE', {
+      [middleware.CSRF_INTENT_HEADER]: middleware.CSRF_INTENT_VALUE,
+      host: '127.0.0.1:4141',
+      origin: 'https://foldergram.intentdeep.com'
+    });
+    const response = createResponse();
+    const next = vi.fn();
+
+    middleware.requireTrustedMutationRequest(request, response, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(response.status).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it('rejects production mutations when the origin host does not match the serving host', async () => {
     vi.resetModules();
     vi.stubEnv('NODE_ENV', 'production');

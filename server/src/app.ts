@@ -5,6 +5,7 @@ import express from 'express';
 
 import { appConfig, repositoryRoot } from './config/env.js';
 import { requireTrustedMutationRequest } from './middleware/csrf-protection.js';
+import { blockPublicDemoMutations } from './middleware/public-demo-mode.js';
 import { apiRouter } from './routes/api.js';
 
 export function createApp() {
@@ -15,7 +16,7 @@ export function createApp() {
   app.use('/thumbnails', express.static(appConfig.thumbnailsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
   app.use('/previews', express.static(appConfig.previewsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
 
-  app.use('/api', requireTrustedMutationRequest, apiRouter);
+  app.use('/api', blockPublicDemoMutations, requireTrustedMutationRequest, apiRouter);
 
   if (appConfig.nodeEnv === 'production') {
     const clientDist = path.join(repositoryRoot, 'client', 'dist');

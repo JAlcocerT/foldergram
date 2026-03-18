@@ -24,6 +24,8 @@ const envSchema = z.object({
   LOG_VERBOSE: z.string().optional(),
   SCAN_DISCOVERY_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   SCAN_DERIVATIVE_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  PUBLIC_DEMO_MODE: z.string().optional(),
+  CSRF_TRUSTED_ORIGINS: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
 
@@ -51,12 +53,48 @@ function uniq(values: string[]): string[] {
   return [...new Set(values)];
 }
 
+function parseBooleanFlag(value: string | undefined): boolean {
+  return typeof value === 'string' && /^(1|true|yes|on)$/i.test(value.trim());
+}
+
+function normalizeConfiguredOrigin(origin: string): string {
+  let parsedOrigin: URL;
+
+  try {
+    parsedOrigin = new URL(origin);
+  } catch {
+    throw new Error(`Invalid CSRF_TRUSTED_ORIGINS entry: ${origin}`);
+  }
+
+  if (parsedOrigin.protocol !== 'http:' && parsedOrigin.protocol !== 'https:') {
+    throw new Error(`Invalid CSRF_TRUSTED_ORIGINS entry: ${origin}`);
+  }
+
+  return parsedOrigin.origin;
+}
+
+function parseConfiguredOrigins(value: string | undefined): string[] {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return [];
+  }
+
+  return uniq(
+    value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+      .map((entry) => normalizeConfiguredOrigin(entry))
+  );
+}
+
 const dataRoot = resolveConfiguredPath(parsed.DATA_ROOT ?? parsed.DATA_DIR, resolveFromRoot('./data'));
 const galleryRoot = resolveConfiguredPath(parsed.GALLERY_ROOT, path.join(dataRoot, 'gallery'));
 const dbDir = resolveConfiguredPath(parsed.DB_DIR, path.join(dataRoot, 'db'));
 const thumbnailsDir = resolveConfiguredPath(parsed.THUMBNAILS_DIR, path.join(dataRoot, 'thumbnails'));
 const previewsDir = resolveConfiguredPath(parsed.PREVIEWS_DIR, path.join(dataRoot, 'previews'));
-const logVerbose = typeof parsed.LOG_VERBOSE === 'string' && /^(1|true|yes|on)$/i.test(parsed.LOG_VERBOSE);
+const logVerbose = parseBooleanFlag(parsed.LOG_VERBOSE);
+const publicDemoMode = parseBooleanFlag(parsed.PUBLIC_DEMO_MODE);
+const csrfTrustedOrigins = parseConfiguredOrigins(parsed.CSRF_TRUSTED_ORIGINS);
 
 const derivativeDirectoriesOverlap =
   isSameOrWithinPath(thumbnailsDir, previewsDir) || isSameOrWithinPath(previewsDir, thumbnailsDir);
@@ -93,6 +131,8 @@ export const appConfig = {
   previewsDir,
   managedGalleryRelativeIgnores,
   logVerbose,
+  publicDemoMode,
+  csrfTrustedOrigins,
   scanDiscoveryConcurrency: parsed.SCAN_DISCOVERY_CONCURRENCY,
   scanDerivativeConcurrency: parsed.SCAN_DERIVATIVE_CONCURRENCY,
   databasePath: path.join(dbDir, 'gallery.sqlite')
