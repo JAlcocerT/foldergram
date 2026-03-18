@@ -9,7 +9,7 @@
 **Local-only photo and video gallery for folders, with an Instagram-inspired browsing pattern.**
 
 [![Available on GHCR](https://img.shields.io/badge/GHCR-foldergram-blue?style=flat-square&logo=docker)](https://github.com/foldergram/foldergram/pkgs/container/foldergram)
-[![LIVE DEMO](https://img.shields.io/badge/LIVE%20DEMO-FOLDERGRAM-0f172a?style=flat-square&logo=googlechrome&logoColor=white)](https://foldergram.intentdeep.com/)
+[![LIVE DEMO](https://img.shields.io/badge/LIVE%20DEMO-FOLDERGRAM-a951ab?style=flat-square&logo=googlechrome&logoColor=white)](https://foldergram.intentdeep.com/)
 [![Node.js Version](https://img.shields.io/badge/Node.js-22%20LTS-green?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4fc08d?style=flat-square&logo=vuedotjs)](https://vuejs.org/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
@@ -191,19 +191,19 @@ data/
   └─ previews/      # Generated previews
 ```
 
-| Variable                      | Default             | Description                                            |
-| ----------------------------- | ------------------- | ------------------------------------------------------ |
-| `SERVER_PORT`                 | `4141`              | Production Express port.                               |
-| `DEV_SERVER_PORT`             | `4140`              | Express server port during for Development `pnpm dev`. |
+| Variable                      | Default             | Description                                                               |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| `SERVER_PORT`                 | `4141`              | Production Express port.                                                  |
+| `DEV_SERVER_PORT`             | `4140`              | Express server port during for Development `pnpm dev`.                    |
 | `DEV_CLIENT_PORT`             | `4141`              | Base Vite client port during `pnpm dev`. The client may use up to `4144`. |
-| `DATA_ROOT`                   | `./data`            | Root directory for app-managed storage.                |
-| `GALLERY_ROOT`                | `./data/gallery`    | Root directory scanned for App Folders.                |
-| `DB_DIR`                      | `./data/db`         | SQLite database directory.                             |
-| `THUMBNAILS_DIR`              | `./data/thumbnails` | Generated thumbnail output directory.                  |
-| `PREVIEWS_DIR`                | `./data/previews`   | Generated preview output directory.                    |
-| `SCAN_DISCOVERY_CONCURRENCY`  | `4`                 | Folder discovery concurrency.                          |
-| `SCAN_DERIVATIVE_CONCURRENCY` | `4`                 | Derivative generation concurrency.                     |
-| `NODE_ENV`                    | `development`       | Runtime mode.                                          |
+| `DATA_ROOT`                   | `./data`            | Root directory for app-managed storage.                                   |
+| `GALLERY_ROOT`                | `./data/gallery`    | Root directory scanned for App Folders.                                   |
+| `DB_DIR`                      | `./data/db`         | SQLite database directory.                                                |
+| `THUMBNAILS_DIR`              | `./data/thumbnails` | Generated thumbnail output directory.                                     |
+| `PREVIEWS_DIR`                | `./data/previews`   | Generated preview output directory.                                       |
+| `SCAN_DISCOVERY_CONCURRENCY`  | `4`                 | Folder discovery concurrency.                                             |
+| `SCAN_DERIVATIVE_CONCURRENCY` | `4`                 | Derivative generation concurrency.                                        |
+| `NODE_ENV`                    | `development`       | Runtime mode.                                                             |
 
 The shipped `.env.example` only includes the `DEV_*` port values. Docker uses
 the fixed internal container port `4141`, and other production runtimes
