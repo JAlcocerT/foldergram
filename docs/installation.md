@@ -23,38 +23,18 @@ cd foldergram
 
 ### 2. Create `docker-compose.yml`
 
-Create a `docker-compose.yml` file with this content:
-
-```yaml
-services:
-  foldergram:
-    image: ghcr.io/foldergram/foldergram:latest
-    ports:
-      - "${SERVER_PORT:-4141}:${SERVER_PORT:-4141}"
-    environment:
-      SERVER_PORT: ${SERVER_PORT:-4141}
-      NODE_ENV: production
-      # Internal container paths (do not change)
-      DATA_ROOT: /app/data
-      GALLERY_ROOT: /app/data/gallery
-      DB_DIR: /app/data/db
-      THUMBNAILS_DIR: /app/data/thumbnails
-      PREVIEWS_DIR: /app/data/previews
-    volumes:
-      # Change the left side to point to your media/data
-      - ./data/gallery:/app/data/gallery
-      - ./data/db:/app/data/db
-      - ./data/thumbnails:/app/data/thumbnails
-      - ./data/previews:/app/data/previews
-    restart: unless-stopped
-```
-
-### 3. Create the local data folders
-
-Create the directories that will be mounted into the container:
+Download the Compose file:
 
 ```bash
-mkdir -p data/gallery data/db data/thumbnails data/previews
+wget -O docker-compose.yml https://raw.githubusercontent.com/foldergram/foldergram/main/docker-compose.yml
+```
+
+### 3. Create your first gallery folder
+
+Create a starter folder for your first indexed App Folder:
+
+```bash
+mkdir -p data/gallery/example-album
 ```
 
 The layout should look like this:
@@ -64,14 +44,13 @@ foldergram/
   docker-compose.yml
   data/
     gallery/
-    db/
-    thumbnails/
-    previews/
+      example-album/
 ```
 
 ### 4. Add your media
 
-Place photos and videos inside folders under `data/gallery`.
+Place photos and videos inside `data/gallery/example-album` or another folder
+under `data/gallery`.
 
 Foldergram ignores loose files placed directly in the gallery root, so use a
 structure like this:
@@ -106,23 +85,25 @@ For a quick backend check, you can also open:
 
 - `http://localhost:4141/api/health`
 
+The default Compose file uses the GHCR image and exposes `4141:4141`. If you
+need a different host port, edit the left side of that mapping in
+`docker-compose.yml`.
+
 ## If you already cloned this repository
 
-This repository also includes a local `docker-compose.yml` and `Dockerfile` for
-building the app image yourself from source instead of using the published GHCR
-image.
+This repository includes:
+
+- `docker-compose.yml` for the GHCR image
+- `docker-compose.local.yml` as a local-build override
 
 From the repo root, run:
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
 
-That local compose file:
-
-- builds from the repo `Dockerfile`
-- mounts the local `data` directories into `/app/data`
-- runs the app in production mode
+This command uses the normal runtime settings, but builds the image locally
+from the repository `Dockerfile`.
 
 ## Source install for development
 
@@ -185,8 +166,7 @@ Foldergram resolves relative paths from the repository root.
 ### Docker
 
 The Docker Compose install already runs the app in production mode.
-It continues to use `SERVER_PORT`, with the compose file defaulting that to
-`4141`.
+The app inside the container listens on `4141` by default.
 
 ### Source
 

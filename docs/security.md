@@ -33,7 +33,7 @@ Allowed hostnames are:
 Allowed ports are:
 
 - `DEV_SERVER_PORT` and the reserved `DEV_CLIENT_PORT` through `DEV_CLIENT_PORT + 3` range in development or test
-- `SERVER_PORT` in production
+- `SERVER_PORT` in production, with loopback origins or the exact host that served the app accepted for browser mutations
 
 ## What this protects against
 

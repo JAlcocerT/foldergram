@@ -52,12 +52,18 @@ docker compose up -d
 
 The included compose file:
 
-- builds from the repo's `Dockerfile`
-- maps port `4141`
+- uses the GHCR image by default
+- maps host port `4141` by default
 - mounts `./data/gallery`, `./data/db`, `./data/thumbnails`, and `./data/previews`
 - runs the app in production mode
 - uses internal container paths under `/app/data`
 - relies on the image's bundled `ffmpeg`
+
+If you cloned the repo and want to build locally instead, use:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
 
 ## 4. Open the app
 

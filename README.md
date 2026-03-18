@@ -64,58 +64,53 @@ For source installs, video support requires `ffmpeg` and `ffprobe`. The Docker i
 
 This is the recommended path for most users. It uses the pre-built GitHub Container Registry (GHCR) image.
 
-1. Create a `docker-compose.yml` file:
-
-```yaml
-services:
-  foldergram:
-    image: ghcr.io/foldergram/foldergram:latest
-    ports:
-      - "${SERVER_PORT:-4141}:${SERVER_PORT:-4141}"
-    environment:
-      SERVER_PORT: ${SERVER_PORT:-4141}
-      NODE_ENV: production
-      # Internal container paths (do not change)
-      DATA_ROOT: /app/data
-      GALLERY_ROOT: /app/data/gallery
-      DB_DIR: /app/data/db
-      THUMBNAILS_DIR: /app/data/thumbnails
-      PREVIEWS_DIR: /app/data/previews
-    volumes:
-      # Change the left side to point to your media/data or follow step 2.
-      - ./data/gallery:/app/data/gallery
-      - ./data/db:/app/data/db
-      - ./data/thumbnails:/app/data/thumbnails
-      - ./data/previews:/app/data/previews
-    restart: unless-stopped
-```
-
-2. Create the local data directories:
+1. Create a folder for Foldergram and move into it:
 
 ```bash
-mkdir -p data/gallery data/db data/thumbnails data/previews
+mkdir foldergram
+cd foldergram
 ```
 
-3. Place your media under your configured gallery mount, for example `./data/gallery/<folder-name>/`.
-4. Start the container:
+2. Download the Compose file:
+
+```bash
+wget -O docker-compose.yml https://raw.githubusercontent.com/foldergram/foldergram/main/docker-compose.yml
+```
+
+3. Create your first gallery folder:
+
+```bash
+mkdir -p data/gallery/example-album
+```
+
+4. Move a few photos or videos into `data/gallery/example-album/` to create your first indexed App Folder.
+5. Start the container:
 
 ```bash
 docker compose up -d
 ```
 
-5. Open `http://localhost:4141`.
+6. Open `http://localhost:4141`.
 
-In Docker, Foldergram runs in production mode, so the Express server serves both the API and the built client from port `4141`.
+In Docker, Foldergram runs in production mode and the app inside the container
+listens on `4141`. If you need a different host port, change the left side of
+`4141:4141` in [`docker-compose.yml`](docker-compose.yml).
 
 ### If You Already Cloned This Repository
 
-This repository also includes [`docker-compose.yml`](docker-compose.yml) and [`Dockerfile`](Dockerfile) if you want to build the image locally instead of pulling from GHCR:
+The repository includes:
+
+- [`docker-compose.yml`](docker-compose.yml) for the GHCR image
+- [`docker-compose.local.yml`](docker-compose.local.yml) as a local-build override
+
+To build locally from source instead of pulling from GHCR, run:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
 
-That local compose file builds from the repo Dockerfile and still serves the app on `http://localhost:4141`.
+This command uses the same runtime settings and volumes, but builds the image
+locally from the repository `Dockerfile`.
 
 ### Run from Source
 
@@ -210,9 +205,9 @@ data/
 | `SCAN_DERIVATIVE_CONCURRENCY` | `4`                 | Derivative generation concurrency.                     |
 | `NODE_ENV`                    | `development`       | Runtime mode.                                          |
 
-The shipped `.env.example` only includes the `DEV_*` port values. Docker and
-other production runtimes continue to use `SERVER_PORT`, which defaults to
-`4141` in the compose file and Docker image.
+The shipped `.env.example` only includes the `DEV_*` port values. Docker uses
+the fixed internal container port `4141`, and other production runtimes
+continue to use `SERVER_PORT`, which defaults to `4141` in the Docker image.
 
 ## Tech Stack
 

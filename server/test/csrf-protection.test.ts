@@ -125,3 +125,47 @@ describe('requireTrustedMutationRequest', () => {
     expect(response.status).toHaveBeenCalledWith(403);
   });
 });
+
+describe.sequential('production mutation origin checks', () => {
+  it('allows production mutations from the same non-loopback host even when Docker maps a different host port', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SERVER_PORT', '4141');
+
+    const middleware = await import('../src/middleware/csrf-protection.js');
+    const request = createRequest('DELETE', {
+      [middleware.CSRF_INTENT_HEADER]: middleware.CSRF_INTENT_VALUE,
+      host: '192.168.100.2:4142',
+      origin: 'http://192.168.100.2:4142'
+    });
+    const response = createResponse();
+    const next = vi.fn();
+
+    middleware.requireTrustedMutationRequest(request, response, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(response.status).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it('rejects production mutations when the origin host does not match the serving host', async () => {
+    vi.resetModules();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SERVER_PORT', '4141');
+
+    const middleware = await import('../src/middleware/csrf-protection.js');
+    const request = createRequest('DELETE', {
+      [middleware.CSRF_INTENT_HEADER]: middleware.CSRF_INTENT_VALUE,
+      host: '192.168.100.2:4142',
+      origin: 'http://192.168.100.3:4142'
+    });
+    const response = createResponse();
+    const next = vi.fn();
+
+    middleware.requireTrustedMutationRequest(request, response, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(403);
+    vi.unstubAllEnvs();
+  });
+});
