@@ -32,14 +32,16 @@ function createResponse() {
 }
 
 describe('isAllowedLocalOrigin', () => {
-  it('allows loopback origins for the app and dev-client ports', () => {
+  it('allows loopback origins for the app port and the dev-client port range', () => {
     expect(isAllowedLocalOrigin(`http://localhost:${appConfig.port}`)).toBe(true);
     expect(isAllowedLocalOrigin(`http://127.0.0.1:${appConfig.devClientPort}`)).toBe(true);
+    expect(isAllowedLocalOrigin(`http://localhost:${appConfig.devClientPorts.at(-1)}`)).toBe(true);
     expect(isAllowedLocalOrigin(`http://[::1]:${appConfig.port}`)).toBe(true);
   });
 
   it('rejects non-loopback or unexpected ports', () => {
     expect(isAllowedLocalOrigin('http://example.com:4141')).toBe(false);
+    expect(isAllowedLocalOrigin(`http://localhost:${appConfig.devClientPorts.at(-1)! + 1}`)).toBe(false);
     expect(isAllowedLocalOrigin('http://localhost:9999')).toBe(false);
     expect(isAllowedLocalOrigin('not-a-url')).toBe(false);
   });

@@ -29,10 +29,11 @@ const envSchema = z.object({
 
 const parsed = envSchema.parse(process.env);
 const isProduction = parsed.NODE_ENV === 'production';
+const devClientPort = parsed.DEV_CLIENT_PORT ?? 4141;
 const serverPort = isProduction
   ? parsed.SERVER_PORT ?? 4141
-  : parsed.DEV_SERVER_PORT ?? 4142;
-const devClientPort = parsed.DEV_CLIENT_PORT ?? 4141;
+  : parsed.DEV_SERVER_PORT ?? 4140;
+const devClientPorts = Array.from({ length: 4 }, (_, index) => devClientPort + index);
 
 function resolveFromRoot(value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(repositoryRoot, value);
@@ -82,6 +83,7 @@ const managedGalleryRelativeIgnores = uniq(
 export const appConfig = {
   port: serverPort,
   devClientPort,
+  devClientPorts,
   nodeEnv: parsed.NODE_ENV,
   isDevelopment: parsed.NODE_ENV === 'development',
   dataRoot,

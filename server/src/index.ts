@@ -24,6 +24,28 @@ import { log } from "./services/log-service.js";
 import { scannerService } from "./services/scanner-service.js";
 import { watcherService } from "./services/watcher-service.js";
 
+function logServerReady(): void {
+  if (!appConfig.isDevelopment) {
+    log.info(`HTTP server listening on http://localhost:${appConfig.port}`);
+    return;
+  }
+
+  const firstClientPort = appConfig.devClientPorts[0] ?? appConfig.devClientPort;
+  const lastClientPort = appConfig.devClientPorts.at(-1) ?? appConfig.devClientPort;
+  const clientPortRange =
+    firstClientPort === lastClientPort ? String(firstClientPort) : `${firstClientPort}-${lastClientPort}`;
+
+  log.table(
+    "Development server ready",
+    [
+      ["API", `http://localhost:${appConfig.port}`],
+      ["Health", `http://localhost:${appConfig.port}/api/health`],
+      ["Client ports", clientPortRange]
+    ],
+    "success"
+  );
+}
+
 async function bootstrap(): Promise<void> {
   const app = createApp();
   const server = createServer(app);
@@ -43,7 +65,7 @@ async function bootstrap(): Promise<void> {
   });
 
   server.listen(appConfig.port, () => {
-    log.info(`HTTP server listening on http://localhost:${appConfig.port}`);
+    logServerReady();
     const startupAction = scannerService.handleStartup("startup");
     if (startupAction === "blocked") {
       log.info("Gallery watcher deferred until the library rebuild completes");

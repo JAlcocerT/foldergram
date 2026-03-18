@@ -158,9 +158,12 @@ npm run dev
 
 Development ports:
 
-- Client: `http://localhost:4141`
-- API: `http://localhost:4142`
-- Docs: `http://localhost:4143`
+- Client: prefers `http://localhost:4141` and automatically uses the next free port up to `4144`
+- API: `http://localhost:4140`
+- Docs: `http://localhost:4145`
+
+The Vite client stays within the reserved `4141-4144` range in development, so
+it can move off `4141` without colliding with the API or docs ports.
 
 If you only want part of the workspace, use:
 
@@ -196,8 +199,8 @@ data/
 | Variable                      | Default             | Description                                            |
 | ----------------------------- | ------------------- | ------------------------------------------------------ |
 | `SERVER_PORT`                 | `4141`              | Production Express port.                               |
-| `DEV_SERVER_PORT`             | `4142`              | Express server port during for Development `pnpm dev`. |
-| `DEV_CLIENT_PORT`             | `4141`              | Vite client port during `pnpm dev`.                    |
+| `DEV_SERVER_PORT`             | `4140`              | Express server port during for Development `pnpm dev`. |
+| `DEV_CLIENT_PORT`             | `4141`              | Base Vite client port during `pnpm dev`. The client may use up to `4144`. |
 | `DATA_ROOT`                   | `./data`            | Root directory for app-managed storage.                |
 | `GALLERY_ROOT`                | `./data/gallery`    | Root directory scanned for App Folders.                |
 | `DB_DIR`                      | `./data/db`         | SQLite database directory.                             |

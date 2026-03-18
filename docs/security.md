@@ -32,7 +32,7 @@ Allowed hostnames are:
 
 Allowed ports are:
 
-- `DEV_SERVER_PORT` and `DEV_CLIENT_PORT` in development or test
+- `DEV_SERVER_PORT` and the reserved `DEV_CLIENT_PORT` through `DEV_CLIENT_PORT + 3` range in development or test
 - `SERVER_PORT` in production
 
 ## What this protects against

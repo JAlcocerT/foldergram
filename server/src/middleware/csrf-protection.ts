@@ -16,7 +16,9 @@ function getAllowedPortSet(): Set<string> {
   const allowedPorts = new Set([String(appConfig.port)]);
 
   if (appConfig.nodeEnv !== 'production') {
-    allowedPorts.add(String(appConfig.devClientPort));
+    for (const port of appConfig.devClientPorts) {
+      allowedPorts.add(String(port));
+    }
   }
 
   return allowedPorts;

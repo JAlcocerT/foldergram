@@ -30,7 +30,7 @@ x-foldergram-intent: 1
 For mutating requests:
 
 - if `Origin` is present, it must be `localhost`, `127.0.0.1`, or `::1`
-- in development and test, the origin port must match either `DEV_SERVER_PORT` or `DEV_CLIENT_PORT`
+- in development and test, the origin port must match `DEV_SERVER_PORT` or the reserved dev-client range from `DEV_CLIENT_PORT` through `DEV_CLIENT_PORT + 3`
 - in production, the origin port must match `SERVER_PORT`
 - if `Origin` is absent but `Referer` is present, the same loopback check is applied to the referer origin
 

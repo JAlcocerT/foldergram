@@ -136,8 +136,8 @@ pnpm dev
 
 The shipped `.env.example` keeps the development ports aligned like this:
 
-- `DEV_CLIENT_PORT=4141`
-- `DEV_SERVER_PORT=4142`
+- `DEV_CLIENT_PORT=4141` with client fallback through `4144`
+- `DEV_SERVER_PORT=4140`
 
 ## Runtime requirements for source installs
 

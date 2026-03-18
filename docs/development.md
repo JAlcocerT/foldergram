@@ -36,9 +36,9 @@ description: Workspace scripts, local ports, watcher behavior, tests, and docs d
 
 | Service | Port |
 | --- | --- |
-| Vite client | `4141` |
-| API server | `4142` |
-| VitePress docs | `4143` |
+| Vite client | prefers `4141`, with automatic fallback through `4144` |
+| API server | `4140` |
+| VitePress docs | `4145` |
 
 ## Dev proxy behavior
 
@@ -50,6 +50,9 @@ The Vite client proxies these paths to the backend:
 
 That keeps the browser pointed at the Vite dev server while backend assets still
 come from Express.
+
+The Vite client automatically stays within the reserved `4141-4144` range. That
+lets it move off `4141` without stepping onto the backend or docs ports.
 
 ## Startup sequence
 
