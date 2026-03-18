@@ -49,6 +49,26 @@
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-heart-16-filled' : 'i-fluent-heart-16-regular'" aria-hidden="true" />
         </a>
       </RouterLink>
+      <RouterLink custom :to="{ name: 'trash' }" v-slot="{ href, navigate, isActive }">
+        <a
+          :href="href"
+          class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
+          :class="isActive ? topbarActiveClass : ''"
+          aria-label="Trash"
+          @click="navigate"
+        >
+          <svg class="w-[1.45rem] h-[1.45rem]" viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M9 4.75h6m-8 3h10m-8.5 0v10a1.25 1.25 0 0 0 1.25 1.25h4.5A1.25 1.25 0 0 0 15.5 17.75v-10m-4 3v5m4-5v5"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+          </svg>
+        </a>
+      </RouterLink>
       <RouterLink custom :to="{ name: 'settings' }" v-slot="{ href, navigate, isActive }">
         <a
           :href="href"

@@ -12,11 +12,14 @@ import type {
   FolderRecord,
   FolderSummaryRecord,
   ScanRunRecord,
+  TrashImage,
   TakenAtSource
 } from '../types/models.js';
 
 const database = databaseManager.connection;
 const EFFECTIVE_FEED_TIME_SQL = 'COALESCE(images.taken_at, images.sort_timestamp)';
+const VISIBLE_IMAGE_WHERE_SQL = 'images.is_deleted = 0 AND images.is_trashed = 0';
+const VISIBLE_IMAGE_WHERE_UNSCOPED_SQL = 'is_deleted = 0 AND is_trashed = 0';
 const FEED_IMAGE_SELECT_SQL = `
   SELECT
     images.id,
@@ -120,7 +123,7 @@ export const folderRepository = {
           SUM(CASE WHEN images.media_type = 'video' THEN 1 ELSE 0 END) AS video_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
-        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0 AND images.is_trashed = 0
         GROUP BY folders.id
         ORDER BY latest_image_mtime_ms DESC, folders.name COLLATE NOCASE ASC, folders.folder_path COLLATE NOCASE ASC
         `
@@ -130,6 +133,10 @@ export const folderRepository = {
 
   getBySlug(slug: string): FolderRecord | undefined {
     return database.prepare('SELECT * FROM folders WHERE slug = ?').get(slug) as FolderRecord | undefined;
+  },
+
+  getById(id: number): FolderRecord | undefined {
+    return database.prepare('SELECT * FROM folders WHERE id = ?').get(id) as FolderRecord | undefined;
   },
 
   getByFolderPath(folderPath: string): FolderRecord | undefined {
@@ -148,7 +155,7 @@ export const folderRepository = {
           SUM(CASE WHEN images.media_type = 'video' THEN 1 ELSE 0 END) AS video_count,
           MAX(images.mtime_ms) AS latest_image_mtime_ms
         FROM folders
-        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0
+        INNER JOIN images ON images.folder_id = folders.id AND images.is_deleted = 0 AND images.is_trashed = 0
         WHERE folders.slug = ?
         GROUP BY folders.id
         `
@@ -202,7 +209,7 @@ export const folderRepository = {
             WHERE EXISTS (
               SELECT 1
               FROM images
-              WHERE images.folder_id = folders.id AND images.is_deleted = 0
+              WHERE images.folder_id = folders.id AND images.is_deleted = 0 AND images.is_trashed = 0
             )
             `
           )
@@ -240,9 +247,9 @@ export const imageRepository = {
       INSERT INTO images (
         folder_id, filename, extension, relative_path, absolute_path, file_size, width, height,
         media_type, mime_type, duration_ms, checksum_or_fingerprint, mtime_ms, first_seen_at, sort_timestamp, taken_at, taken_at_source,
-        thumbnail_path, preview_path, playback_strategy, is_deleted, updated_at
+        thumbnail_path, preview_path, playback_strategy, is_deleted, is_trashed, trashed_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, NULL, ?)
       ON CONFLICT(relative_path) DO UPDATE SET
         folder_id = excluded.folder_id,
         filename = excluded.filename,
@@ -370,12 +377,43 @@ export const imageRepository = {
     database.prepare('UPDATE images SET is_deleted = 0, updated_at = ? WHERE relative_path = ?').run(nowIso(), relativePath);
   },
 
+  moveToTrash(id: number, trashedAt = nowIso()): boolean {
+    const result = database
+      .prepare(
+        `
+        UPDATE images
+        SET is_trashed = 1, trashed_at = ?, updated_at = ?
+        WHERE id = ? AND is_deleted = 0 AND is_trashed = 0
+        `
+      )
+      .run(trashedAt, nowIso(), id);
+    return Number(result.changes ?? 0) > 0;
+  },
+
+  restoreFromTrash(id: number): boolean {
+    const result = database
+      .prepare(
+        `
+        UPDATE images
+        SET is_trashed = 0, trashed_at = NULL, updated_at = ?
+        WHERE id = ? AND is_deleted = 0 AND is_trashed = 1
+        `
+      )
+      .run(nowIso(), id);
+    return Number(result.changes ?? 0) > 0;
+  },
+
+  deleteById(id: number): boolean {
+    const result = database.prepare('DELETE FROM images WHERE id = ?').run(id);
+    return Number(result.changes ?? 0) > 0;
+  },
+
   listFeed(page: number, limit: number): FeedImage[] {
     const offset = (page - 1) * limit;
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
@@ -383,14 +421,16 @@ export const imageRepository = {
   },
 
   countFeed(): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0').get() as { count: number }).count);
+    return Number(
+      (database.prepare(`SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL}`).get() as { count: number }).count
+    );
   },
 
   listRecentCandidates(offset: number, limit: number): FeedImage[] {
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
       ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
@@ -401,7 +441,7 @@ export const imageRepository = {
     return Number(
       (
         database
-          .prepare(`SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?`)
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} AND ${EFFECTIVE_FEED_TIME_SQL} <= ?`)
           .get(cutoffTimestamp) as { count: number }
       ).count
     );
@@ -412,7 +452,7 @@ export const imageRepository = {
       `
       ${FEED_IMAGE_SELECT_SQL}
       LEFT JOIN likes ON likes.image_id = images.id
-      WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL} AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
       ORDER BY
         CASE WHEN likes.image_id IS NULL THEN 0 ELSE 1 END DESC,
         ${EFFECTIVE_FEED_TIME_SQL} DESC,
@@ -428,7 +468,7 @@ export const imageRepository = {
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
       ORDER BY ABS(((images.id * 1103515245) + (? * 1013904223)) % 2147483647), images.id DESC
       LIMIT ? OFFSET ?
       `
@@ -448,7 +488,7 @@ export const imageRepository = {
             `
             SELECT COUNT(*) AS count
             FROM images
-            WHERE images.is_deleted = 0
+            WHERE ${VISIBLE_IMAGE_WHERE_SQL}
               AND strftime('%m-%d', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') IN (${placeholders})
               AND CAST(strftime('%Y', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') AS INTEGER) < ?
             `
@@ -469,7 +509,7 @@ export const imageRepository = {
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
         AND strftime('%m-%d', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') IN (${placeholders})
         AND CAST(strftime('%Y', ${EFFECTIVE_FEED_TIME_SQL} / 1000, 'unixepoch', 'localtime') AS INTEGER) < ?
       ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
@@ -486,7 +526,7 @@ export const imageRepository = {
             `
             SELECT COUNT(*) AS count
             FROM images
-            WHERE images.is_deleted = 0
+            WHERE ${VISIBLE_IMAGE_WHERE_SQL}
               AND ${EFFECTIVE_FEED_TIME_SQL} BETWEEN ? AND ?
             `
           )
@@ -501,7 +541,7 @@ export const imageRepository = {
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
         AND ${EFFECTIVE_FEED_TIME_SQL} BETWEEN ? AND ?
       ORDER BY ${EFFECTIVE_FEED_TIME_SQL} DESC, images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
@@ -515,11 +555,47 @@ export const imageRepository = {
     return database.prepare(
       `
       ${FEED_IMAGE_SELECT_SQL}
-      WHERE images.folder_id = ? AND images.is_deleted = 0${mediaTypeClause}
+      WHERE images.folder_id = ? AND ${VISIBLE_IMAGE_WHERE_SQL}${mediaTypeClause}
       ORDER BY images.sort_timestamp DESC, images.id DESC
       LIMIT ? OFFSET ?
       `
     ).all(...(mediaType ? [folderId, mediaType, limit, offset] : [folderId, limit, offset])) as unknown as FeedImage[];
+  },
+
+  listTrashed(page: number, limit: number): TrashImage[] {
+    const offset = (page - 1) * limit;
+    return database.prepare(
+      `
+      SELECT
+        images.id,
+        images.folder_id AS folderId,
+        folders.slug AS folderSlug,
+        folders.name AS folderName,
+        folders.folder_path AS folderPath,
+        images.filename,
+        images.width,
+        images.height,
+        images.media_type AS mediaType,
+        images.duration_ms AS durationMs,
+        images.thumbnail_path AS thumbnailUrl,
+        images.preview_path AS previewUrl,
+        images.playback_strategy AS playbackStrategy,
+        images.sort_timestamp AS sortTimestamp,
+        images.taken_at AS takenAt,
+        images.trashed_at AS trashedAt
+      FROM images
+      INNER JOIN folders ON folders.id = images.folder_id
+      WHERE images.is_deleted = 0 AND images.is_trashed = 1
+      ORDER BY images.trashed_at DESC, images.id DESC
+      LIMIT ? OFFSET ?
+      `
+    ).all(limit, offset) as unknown as TrashImage[];
+  },
+
+  countTrashed(): number {
+    return Number(
+      (database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND is_trashed = 1').get() as { count: number }).count
+    );
   },
 
   countByFolder(folderId: number, mediaType?: MediaType): number {
@@ -528,6 +604,17 @@ export const imageRepository = {
       (
         database
           .prepare(`SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND is_deleted = 0${mediaTypeClause}`)
+          .get(...(mediaType ? [folderId, mediaType] : [folderId])) as { count: number }
+      ).count
+    );
+  },
+
+  countVisibleByFolder(folderId: number, mediaType?: MediaType): number {
+    const mediaTypeClause = mediaType ? ' AND media_type = ?' : '';
+    return Number(
+      (
+        database
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE folder_id = ? AND ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL}${mediaTypeClause}`)
           .get(...(mediaType ? [folderId, mediaType] : [folderId])) as { count: number }
       ).count
     );
@@ -573,7 +660,7 @@ export const imageRepository = {
     return Number(
       (
         database
-          .prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND taken_at_source = ?')
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} AND taken_at_source = ?`)
           .get(source) as { count: number }
       ).count
     );
@@ -581,7 +668,7 @@ export const imageRepository = {
 
   getLatestFolderImageId(folderId: number): number | null {
     const row = database.prepare(
-      'SELECT id FROM images WHERE folder_id = ? AND is_deleted = 0 ORDER BY sort_timestamp DESC, id DESC LIMIT 1'
+      `SELECT id FROM images WHERE folder_id = ? AND ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} ORDER BY sort_timestamp DESC, id DESC LIMIT 1`
     ).get(folderId) as { id: number } | undefined;
     return row?.id ?? null;
   },
@@ -611,7 +698,7 @@ export const imageRepository = {
         images.taken_at AS takenAt
       FROM images
       INNER JOIN folders ON folders.id = images.folder_id
-      WHERE images.id = ? AND images.is_deleted = 0
+      WHERE images.id = ? AND ${VISIBLE_IMAGE_WHERE_SQL}
       `
     ).get(id) as (Omit<ImageDetail, 'nextImageId' | 'previousImageId'> & { originalUrl: string }) | undefined;
 
@@ -624,7 +711,7 @@ export const imageRepository = {
       `
       SELECT id
       FROM images
-      WHERE folder_id = ? AND is_deleted = 0
+      WHERE folder_id = ? AND ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL}
         ${mediaTypeClause}
         AND (sort_timestamp < ? OR (sort_timestamp = ? AND id < ?))
       ORDER BY sort_timestamp DESC, id DESC
@@ -638,7 +725,7 @@ export const imageRepository = {
       `
       SELECT id
       FROM images
-      WHERE folder_id = ? AND is_deleted = 0
+      WHERE folder_id = ? AND ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL}
         ${mediaTypeClause}
         AND (sort_timestamp > ? OR (sort_timestamp = ? AND id > ?))
       ORDER BY sort_timestamp ASC, id ASC
@@ -663,14 +750,20 @@ export const imageRepository = {
     return Number(
       (
         database
-          .prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND media_type = ?')
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} AND media_type = ?`)
           .get(mediaType) as { count: number }
       ).count
     );
   },
 
   countWithThumbnail(): number {
-    return Number((database.prepare('SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND thumbnail_path IS NOT NULL').get() as { count: number }).count);
+    return Number(
+      (
+        database
+          .prepare(`SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} AND thumbnail_path IS NOT NULL`)
+          .get() as { count: number }
+      ).count
+    );
   },
 
   countWithPreview(): number {
@@ -678,7 +771,7 @@ export const imageRepository = {
       (
         database
           .prepare(
-            "SELECT COUNT(*) AS count FROM images WHERE is_deleted = 0 AND (media_type = 'image' OR COALESCE(playback_strategy, 'preview') = 'preview')"
+            `SELECT COUNT(*) AS count FROM images WHERE ${VISIBLE_IMAGE_WHERE_UNSCOPED_SQL} AND (media_type = 'image' OR COALESCE(playback_strategy, 'preview') = 'preview')`
           )
           .get() as { count: number }
       ).count
@@ -707,12 +800,13 @@ export const likeRepository = {
         images.duration_ms AS durationMs,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
+        images.playback_strategy AS playbackStrategy,
         images.sort_timestamp AS sortTimestamp,
         images.taken_at AS takenAt
       FROM likes
       INNER JOIN images ON images.id = likes.image_id
       INNER JOIN folders ON folders.id = images.folder_id
-      WHERE images.is_deleted = 0
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL}
       ORDER BY likes.created_at DESC, likes.image_id DESC
       `
     ).all() as unknown as FeedImage[];
@@ -727,7 +821,7 @@ export const likeRepository = {
             SELECT COUNT(*) AS count
             FROM likes
             INNER JOIN images ON images.id = likes.image_id
-            WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+            WHERE ${VISIBLE_IMAGE_WHERE_SQL} AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
             `
           )
           .get(cutoffTimestamp) as { count: number }
@@ -753,12 +847,13 @@ export const likeRepository = {
         images.duration_ms AS durationMs,
         images.thumbnail_path AS thumbnailUrl,
         images.preview_path AS previewUrl,
+        images.playback_strategy AS playbackStrategy,
         images.sort_timestamp AS sortTimestamp,
         images.taken_at AS takenAt
       FROM likes
       INNER JOIN images ON images.id = likes.image_id
       INNER JOIN folders ON folders.id = images.folder_id
-      WHERE images.is_deleted = 0 AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
+      WHERE ${VISIBLE_IMAGE_WHERE_SQL} AND ${EFFECTIVE_FEED_TIME_SQL} <= ?
       ORDER BY likes.created_at DESC, likes.image_id DESC
       LIMIT ? OFFSET ?
       `

@@ -11,16 +11,44 @@
       :is-modal="modal"
       :deleting="viewerStore.deleting"
       @close="emit('close')"
-      @delete="confirmDeleteOpen = true"
+      @delete="openDeleteDialog"
     />
     <ConfirmDialog
       v-if="confirmDeleteOpen"
       title="Delete this post?"
-      message="This file will be permanently deleted from the hard drive. This action cannot be undone."
+      :message="deleteDialogMessage"
+      :confirm-label="deleteDialogConfirmLabel"
       :loading="viewerStore.deleting"
       @cancel="confirmDeleteOpen = false"
       @confirm="handleDelete"
-    />
+    >
+      <template #details>
+        <label class="flex items-start gap-3 mt-3 cursor-pointer select-none">
+          <input
+            v-model="deleteOriginalFromDisk"
+            class="mt-[0.2rem]"
+            type="checkbox"
+            :disabled="viewerStore.deleting"
+          />
+          <span class="grid gap-[0.18rem]">
+            <span class="text-[0.92rem] font-semibold text-text">Also permanently delete original file from disk</span>
+            <span class="text-[0.84rem] text-muted">Keep this unchecked to move the post to Trash while keeping the source file on disk.</span>
+          </span>
+        </label>
+        <p
+          v-if="deleteOriginalFromDisk"
+          class="m-0 mt-3 px-3 py-[0.8rem] rounded-[0.9rem] border border-[rgba(217,48,37,0.24)] text-[0.84rem] text-[#b42318] bg-[rgba(217,48,37,0.08)]"
+        >
+          This will permanently delete the original file, thumbnail, and preview from disk. This action cannot be undone.
+        </p>
+        <p
+          v-if="deleteError"
+          class="m-0 mt-3 px-3 py-[0.8rem] rounded-[0.9rem] border border-[rgba(217,48,37,0.24)] text-[0.84rem] text-[#b42318] bg-[rgba(217,48,37,0.08)]"
+        >
+          {{ deleteError }}
+        </p>
+      </template>
+    </ConfirmDialog>
   </div>
 </template>
 
@@ -56,12 +84,20 @@ const momentsStore = useMomentsStore();
 const route = useRoute();
 const router = useRouter();
 const confirmDeleteOpen = ref(false);
+const deleteOriginalFromDisk = ref(false);
+const deleteError = ref<string | null>(null);
 
 const imageId = computed(() => Number(props.id));
 const activeMediaType = computed(() => (route.query.tab === 'reels' ? 'video' : undefined));
 const folder = computed(() =>
   viewerStore.image ? foldersStore.items.find((entry) => entry.slug === viewerStore.image?.folderSlug) ?? null : null
 );
+const deleteDialogMessage = computed(() =>
+  deleteOriginalFromDisk.value
+    ? 'This will permanently delete the post from the app and remove original media from disk.'
+    : 'This will delete the post from the app and move it to Trash. The original file will stay on disk unless you choose permanent deletion.'
+);
+const deleteDialogConfirmLabel = computed(() => (deleteOriginalFromDisk.value ? 'Permanently Delete' : 'Delete'));
 
 async function loadImage() {
   if (Number.isFinite(imageId.value)) {
@@ -72,31 +108,46 @@ async function loadImage() {
 onMounted(loadImage);
 watch(() => [imageId.value, activeMediaType.value] as const, loadImage);
 
+function openDeleteDialog() {
+  deleteOriginalFromDisk.value = false;
+  deleteError.value = null;
+  confirmDeleteOpen.value = true;
+}
+
 async function handleDelete() {
   if (!viewerStore.image) {
     return;
   }
 
   const currentImage = viewerStore.image;
-  const deleted = await viewerStore.deleteImage(currentImage.id);
-  confirmDeleteOpen.value = false;
+  deleteError.value = null;
 
-  feedStore.removeImage(deleted.id);
-  likesStore.removeImage(deleted.id);
-  const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug, currentImage.mediaType);
-  momentsStore.removeImage(deleted.id);
-  appStore.removeIndexedImage(removedFolder ? 1 : 0, currentImage.mediaType);
+  try {
+    const deleted = await viewerStore.deleteImage(currentImage.id, {
+      permanent: deleteOriginalFromDisk.value
+    });
+    confirmDeleteOpen.value = false;
+    deleteOriginalFromDisk.value = false;
 
-  if (props.modal) {
-    emit('close');
-    return;
+    feedStore.removeImage(deleted.id);
+    likesStore.removeImage(deleted.id);
+    const removedFolder = foldersStore.removeImage(deleted.id, deleted.folderSlug, currentImage.mediaType);
+    momentsStore.removeImage(deleted.id);
+    appStore.removeIndexedImage(removedFolder ? 1 : 0, currentImage.mediaType);
+
+    if (props.modal) {
+      emit('close');
+      return;
+    }
+
+    if (removedFolder) {
+      await router.replace({ name: 'library' });
+      return;
+    }
+
+    await router.replace({ name: 'folder', params: { slug: deleted.folderSlug } });
+  } catch (error) {
+    deleteError.value = error instanceof Error ? error.message : 'Unable to delete post';
   }
-
-  if (removedFolder) {
-    await router.replace({ name: 'library' });
-    return;
-  }
-
-  await router.replace({ name: 'folder', params: { slug: deleted.folderSlug } });
 }
 </script>

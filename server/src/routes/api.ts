@@ -137,6 +137,11 @@ router.get('/likes', (_request, response) => {
   response.json(galleryService.getLikes());
 });
 
+router.get('/trash/images', (request, response) => {
+  const query = paginationQuerySchema.parse(request.query);
+  response.json(galleryService.getTrashImages(query.page, query.limit));
+});
+
 router.get('/images/:id', (request, response) => {
   const params = imageIdSchema.parse(request.params);
   const query = mediaTypeQuerySchema.parse(request.query);
@@ -171,6 +176,36 @@ router.delete('/images/:id/like', (request, response) => {
 
   if (!payload) {
     response.status(404).json({ message: 'Image not found' });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    ...payload
+  });
+});
+
+router.post('/images/:id/trash', (request, response) => {
+  const params = imageIdSchema.parse(request.params);
+  const payload = galleryService.trashImage(params.id);
+
+  if (!payload) {
+    response.status(404).json({ message: 'Post not found' });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    ...payload
+  });
+});
+
+router.post('/images/:id/restore', (request, response) => {
+  const params = imageIdSchema.parse(request.params);
+  const payload = galleryService.restoreImage(params.id);
+
+  if (!payload) {
+    response.status(404).json({ message: 'Post not found' });
     return;
   }
 

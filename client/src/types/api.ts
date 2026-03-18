@@ -82,10 +82,25 @@ export interface ImageDetail extends FeedItem {
   previousImageId: number | null;
 }
 
+export interface TrashItem extends FeedItem {
+  trashedAt: string | null;
+}
+
+export interface TrashImagesPayload {
+  items: TrashItem[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
 export interface DeleteImageResult {
   id: number;
   folderSlug: string;
 }
+
+export type TrashImageResult = DeleteImageResult;
+export type RestoreImageResult = DeleteImageResult;
 
 export interface DeleteFolderResult {
   slug: string;

@@ -11,6 +11,8 @@ export default defineConfig({
     "i-fluent-settings-16-regular",
     "i-fluent-heart-16-filled",
     "i-fluent-heart-16-regular",
+    "i-fluent-checkmark-20-filled",
+    "i-fluent-square-20-regular",
     "i-fluent-folder-16-filled",
     "i-fluent-folder-16-regular",
     "i-fluent-line-horizontal-3-20-filled",

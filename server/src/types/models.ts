@@ -41,6 +41,8 @@ export interface ImageRecord {
   preview_path: string;
   playback_strategy: PlaybackStrategy | null;
   is_deleted: number;
+  is_trashed: number;
+  trashed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,4 +103,8 @@ export interface ImageDetail extends FeedImage {
   originalUrl: string;
   nextImageId: number | null;
   previousImageId: number | null;
+}
+
+export interface TrashImage extends FeedImage {
+  trashedAt: string | null;
 }

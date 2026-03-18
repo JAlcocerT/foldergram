@@ -7,6 +7,7 @@ import LikesView from '../views/LikesView.vue';
 import ExploreView from '../views/ExploreView.vue';
 import FolderView from '../views/FolderView.vue';
 import MomentView from '../views/MomentView.vue';
+import TrashView from '../views/TrashView.vue';
 import { useAppStore } from '../stores/app';
 import { pinia } from '../stores/pinia';
 import SettingsView from '../views/SettingsView.vue';
@@ -57,6 +58,11 @@ export const router = createRouter({
       path: '/likes/posts',
       name: 'likes',
       component: LikesView
+    },
+    {
+      path: '/trash',
+      name: 'trash',
+      component: TrashView
     },
     {
       path: '/settings',

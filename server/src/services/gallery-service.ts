@@ -9,7 +9,7 @@ import {
 } from '../constants/app-setting-keys.js';
 import { appConfig } from '../config/env.js';
 import { appSettingsRepository, folderRepository, folderScanStateRepository, imageRepository, likeRepository, scanRunRepository } from '../db/repositories.js';
-import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType, PlaybackStrategy } from '../types/models.js';
+import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType, PlaybackStrategy, TrashImage } from '../types/models.js';
 import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBursts, listMonthDayKeysAroundDate } from '../utils/feed-utils.js';
 import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
@@ -54,6 +54,7 @@ const RAIL_COVER_CANDIDATE_LIMIT = 12;
 
 type IndexedFeedImage = FeedImage & { playbackStrategy?: PlaybackStrategy | null };
 type IndexedImageDetail = ImageDetail & { playbackStrategy?: PlaybackStrategy | null };
+type IndexedTrashImage = TrashImage & { playbackStrategy?: PlaybackStrategy | null };
 
 function getThumbnailAssetVersion(): string | null {
   const lastCompletedScanId = scanRunRepository.latestCompleted()?.id ?? null;
@@ -177,6 +178,21 @@ function mapImageDetail(image: IndexedImageDetail, thumbnailVersion = getThumbna
   };
 }
 
+function mapTrashImage(image: IndexedTrashImage, thumbnailVersion = getThumbnailAssetVersion()): TrashImage {
+  const { playbackStrategy, ...rest } = image;
+  return {
+    ...rest,
+    folderBreadcrumb: getPathBreadcrumb(rest.folderPath),
+    thumbnailUrl: toPublicMediaUrl('/thumbnails', rest.thumbnailUrl, thumbnailVersion),
+    previewUrl: buildPreviewUrl({
+      id: rest.id,
+      mediaType: rest.mediaType,
+      previewUrl: rest.previewUrl,
+      playbackStrategy
+    })
+  };
+}
+
 function buildFolderSummary(folder: FolderSummaryRecord) {
   const thumbnailVersion = getThumbnailAssetVersion();
   const avatarImageId = folder.avatar_image_id ?? imageRepository.getLatestFolderImageId(folder.id);
@@ -227,6 +243,16 @@ function mapFeedItems(items: IndexedFeedImage[], thumbnailVersion = getThumbnail
 }
 
 function buildPaginatedPayload(items: FeedImage[], page: number, limit: number, total: number) {
+  return {
+    items,
+    page,
+    limit,
+    total,
+    hasMore: page * limit < total
+  };
+}
+
+function buildTrashPaginatedPayload(items: TrashImage[], page: number, limit: number, total: number) {
   return {
     items,
     page,
@@ -649,7 +675,7 @@ export const galleryService = {
       return null;
     }
 
-    const total = mediaType ? imageRepository.countByFolder(folder.id, mediaType) : folder.image_count;
+    const total = mediaType ? imageRepository.countVisibleByFolder(folder.id, mediaType) : folder.image_count;
     const thumbnailVersion = getThumbnailAssetVersion();
 
     return {
@@ -675,6 +701,24 @@ export const galleryService = {
     return mapImageDetail(detail, getThumbnailAssetVersion());
   },
 
+  getTrashImages(page: number, limit: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return {
+        items: [],
+        page,
+        limit,
+        total: 0,
+        hasMore: false
+      };
+    }
+
+    const total = imageRepository.countTrashed();
+    const thumbnailVersion = getThumbnailAssetVersion();
+    const items = imageRepository.listTrashed(page, limit).map((image) => mapTrashImage(image as IndexedTrashImage, thumbnailVersion));
+
+    return buildTrashPaginatedPayload(items, page, limit, total);
+  },
+
   getLikes() {
     if (!storageService.getState().libraryAvailable) {
       return {
@@ -693,7 +737,7 @@ export const galleryService = {
     }
 
     const image = imageRepository.getById(id);
-    if (!image || image.is_deleted) {
+    if (!image || image.is_deleted || image.is_trashed) {
       return null;
     }
 
@@ -711,7 +755,7 @@ export const galleryService = {
     }
 
     const image = imageRepository.getById(id);
-    if (!image || image.is_deleted) {
+    if (!image || image.is_deleted || image.is_trashed) {
       return null;
     }
 
@@ -720,6 +764,56 @@ export const galleryService = {
     return {
       id,
       liked: false
+    };
+  },
+
+  trashImage(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
+    const imageRecord = imageRepository.getById(id);
+    if (!imageRecord || imageRecord.is_deleted) {
+      return null;
+    }
+
+    const folder = folderRepository.getById(imageRecord.folder_id);
+    if (!folder) {
+      return null;
+    }
+
+    if (imageRecord.is_trashed === 0) {
+      imageRepository.moveToTrash(id);
+      folderRepository.setAvatar(imageRecord.folder_id, imageRepository.getLatestFolderImageId(imageRecord.folder_id));
+    }
+
+    return {
+      id: imageRecord.id,
+      folderSlug: folder.slug
+    };
+  },
+
+  restoreImage(id: number) {
+    if (!storageService.getState().libraryAvailable) {
+      return null;
+    }
+
+    const imageRecord = imageRepository.getById(id);
+    if (!imageRecord || imageRecord.is_deleted || imageRecord.is_trashed === 0) {
+      return null;
+    }
+
+    const folder = folderRepository.getById(imageRecord.folder_id);
+    if (!folder) {
+      return null;
+    }
+
+    imageRepository.restoreFromTrash(id);
+    folderRepository.setAvatar(imageRecord.folder_id, imageRepository.getLatestFolderImageId(imageRecord.folder_id));
+
+    return {
+      id: imageRecord.id,
+      folderSlug: folder.slug
     };
   },
 
@@ -765,7 +859,7 @@ export const galleryService = {
     }
 
     const detail = imageRepository.getById(id);
-    if (!detail || detail.is_deleted) {
+    if (!detail || detail.is_deleted || detail.is_trashed) {
       return null;
     }
 
@@ -783,9 +877,12 @@ export const galleryService = {
     }
 
     const imageRecord = imageRepository.getById(id);
-    const imageDetail = imageRepository.getImageDetail(id);
+    if (!imageRecord) {
+      return null;
+    }
 
-    if (!imageRecord || !imageDetail) {
+    const folder = folderRepository.getById(imageRecord.folder_id);
+    if (!folder) {
       return null;
     }
 
@@ -811,13 +908,16 @@ export const galleryService = {
       removeFileIfPresent(previewPath)
     ]);
 
-    likeRepository.remove(imageRecord.id);
-    imageRepository.markDeleted(imageRecord.relative_path);
+    if (folder.avatar_image_id === imageRecord.id) {
+      folderRepository.setAvatar(imageRecord.folder_id, null);
+    }
+
+    imageRepository.deleteById(imageRecord.id);
     folderRepository.setAvatar(imageRecord.folder_id, imageRepository.getLatestFolderImageId(imageRecord.folder_id));
 
     return {
       id: imageRecord.id,
-      folderSlug: imageDetail.folderSlug
+      folderSlug: folder.slug
     };
   },
 

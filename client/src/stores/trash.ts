@@ -1,0 +1,83 @@
+import { defineStore } from 'pinia';
+
+import { fetchTrashImages } from '../api/gallery';
+import type { TrashItem } from '../types/api';
+
+interface TrashState {
+  items: TrashItem[];
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  loading: boolean;
+  error: string | null;
+  initialized: boolean;
+}
+
+export const useTrashStore = defineStore('trash', {
+  state: (): TrashState => ({
+    items: [],
+    page: 1,
+    limit: 24,
+    hasMore: true,
+    loading: false,
+    error: null,
+    initialized: false
+  }),
+  actions: {
+    removeItems(ids: number[]) {
+      if (ids.length === 0) {
+        return;
+      }
+
+      const idSet = new Set(ids);
+      this.items = this.items.filter((item) => !idSet.has(item.id));
+    },
+
+    reset() {
+      this.items = [];
+      this.page = 1;
+      this.hasMore = true;
+      this.loading = false;
+      this.error = null;
+      this.initialized = false;
+    },
+
+    async loadInitial(force = false) {
+      if (this.loading) {
+        return;
+      }
+
+      if (this.initialized && !force) {
+        return;
+      }
+
+      this.items = [];
+      this.page = 1;
+      this.hasMore = true;
+      this.error = null;
+      this.initialized = false;
+      await this.loadMore();
+    },
+
+    async loadMore() {
+      if (this.loading || !this.hasMore) {
+        return;
+      }
+
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const payload = await fetchTrashImages(this.page, this.limit);
+        this.items.push(...payload.items);
+        this.page += 1;
+        this.hasMore = payload.hasMore;
+        this.initialized = true;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unable to load trash';
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+});

@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS images (
   preview_path TEXT NOT NULL,
   playback_strategy TEXT NOT NULL DEFAULT 'preview',
   is_deleted INTEGER NOT NULL DEFAULT 0,
+  is_trashed INTEGER NOT NULL DEFAULT 0,
+  trashed_at TEXT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
@@ -82,6 +84,12 @@ CREATE INDEX IF NOT EXISTS idx_images_folder_sort ON images(folder_id, is_delete
 CREATE INDEX IF NOT EXISTS idx_images_folder_media_sort ON images(folder_id, media_type, is_deleted, sort_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_images_is_deleted ON images(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_images_media_type ON images(media_type, is_deleted, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_visibility_flags ON images(is_deleted, is_trashed);
+CREATE INDEX IF NOT EXISTS idx_images_taken_at_source_visibility ON images(is_deleted, is_trashed, taken_at_source);
+CREATE INDEX IF NOT EXISTS idx_images_folder_visible_sort ON images(folder_id, is_deleted, is_trashed, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_folder_media_visible_sort ON images(folder_id, media_type, is_deleted, is_trashed, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_media_visible_sort ON images(media_type, is_deleted, is_trashed, sort_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_images_trashed_listing ON images(is_trashed, is_deleted, trashed_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_images_relative_path ON images(relative_path);
 CREATE INDEX IF NOT EXISTS idx_folder_scan_state_updated_at ON folder_scan_state(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_likes_created_at ON likes(created_at DESC);

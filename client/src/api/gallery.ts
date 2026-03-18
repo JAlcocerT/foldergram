@@ -11,9 +11,12 @@ import type {
   MomentsPayload,
   PaginatedFeed,
   FolderImagesPayload,
+  RestoreImageResult,
   RebuildLibraryResult,
   RebuildThumbnailsResult,
-  FolderSummary
+  FolderSummary,
+  TrashImageResult,
+  TrashImagesPayload
 } from '../types/api';
 import { requestJson } from './http';
 
@@ -75,6 +78,10 @@ export function fetchLikes() {
   return requestJson<LikesPayload>('/api/likes');
 }
 
+export function fetchTrashImages(page = 1, limit = 24) {
+  return requestJson<TrashImagesPayload>(`/api/trash/images?page=${page}&limit=${limit}`);
+}
+
 export function likeImage(id: number) {
   return requestJson<LikeMutationResult>(`/api/images/${id}/like`, {
     method: 'POST'
@@ -84,6 +91,18 @@ export function likeImage(id: number) {
 export function unlikeImage(id: number) {
   return requestJson<LikeMutationResult>(`/api/images/${id}/like`, {
     method: 'DELETE'
+  });
+}
+
+export function trashImage(id: number) {
+  return requestJson<TrashImageResult>(`/api/images/${id}/trash`, {
+    method: 'POST'
+  });
+}
+
+export function restoreImage(id: number) {
+  return requestJson<RestoreImageResult>(`/api/images/${id}/restore`, {
+    method: 'POST'
   });
 }
 

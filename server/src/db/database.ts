@@ -70,6 +70,18 @@ class DatabaseManager {
     if (this.tableExists('images') && this.tableHasColumn('images', 'playback_strategy')) {
       this.database.exec("UPDATE images SET playback_strategy = 'preview' WHERE media_type != 'video' AND playback_strategy IS NULL");
     }
+
+    if (this.tableExists('images') && !this.tableHasColumn('images', 'is_trashed')) {
+      this.database.exec('ALTER TABLE images ADD COLUMN is_trashed INTEGER NOT NULL DEFAULT 0');
+    }
+
+    if (this.tableExists('images') && !this.tableHasColumn('images', 'trashed_at')) {
+      this.database.exec('ALTER TABLE images ADD COLUMN trashed_at TEXT NULL');
+    }
+
+    if (this.tableExists('images') && this.tableHasColumn('images', 'is_trashed') && this.tableHasColumn('images', 'trashed_at')) {
+      this.database.exec('UPDATE images SET trashed_at = NULL WHERE is_trashed = 0');
+    }
   }
 
   private applyCompatIndexes(): void {
@@ -77,6 +89,18 @@ class DatabaseManager {
     this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_taken_at_source ON images(is_deleted, taken_at_source)');
     this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_media_type ON images(media_type, is_deleted, sort_timestamp DESC)');
     this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_folder_media_sort ON images(folder_id, media_type, is_deleted, sort_timestamp DESC)');
+    this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_visibility_flags ON images(is_deleted, is_trashed)');
+    this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_taken_at_source_visibility ON images(is_deleted, is_trashed, taken_at_source)');
+    this.database.exec(
+      'CREATE INDEX IF NOT EXISTS idx_images_folder_visible_sort ON images(folder_id, is_deleted, is_trashed, sort_timestamp DESC)'
+    );
+    this.database.exec(
+      'CREATE INDEX IF NOT EXISTS idx_images_folder_media_visible_sort ON images(folder_id, media_type, is_deleted, is_trashed, sort_timestamp DESC)'
+    );
+    this.database.exec(
+      'CREATE INDEX IF NOT EXISTS idx_images_media_visible_sort ON images(media_type, is_deleted, is_trashed, sort_timestamp DESC)'
+    );
+    this.database.exec('CREATE INDEX IF NOT EXISTS idx_images_trashed_listing ON images(is_trashed, is_deleted, trashed_at DESC, id DESC)');
   }
 }
 

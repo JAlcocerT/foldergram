@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-import { deleteImage, fetchImage } from '../api/gallery';
+import { deleteImage, fetchImage, trashImage } from '../api/gallery';
 import type { DeleteImageResult, ImageDetail } from '../types/api';
 
 interface ViewerState {
@@ -39,12 +39,12 @@ export const useViewerStore = defineStore('viewer', {
       }
     },
 
-    async deleteImage(id: number): Promise<DeleteImageResult> {
+    async deleteImage(id: number, options: { permanent?: boolean } = {}): Promise<DeleteImageResult> {
       this.deleting = true;
       this.error = null;
 
       try {
-        const payload = await deleteImage(id);
+        const payload = options.permanent ? await deleteImage(id) : await trashImage(id);
         if (this.image?.id === id) {
           this.image = null;
         }
