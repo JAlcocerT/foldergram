@@ -12,6 +12,7 @@ import { appSettingsRepository, folderRepository, folderScanStateRepository, ima
 import type { FeedImage, ImageDetail, FolderSummaryRecord, MediaType, PlaybackStrategy, TrashImage } from '../types/models.js';
 import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBursts, listMonthDayKeysAroundDate } from '../utils/feed-utils.js';
 import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
+import { countSupportedRootMediaFiles } from '../utils/gallery-root-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
@@ -848,7 +849,8 @@ export const galleryService = {
         reason: rebuildRequired ? 'gallery_root_changed' : null,
         currentGalleryRoot,
         previousGalleryRoot,
-        lastSuccessfulGalleryRoot
+        lastSuccessfulGalleryRoot,
+        ignoredRootMediaCount: storageState.libraryAvailable ? countSupportedRootMediaFiles(currentGalleryRoot) : 0
       }
     };
   },

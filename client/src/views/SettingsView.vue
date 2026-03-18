@@ -37,6 +37,24 @@
       </div>
     </section>
 
+    <section
+      v-if="showIgnoredRootMediaNotice"
+      class="card flex items-center justify-between gap-3 px-4 py-3 border-[color-mix(in_srgb,var(--border)_82%,#d2a133_18%)]"
+      style="background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 97%, #fff9ea 3%) 0%, color-mix(in srgb, var(--surface) 94%, #fff3d8 6%) 100%);"
+    >
+      <p class="m-0 min-w-0 flex-1 break-words text-[0.8rem] leading-[1.45] text-muted">
+        {{ ignoredRootMediaNoticeMessage }}
+      </p>
+      <button
+        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-[rgba(159,106,0,0.08)] text-[#9f6a00] cursor-pointer transition-colors duration-180 hover:bg-[rgba(159,106,0,0.14)]"
+        type="button"
+        aria-label="Dismiss gallery root warning"
+        @click="dismissIgnoredRootMediaNotice"
+      >
+        <span class="i-fluent-dismiss-20-filled h-5 w-5" aria-hidden="true" />
+      </button>
+    </section>
+
     <section class="grid grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.95fr)] gap-6 items-start max-md:grid-cols-1">
       <!-- Left: Scan controls -->
       <div class="flex flex-col gap-[1.15rem]">
@@ -241,7 +259,8 @@ const rebuildingThumbnails = ref(false);
 const confirmRebuildOpen = ref(false);
 const confirmThumbnailRebuildOpen = ref(false);
 const SCAN_ERROR_NOTICE_STORAGE_KEY = 'foldergram-scan-error-notice-dismissal';
-const SCAN_ERROR_NOTICE_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+const IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY = 'foldergram-ignored-root-media-notice-dismissal';
+const NOTICE_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
 
 function loadDismissedScanErrorNotice(): { scanId: number; dismissedUntil: number } | null {
   if (typeof window === 'undefined') {
@@ -274,6 +293,7 @@ function loadDismissedScanErrorNotice(): { scanId: number; dismissedUntil: numbe
 }
 
 const dismissedScanErrorNotice = ref(loadDismissedScanErrorNotice());
+const dismissedIgnoredRootMediaNotice = ref(loadDismissedIgnoredRootMediaNotice());
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -505,8 +525,34 @@ const showScanErrorNotice = computed(() => {
 
   return Date.now() >= dismissed.dismissedUntil;
 });
+const ignoredRootMediaCount = computed(() => appStore.stats?.libraryIndex.ignoredRootMediaCount ?? 0);
+const showIgnoredRootMediaNotice = computed(() => {
+  if (appStore.isLibraryUnavailable || (appStore.stats?.folders ?? 0) === 0 || ignoredRootMediaCount.value === 0) {
+    return false;
+  }
+
+  const dismissed = dismissedIgnoredRootMediaNotice.value;
+  if (!dismissed) {
+    return true;
+  }
+
+  const currentGalleryRoot = appStore.stats?.libraryIndex.currentGalleryRoot ?? '';
+  if (dismissed.galleryRoot !== currentGalleryRoot) {
+    return true;
+  }
+
+  if (dismissed.ignoredRootMediaCount !== ignoredRootMediaCount.value) {
+    return true;
+  }
+
+  return Date.now() >= dismissed.dismissedUntil;
+});
 const scanErrorNoticeMessage = computed(() => {
   return 'Some media failed during the last run. Scan the library again to retry any missed files and derivative generation.';
+});
+const ignoredRootMediaNoticeMessage = computed(() => {
+  const supportedFileLabel = ignoredRootMediaCount.value === 1 ? 'supported file is' : 'supported files are';
+  return `${formatCount(ignoredRootMediaCount.value)} ${supportedFileLabel} being ignored in the gallery root. Move them into a folder inside your gallery root to create App Folders. Files placed directly in the gallery root are ignored.`;
 });
 
 function dismissScanErrorNotice() {
@@ -517,12 +563,66 @@ function dismissScanErrorNotice() {
 
   const nextDismissal = {
     scanId,
-    dismissedUntil: Date.now() + SCAN_ERROR_NOTICE_DISMISS_MS
+    dismissedUntil: Date.now() + NOTICE_DISMISS_MS
   };
 
   dismissedScanErrorNotice.value = nextDismissal;
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(SCAN_ERROR_NOTICE_STORAGE_KEY, JSON.stringify(nextDismissal));
+  }
+}
+
+function loadDismissedIgnoredRootMediaNotice(): { galleryRoot: string; ignoredRootMediaCount: number; dismissedUntil: number } | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as {
+      galleryRoot?: unknown;
+      ignoredRootMediaCount?: unknown;
+      dismissedUntil?: unknown;
+    };
+    if (
+      typeof parsed.galleryRoot !== 'string' ||
+      typeof parsed.ignoredRootMediaCount !== 'number' ||
+      !Number.isFinite(parsed.ignoredRootMediaCount) ||
+      typeof parsed.dismissedUntil !== 'number' ||
+      !Number.isFinite(parsed.dismissedUntil)
+    ) {
+      return null;
+    }
+
+    return {
+      galleryRoot: parsed.galleryRoot,
+      ignoredRootMediaCount: parsed.ignoredRootMediaCount,
+      dismissedUntil: parsed.dismissedUntil
+    };
+  } catch {
+    return null;
+  }
+}
+
+function dismissIgnoredRootMediaNotice() {
+  const currentGalleryRoot = appStore.stats?.libraryIndex.currentGalleryRoot;
+  if (!currentGalleryRoot || ignoredRootMediaCount.value === 0) {
+    return;
+  }
+
+  const nextDismissal = {
+    galleryRoot: currentGalleryRoot,
+    ignoredRootMediaCount: ignoredRootMediaCount.value,
+    dismissedUntil: Date.now() + NOTICE_DISMISS_MS
+  };
+
+  dismissedIgnoredRootMediaNotice.value = nextDismissal;
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY, JSON.stringify(nextDismissal));
   }
 }
 

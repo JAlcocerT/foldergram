@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+data/
 data/db/*.db
 data/db/*.sqlite
 data/db/*.sqlite-shm

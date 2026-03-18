@@ -179,6 +179,7 @@ export interface AppStats {
     currentGalleryRoot: string;
     previousGalleryRoot: string | null;
     lastSuccessfulGalleryRoot: string | null;
+    ignoredRootMediaCount: number;
   };
   lastScan: ScanRunSummary | null;
 }

@@ -129,7 +129,30 @@
         </dl>
       </section>
 
-      <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No posts indexed yet" description="Add folders under data/gallery/ and the feed will populate after the next scan." />
+      <section
+        v-else-if="showHomeSetupNotice"
+        class="grid gap-[0.85rem] px-5 py-5 mb-[1.1rem] border rounded-[1rem] shadow-[var(--shadow)]"
+        :style="homeSetupNoticeStyle"
+      >
+        <span class="text-[0.75rem] font-bold tracking-[0.08em] uppercase" :class="homeSetupNoticeEyebrowClass">
+          {{ homeSetupNoticeEyebrow }}
+        </span>
+        <h2 class="m-0">{{ homeSetupNoticeTitle }}</h2>
+        <p class="m-0 text-muted">{{ homeSetupNoticeDescription }}</p>
+        <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+          <button class="btn-primary min-w-[11.5rem]" type="button" :disabled="homeScanDisabled" @click="runHomeScan">
+            {{ homeScanButtonLabel }}
+          </button>
+          <p class="m-0 text-muted">{{ homeScanNote }}</p>
+        </div>
+        <p
+          v-if="homeScanError"
+          class="m-0 px-4 py-[0.85rem] border border-[rgba(214,48,49,0.24)] rounded-[0.9rem] text-[#c0392b] bg-[rgba(214,48,49,0.08)]"
+        >
+          {{ homeScanError }}
+        </p>
+      </section>
+      <EmptyState v-else-if="feedStore.initialized && feedStore.items.length === 0" title="No posts indexed yet" description="Add folders under the gallery root and the feed will populate after the next scan." />
       <template v-else>
         <!-- Feed cards in home-layout context: transparent card, no shadow -->
         <div class="w-full max-w-[29.375rem] mx-auto flex flex-col gap-[1.2rem]">
@@ -208,6 +231,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
+import { triggerManualScan } from '../api/gallery';
 import Avatar from '../components/Avatar.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ErrorState from '../components/ErrorState.vue';
@@ -236,6 +260,8 @@ const recommendedFolders = computed(() => homeRecommendations.value.recommendedF
 const activeRailViewerId = ref<string | null>(null);
 const homeLayoutElement = ref<HTMLElement | null>(null);
 const isCompactHomeLayout = ref(false);
+const requestingHomeScan = ref(false);
+const homeScanError = ref<string | null>(null);
 
 const HOME_RIGHT_RAIL_BREAKPOINT = 960;
 let homeLayoutResizeObserver: ResizeObserver | null = null;
@@ -274,6 +300,60 @@ const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
 const showInitialScanState = computed(
   () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
 );
+const ignoredRootMediaCount = computed(() => appStore.stats?.libraryIndex.ignoredRootMediaCount ?? 0);
+const hasIndexedFolders = computed(() => (appStore.stats?.folders ?? 0) > 0);
+const showHomeSetupNotice = computed(
+  () =>
+    !appStore.isLibraryUnavailable &&
+    !showInitialScanState.value &&
+    Boolean(appStore.stats) &&
+    feedStore.initialized &&
+    feedStore.items.length === 0 &&
+    !hasIndexedFolders.value
+);
+const homeSetupNoticeEyebrow = computed(() => (ignoredRootMediaCount.value > 0 ? 'Gallery Root' : 'Get Started'));
+const homeSetupNoticeEyebrowClass = computed(() => (ignoredRootMediaCount.value > 0 ? 'text-[#9f6a00]' : 'text-accent-strong'));
+const homeSetupNoticeTitle = computed(() =>
+  ignoredRootMediaCount.value > 0 ? 'Files in the gallery root are being ignored' : 'No folders found yet'
+);
+const homeSetupNoticeDescription = computed(() => {
+  if (ignoredRootMediaCount.value > 0) {
+    const supportedFileLabel = ignoredRootMediaCount.value === 1 ? 'supported file is' : 'supported files are';
+    return `${formatCount(ignoredRootMediaCount.value)} ${supportedFileLabel} being ignored in the gallery root. Move them into a folder inside your gallery root, such as example-album, to create App Folders. Files placed directly in the gallery root are ignored.`;
+  }
+
+  return 'Create a folder inside your gallery root, such as example-album, and place photos or videos in it to create your first App Folder. Files placed directly in the gallery root are ignored.';
+});
+const homeSetupNoticeStyle = computed(() =>
+  ignoredRootMediaCount.value > 0
+    ? 'background: radial-gradient(circle at top right, rgba(210,161,51,0.16), transparent 38%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, #fff4d1 8%) 0%, color-mix(in srgb, var(--surface) 88%, #ffeab1 12%) 100%); border-color: color-mix(in srgb, var(--border) 70%, #d2a133 30%);'
+    : 'background: radial-gradient(circle at top right, rgba(0,149,246,0.12), transparent 38%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%) 100%); border-color: color-mix(in srgb, var(--border) 78%, var(--accent) 22%);'
+);
+const homeScanDisabled = computed(
+  () => appStore.isLibraryUnavailable || appStore.isLibraryRebuildRequired || appStore.isScanning || requestingHomeScan.value
+);
+const homeScanButtonLabel = computed(() => {
+  if (appStore.isScanning || requestingHomeScan.value) {
+    return 'Scanning library...';
+  }
+
+  return 'Run Scan Library';
+});
+const homeScanNote = computed(() => {
+  if (appStore.isLibraryUnavailable) {
+    return appStore.libraryUnavailableReason;
+  }
+
+  if (appStore.isLibraryRebuildRequired) {
+    return 'Rebuild the library index first because the gallery location changed.';
+  }
+
+  if (appStore.isScanning || requestingHomeScan.value) {
+    return 'Scanning the gallery now and refreshing the Home feed when it finishes.';
+  }
+
+  return 'Run a scan after adding folders or moving files so the library can index them.';
+});
 const scanDescription = computed(() => {
   const scan = appStore.stats?.scan;
   if (!scan) {
@@ -296,6 +376,26 @@ const scanDescription = computed(() => {
   return `Indexing folders and posts so the library can open immediately.${currentFolder}`;
 });
 
+function wait(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function warmScanStatus() {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await wait(attempt === 0 ? 150 : 250);
+
+    try {
+      await appStore.fetchStats({ background: true });
+    } catch {
+      // The rescan request may win the race; keep polling until scan state flips or the request finishes.
+    }
+
+    if (appStore.stats?.scan.isScanning) {
+      return;
+    }
+  }
+}
+
 async function selectMode(mode: FeedMode) {
   await feedStore.setMode(mode);
 }
@@ -311,6 +411,27 @@ function closeRailViewer() {
 function updateHomeLayout() {
   const layoutWidth = homeLayoutElement.value?.clientWidth ?? window.innerWidth;
   isCompactHomeLayout.value = layoutWidth <= HOME_RIGHT_RAIL_BREAKPOINT;
+}
+
+async function runHomeScan() {
+  if (homeScanDisabled.value) {
+    return;
+  }
+
+  requestingHomeScan.value = true;
+  homeScanError.value = null;
+
+  try {
+    const request = triggerManualScan();
+    void warmScanStatus();
+    await request;
+    await appStore.fetchStats({ background: true });
+    await Promise.all([foldersStore.fetchFolders(true), feedStore.loadInitial(true), momentsStore.fetchMoments(true)]);
+  } catch (error) {
+    homeScanError.value = error instanceof Error ? error.message : 'Unable to start a library scan.';
+  } finally {
+    requestingHomeScan.value = false;
+  }
 }
 
 onMounted(async () => {
