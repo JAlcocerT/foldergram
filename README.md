@@ -93,9 +93,7 @@ docker compose up -d
 
 6. Open `http://localhost:4141`.
 
-In Docker, Foldergram runs in production mode and the app inside the container
-listens on `4141`. If you need a different host port, change the left side of
-`4141:4141` in [`docker-compose.yml`](docker-compose.yml).
+In Docker, Foldergram runs in production mode and the app inside the container listens on `4141`. If you need a different host port, change the left side of `4141:4141` in [`docker-compose.yml`](docker-compose.yml).
 
 ### If You Already Cloned This Repository
 
@@ -110,8 +108,7 @@ To build locally from source instead of pulling from GHCR, run:
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
 
-This command uses the same runtime settings and volumes, but builds the image
-locally from the repository `Dockerfile`.
+This command uses the same runtime settings and volumes, but builds the image locally from the repository `Dockerfile`.
 
 ### Run from Source
 
@@ -158,8 +155,7 @@ Development ports:
 - API: `http://localhost:4140`
 - Docs: `http://localhost:4145`
 
-The Vite client stays within the reserved `4141-4144` range in development, so
-it can move off `4141` without colliding with the API or docs ports.
+The Vite client stays within the reserved `4141-4144` range in development, so it can move off `4141` without colliding with the API or docs ports.
 
 If you only want part of the workspace, use:
 
@@ -208,21 +204,15 @@ data/
 | `CSRF_TRUSTED_ORIGINS`        | empty               | Comma-separated extra browser origins allowed for mutating API requests.  |
 | `NODE_ENV`                    | `development`       | Runtime mode.                                                             |
 
-The shipped `.env.example` only includes the `DEV_*` port values. Docker uses
-the fixed internal container port `4141`, and other production runtimes
-continue to use `SERVER_PORT`, which defaults to `4141` in the Docker image.
+The shipped `.env.example` only includes the `DEV_*` port values. Docker uses the fixed internal container port `4141`, and other production runtimes continue to use `SERVER_PORT`, which defaults to `4141` in the Docker image.
 
 ### Access Protection
 
-Shared-password protection is configured from the Settings page, not from
-`.env`. When enabled, Foldergram stores a one-way password hash plus session
-metadata in SQLite and requires that password before serving protected API or
-media routes.
+Shared-password protection is configured from the Settings page, not from `.env`. When enabled, Foldergram stores a one-way password hash plus session metadata in SQLite and requires that password before serving protected API or media routes.
 
 ### Public Demo Deployments
 
-If you run a public read-only demo, keep the repository unchanged on the server
-and set the behavior in `.env` instead:
+To run Foldergram as a public read-only demo, set the following in `.env`:
 
 ```env
 NODE_ENV=production
@@ -231,9 +221,8 @@ CSRF_TRUSTED_ORIGINS=https://foldergram.intentdeep.com
 ```
 
 `PUBLIC_DEMO_MODE=1` blocks every `POST`, `PUT`, `PATCH`, and `DELETE` request
-under `/api`, including future routes you add later. `CSRF_TRUSTED_ORIGINS` is
-only needed when the browser-visible origin differs from the upstream Node host
-seen by Express, such as behind a reverse proxy or HTTPS terminator.
+under `/api`, including future routes. `CSRF_TRUSTED_ORIGINS` is
+only needed when the browser-visible origin differs from the upstream Node host seen by Express, such as behind a reverse proxy or HTTPS terminator.
 
 ## Tech Stack
 
