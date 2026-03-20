@@ -183,3 +183,13 @@ export interface AppStats {
   };
   lastScan: ScanRunSummary | null;
 }
+
+export interface AuthStatus {
+  enabled: boolean;
+  authenticated: boolean;
+}
+
+export interface AuthMutationResult {
+  ok: boolean;
+  auth: AuthStatus;
+}

@@ -1,3 +1,16 @@
+export const AUTH_REQUIRED_EVENT = 'foldergram:auth-required';
+const AUTH_REQUIRED_HEADER = 'x-foldergram-auth-required';
+
+export class RequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'RequestError';
+    this.status = status;
+  }
+}
+
 export async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? 'GET').toUpperCase();
   const headers = new Headers(init?.headers);
@@ -8,6 +21,7 @@ export async function requestJson<T>(input: RequestInfo | URL, init?: RequestIni
 
   const response = await fetch(input, {
     ...init,
+    credentials: 'same-origin',
     headers
   });
 
@@ -20,10 +34,18 @@ export async function requestJson<T>(input: RequestInfo | URL, init?: RequestIni
         message = payload.message;
       }
     } catch {
-      return Promise.reject(new Error(message));
+      const error = new RequestError(message, response.status);
+      if (response.status === 401 && response.headers.get(AUTH_REQUIRED_HEADER) === '1' && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
+      }
+      return Promise.reject(error);
     }
 
-    throw new Error(message);
+    const error = new RequestError(message, response.status);
+    if (response.status === 401 && response.headers.get(AUTH_REQUIRED_HEADER) === '1' && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
+    }
+    throw error;
   }
 
   return (await response.json()) as T;

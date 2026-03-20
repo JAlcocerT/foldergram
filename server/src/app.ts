@@ -4,19 +4,36 @@ import path from 'node:path';
 import express from 'express';
 
 import { appConfig, repositoryRoot } from './config/env.js';
+import { requireApiAuthentication, requireMediaAuthentication } from './middleware/auth-protection.js';
 import { requireTrustedMutationRequest } from './middleware/csrf-protection.js';
 import { blockPublicDemoMutations } from './middleware/public-demo-mode.js';
 import { apiRouter } from './routes/api.js';
+import { authService } from './services/auth-service.js';
+
+function createProtectedStaticOptions() {
+  return {
+    fallthrough: false,
+    setHeaders(response: { setHeader(name: string, value: string): void }) {
+      if (authService.isEnabled()) {
+        response.setHeader('Cache-Control', 'private, no-store');
+        response.setHeader('Vary', 'Cookie');
+        return;
+      }
+
+      response.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+  };
+}
 
 export function createApp() {
   const app = express();
 
   app.use(express.json());
 
-  app.use('/thumbnails', express.static(appConfig.thumbnailsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
-  app.use('/previews', express.static(appConfig.previewsDir, { fallthrough: false, immutable: true, maxAge: '7d' }));
+  app.use('/thumbnails', requireMediaAuthentication, express.static(appConfig.thumbnailsDir, createProtectedStaticOptions()));
+  app.use('/previews', requireMediaAuthentication, express.static(appConfig.previewsDir, createProtectedStaticOptions()));
 
-  app.use('/api', blockPublicDemoMutations, requireTrustedMutationRequest, apiRouter);
+  app.use('/api', blockPublicDemoMutations, requireTrustedMutationRequest, requireApiAuthentication, apiRouter);
 
   if (appConfig.nodeEnv === 'production') {
     const clientDist = path.join(repositoryRoot, 'client', 'dist');

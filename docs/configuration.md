@@ -24,7 +24,22 @@ Foldergram reads `.env` from the repository root and validates it in
 | `LOG_VERBOSE` | `0` | Truthy values are `1`, `true`, `yes`, and `on`. |
 | `SCAN_DISCOVERY_CONCURRENCY` | `4` | Discovery concurrency, validated from `1` to `32`. |
 | `SCAN_DERIVATIVE_CONCURRENCY` | `4` | Derivative concurrency, validated from `1` to `32`. |
+| `PUBLIC_DEMO_MODE` | `0` | When enabled, mutating API routes return `403` for read-only demo deployments. |
+| `CSRF_TRUSTED_ORIGINS` | unset | Comma-separated extra browser origins allowed for mutating API requests. Useful behind reverse proxies or HTTPS terminators. |
 | `NODE_ENV` | `development` | Must be `development`, `test`, or `production`. |
+
+## Access protection configuration
+
+Shared-password protection is **not** configured in `.env`.
+
+Instead:
+
+- enable it from the Settings page
+- Foldergram stores the password hash and session metadata in SQLite `app_settings`
+- deleting or replacing the SQLite database resets the configured password protection state
+
+The built-in auth model is a single shared password for one app instance, not a
+multi-user account system.
 
 ## Path resolution rules
 
@@ -60,6 +75,8 @@ PREVIEWS_DIR=./data/previews
 LOG_VERBOSE=0
 SCAN_DISCOVERY_CONCURRENCY=4
 SCAN_DERIVATIVE_CONCURRENCY=4
+PUBLIC_DEMO_MODE=0
+CSRF_TRUSTED_ORIGINS=
 NODE_ENV=development
 ```
 

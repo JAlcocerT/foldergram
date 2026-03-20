@@ -1,5 +1,17 @@
 <template>
-  <AppShell>
+  <section
+    v-if="showAuthLoading"
+    class="min-h-screen px-6 py-10 flex items-center justify-center"
+    style="background: radial-gradient(circle at top, rgba(0,149,246,0.1), transparent 34%), linear-gradient(180deg, color-mix(in srgb, var(--bg) 90%, #ffffff 10%) 0%, var(--bg) 100%);"
+  >
+    <div class="card w-full max-w-[24rem] p-8 text-center">
+      <p class="m-0 text-[0.78rem] font-bold uppercase tracking-[0.08em] text-accent-strong">Access Protection</p>
+      <h1 class="mt-3 mb-2 text-[1.45rem] font-semibold tracking-[-0.04em]">Checking access</h1>
+      <p class="m-0 text-muted">Loading the current password protection status.</p>
+    </div>
+  </section>
+  <AuthGate v-else-if="authStore.requiresLogin" />
+  <AppShell v-else>
     <RouterView :route="displayRoute" />
     <div v-if="showImageModal" class="fixed inset-0 z-40 flex items-center justify-center px-8 py-8 max-md:px-4 max-md:py-4 bg-black/72" @click.self="closeImageModal">
       <ImageView :id="String(route.params.id ?? '')" modal @close="closeImageModal" />
@@ -8,20 +20,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import { computed, nextTick, onUnmounted, watch } from 'vue';
 import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router';
 
 import AppShell from './components/AppShell.vue';
+import AuthGate from './components/AuthGate.vue';
 import ImageView from './views/ImageView.vue';
 import { useAppStore } from './stores/app';
+import { useAuthStore } from './stores/auth';
+import { useExploreStore } from './stores/explore';
 import { useLikesStore } from './stores/likes';
 import { useFoldersStore } from './stores/folders';
+import { useFeedStore } from './stores/feed';
+import { useMomentsStore } from './stores/moments';
+import { useTrashStore } from './stores/trash';
+import { useViewerStore } from './stores/viewer';
 
 const appStore = useAppStore();
+const authStore = useAuthStore();
+const exploreStore = useExploreStore();
+const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
+const momentsStore = useMomentsStore();
 const route = useRoute();
 const router = useRouter();
+const trashStore = useTrashStore();
+const viewerStore = useViewerStore();
 let lockedScrollX = 0;
 let lockedScrollY = 0;
 let modalScrollLocked = false;
@@ -62,6 +87,27 @@ const showImageModal = computed(
 const displayRoute = computed<RouteLocationNormalizedLoaded | undefined>(() =>
   showImageModal.value ? modalBackgroundRoute.value ?? undefined : route
 );
+const showAuthLoading = computed(() => !authStore.ready && authStore.loading);
+
+function resetProtectedState() {
+  unlockModalScroll();
+  appStore.resetProtectedState();
+  feedStore.resetForRebuild();
+  foldersStore.resetForRebuild();
+  likesStore.resetForRebuild();
+  momentsStore.resetForRebuild();
+  exploreStore.reset();
+  trashStore.reset();
+  viewerStore.reset();
+}
+
+async function loadProtectedState(force = false) {
+  await Promise.all([
+    appStore.fetchStats(force ? { background: true } : {}),
+    foldersStore.fetchFolders(force),
+    likesStore.initialize(force)
+  ]);
+}
 
 function lockModalScroll() {
   if (modalScrollLocked) {
@@ -112,10 +158,6 @@ function unlockModalScroll() {
   modalScrollLocked = false;
 }
 
-onMounted(async () => {
-  await Promise.all([appStore.fetchStats(), foldersStore.fetchFolders(), likesStore.initialize()]);
-});
-
 onUnmounted(() => {
   unlockModalScroll();
   appStore.stopStatsPolling();
@@ -129,6 +171,23 @@ watch(
     }
 
     await foldersStore.fetchFolders(true);
+  }
+);
+
+watch(
+  () => authStore.accessGranted,
+  async (accessGranted, hadAccess) => {
+    if (!accessGranted) {
+      resetProtectedState();
+      return;
+    }
+
+    if (!hadAccess || !appStore.stats) {
+      await loadProtectedState(Boolean(hadAccess));
+    }
+  },
+  {
+    immediate: true
   }
 );
 

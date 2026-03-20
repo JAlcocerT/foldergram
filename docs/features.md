@@ -124,12 +124,24 @@ Settings is the operational control surface for the library.
 
 It exposes:
 
+- shared-password protection controls
 - live scan status
 - storage and index status
 - last completed scan details
 - manual scan
 - thumbnail-only rebuild
 - full library rebuild
+
+### Shared-password protection
+
+Settings can optionally enable a single shared password for the app.
+
+That flow supports:
+
+- turning password protection on
+- changing the shared password
+- disabling protection again
+- signing the current browser session out
 
 ### Rebuild actions
 
@@ -159,7 +171,7 @@ The current repository does **not** implement:
 - comments
 - messaging
 - notifications
-- user accounts
+- multi-user accounts
 - remote multi-user permissions
 - cloud sync
 - hierarchical album navigation

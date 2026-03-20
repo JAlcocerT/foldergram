@@ -8,6 +8,139 @@
       </div>
     </header>
 
+    <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(24,119,242,0.14), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #f3f8ff 4%) 0%, var(--surface) 100%);">
+      <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
+        <div>
+          <span class="eyebrow text-accent-strong">Access Protection</span>
+          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Shared password lock</h2>
+          <p class="m-0 mt-[0.35rem] text-muted">Protect the gallery, API, and generated media with one shared password for your local or homelab network.</p>
+        </div>
+        <span
+          class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
+          :class="authStore.enabled ? 'text-accent-strong bg-[color-mix(in_srgb,var(--accent-soft)_78%,transparent_22%)]' : 'text-muted bg-surface-alt'"
+        >
+          {{ authStore.enabled ? 'Enabled' : 'Disabled' }}
+        </span>
+      </div>
+
+      <p class="m-0 text-muted">
+        {{ authProtectionDescription }}
+      </p>
+
+      <div v-if="authFeedbackMessage" class="rounded-[0.95rem] px-4 py-3 text-[0.9rem]" :class="authFeedbackTone === 'error' ? 'border border-[rgba(214,48,49,0.24)] text-[#c0392b] bg-[rgba(214,48,49,0.08)]' : 'border border-[rgba(24,119,242,0.2)] text-accent-strong bg-[rgba(24,119,242,0.08)]'">
+        {{ authFeedbackMessage }}
+      </div>
+
+      <section v-if="!authStore.enabled" class="grid gap-[1rem]">
+        <div class="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
+          <label class="grid gap-[0.45rem]">
+            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New password</span>
+            <input
+              v-model="enablePassword"
+              class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Minimum 8 characters"
+              :disabled="authStore.loading"
+            />
+          </label>
+          <label class="grid gap-[0.45rem]">
+            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm password</span>
+            <input
+              v-model="enablePasswordConfirmation"
+              class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Repeat the password"
+              :disabled="authStore.loading"
+            />
+          </label>
+        </div>
+
+        <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+          <button class="btn-primary min-w-[13rem]" type="button" :disabled="authStore.loading" @click="enableAccessProtection">
+            {{ authStore.loading ? 'Enabling...' : 'Enable Password Protection' }}
+          </button>
+          <p class="m-0 text-muted">The password is stored as a one-way hash and unlocks this browser with a signed session cookie.</p>
+        </div>
+      </section>
+
+      <section v-else class="grid gap-[1rem]">
+        <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[color-mix(in_srgb,var(--border)_78%,var(--accent)_22%)] p-5">
+          <div>
+            <h3 class="m-0 text-[1rem]">Change password</h3>
+            <p class="m-0 mt-[0.25rem] text-muted">Update the shared password and invalidate older sessions.</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
+            <label class="grid gap-[0.45rem]">
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Current password</span>
+              <input
+                v-model="currentPassword"
+                class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+                type="password"
+                autocomplete="current-password"
+                :disabled="authStore.loading"
+              />
+            </label>
+            <label class="grid gap-[0.45rem]">
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New password</span>
+              <input
+                v-model="nextPassword"
+                class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+                type="password"
+                autocomplete="new-password"
+                :disabled="authStore.loading"
+              />
+            </label>
+            <label class="grid gap-[0.45rem]">
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm new password</span>
+              <input
+                v-model="nextPasswordConfirmation"
+                class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+                type="password"
+                autocomplete="new-password"
+                :disabled="authStore.loading"
+              />
+            </label>
+          </div>
+
+          <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+            <button class="btn-primary min-w-[11.5rem]" type="button" :disabled="authStore.loading" @click="changeAccessPassword">
+              {{ authStore.loading ? 'Updating...' : 'Change Password' }}
+            </button>
+            <p class="m-0 text-muted">Use at least 8 characters. Changing the password signs out any older sessions.</p>
+          </div>
+        </div>
+
+        <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[rgba(214,48,49,0.16)] p-5">
+          <div>
+            <h3 class="m-0 text-[1rem]">Disable protection</h3>
+            <p class="m-0 mt-[0.25rem] text-muted">Turn the shared password back off for this Foldergram instance.</p>
+          </div>
+
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-4 items-end max-lg:grid-cols-1">
+            <label class="grid gap-[0.45rem]">
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Current password</span>
+              <input
+                v-model="disablePassword"
+                class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
+                type="password"
+                autocomplete="current-password"
+                :disabled="authStore.loading"
+              />
+            </label>
+            <button class="btn-primary min-w-[10.5rem] bg-[#d93025] hover:bg-[#c5281c]" type="button" :disabled="authStore.loading" @click="disableAccessProtection">
+              {{ authStore.loading ? 'Disabling...' : 'Disable Protection' }}
+            </button>
+            <button class="inline-flex min-h-12 items-center justify-center rounded-[0.95rem] border border-border bg-transparent px-4 text-[0.92rem] font-semibold text-text transition-colors duration-180 hover:bg-surface-alt disabled:cursor-wait disabled:opacity-60" type="button" :disabled="authStore.loading" @click="signOut">
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </section>
+    </section>
+
     <section
       v-if="showScanErrorNotice"
       class="card grid gap-[1rem] p-8 border-[color-mix(in_srgb,#d2a133_45%,var(--border)_55%)]"
@@ -237,6 +370,7 @@ import { useRoute } from 'vue-router';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { triggerLibraryRebuild, triggerManualScan, triggerThumbnailRebuild } from '../api/gallery';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
@@ -244,6 +378,7 @@ import { useMomentsStore } from '../stores/moments';
 import { useViewerStore } from '../stores/viewer';
 
 const appStore = useAppStore();
+const authStore = useAuthStore();
 const feedStore = useFeedStore();
 const foldersStore = useFoldersStore();
 const likesStore = useLikesStore();
@@ -258,9 +393,17 @@ const rebuilding = ref(false);
 const rebuildingThumbnails = ref(false);
 const confirmRebuildOpen = ref(false);
 const confirmThumbnailRebuildOpen = ref(false);
+const authFeedback = ref<{ tone: 'success' | 'error'; message: string } | null>(null);
+const enablePassword = ref('');
+const enablePasswordConfirmation = ref('');
+const currentPassword = ref('');
+const nextPassword = ref('');
+const nextPasswordConfirmation = ref('');
+const disablePassword = ref('');
 const SCAN_ERROR_NOTICE_STORAGE_KEY = 'foldergram-scan-error-notice-dismissal';
 const IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY = 'foldergram-ignored-root-media-notice-dismissal';
 const NOTICE_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+const MIN_PASSWORD_LENGTH = 8;
 
 function loadDismissedScanErrorNotice(): { scanId: number; dismissedUntil: number } | null {
   if (typeof window === 'undefined') {
@@ -312,6 +455,41 @@ function formatDateTime(value: string | null | undefined) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
+}
+
+function clearAuthFeedback() {
+  authFeedback.value = null;
+  authStore.clearError();
+}
+
+function setAuthError(message: string) {
+  authFeedback.value = {
+    tone: 'error',
+    message
+  };
+}
+
+function setAuthSuccess(message: string) {
+  authFeedback.value = {
+    tone: 'success',
+    message
+  };
+}
+
+function validatePasswordConfirmation(password: string, confirmation: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+
+  if (password.trim().length === 0) {
+    return 'Password cannot be empty.';
+  }
+
+  if (password !== confirmation) {
+    return 'The password confirmation does not match.';
+  }
+
+  return null;
 }
 
 const scan = computed(() => appStore.stats?.scan ?? null);
@@ -489,6 +667,13 @@ const thumbnailRebuildActionNote = computed(() => {
 
   return 'Use this for a faster thumbnail-only refresh.';
 });
+const authProtectionDescription = computed(() =>
+  authStore.enabled
+    ? 'Password protection is active for this browser session. Use the controls below to rotate the shared password, sign out, or turn protection off again.'
+    : 'Protection is currently off. Anyone who can reach this app on your network can browse the library until you enable a password.'
+);
+const authFeedbackMessage = computed(() => authFeedback.value?.message ?? authStore.error);
+const authFeedbackTone = computed(() => authFeedback.value?.tone ?? 'error');
 const storageLabel = computed(() => (appStore.isLibraryUnavailable ? 'Unavailable' : 'Available'));
 const lastScanStatus = computed(() => {
   if (!lastCompletedScan.value) {
@@ -623,6 +808,93 @@ function dismissIgnoredRootMediaNotice() {
   dismissedIgnoredRootMediaNotice.value = nextDismissal;
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY, JSON.stringify(nextDismissal));
+  }
+}
+
+async function enableAccessProtection() {
+  if (authStore.loading) {
+    return;
+  }
+
+  clearAuthFeedback();
+  const validationError = validatePasswordConfirmation(enablePassword.value, enablePasswordConfirmation.value);
+  if (validationError) {
+    setAuthError(validationError);
+    return;
+  }
+
+  try {
+    await authStore.enablePassword(enablePassword.value);
+    enablePassword.value = '';
+    enablePasswordConfirmation.value = '';
+    setAuthSuccess('Password protection is now enabled for this Foldergram instance.');
+  } catch (error) {
+    setAuthError(error instanceof Error ? error.message : 'Unable to enable password protection.');
+  }
+}
+
+async function changeAccessPassword() {
+  if (authStore.loading) {
+    return;
+  }
+
+  clearAuthFeedback();
+  if (currentPassword.value.length === 0) {
+    setAuthError('Enter the current password to change it.');
+    return;
+  }
+
+  const validationError = validatePasswordConfirmation(nextPassword.value, nextPasswordConfirmation.value);
+  if (validationError) {
+    setAuthError(validationError);
+    return;
+  }
+
+  try {
+    await authStore.changePassword(currentPassword.value, nextPassword.value);
+    currentPassword.value = '';
+    nextPassword.value = '';
+    nextPasswordConfirmation.value = '';
+    setAuthSuccess('The shared password was updated and existing sessions were invalidated.');
+  } catch (error) {
+    setAuthError(error instanceof Error ? error.message : 'Unable to change the password.');
+  }
+}
+
+async function disableAccessProtection() {
+  if (authStore.loading) {
+    return;
+  }
+
+  clearAuthFeedback();
+  if (disablePassword.value.length === 0) {
+    setAuthError('Enter the current password to disable protection.');
+    return;
+  }
+
+  try {
+    await authStore.disablePassword(disablePassword.value);
+    disablePassword.value = '';
+    currentPassword.value = '';
+    nextPassword.value = '';
+    nextPasswordConfirmation.value = '';
+    setAuthSuccess('Password protection has been disabled.');
+  } catch (error) {
+    setAuthError(error instanceof Error ? error.message : 'Unable to disable password protection.');
+  }
+}
+
+async function signOut() {
+  if (authStore.loading) {
+    return;
+  }
+
+  clearAuthFeedback();
+
+  try {
+    await authStore.logout();
+  } catch (error) {
+    setAuthError(error instanceof Error ? error.message : 'Unable to sign out.');
   }
 }
 

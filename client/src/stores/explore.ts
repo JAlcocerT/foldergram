@@ -63,6 +63,16 @@ export const useExploreStore = defineStore('explore', {
     recentSearchesInitialized: false
   }),
   actions: {
+    reset() {
+      this.items = [];
+      this.page = 1;
+      this.hasMore = true;
+      this.loading = false;
+      this.error = null;
+      this.initialized = false;
+      this.randomSeed = null;
+    },
+
     initializeRecentSearches() {
       if (this.recentSearchesInitialized) {
         return;

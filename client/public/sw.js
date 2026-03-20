@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'foldergram-v2';
+const CACHE_VERSION = 'foldergram-v3';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const IS_LOCALHOST = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
@@ -53,6 +53,8 @@ self.addEventListener('fetch', (event) => {
 
   if (
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/thumbnails/') ||
+    url.pathname.startsWith('/previews/') ||
     url.pathname.startsWith('/originals/') ||
     url.pathname.startsWith('/@') ||
     url.pathname.startsWith('/src/') ||
@@ -83,7 +85,8 @@ self.addEventListener('fetch', (event) => {
         !response.ok ||
         response.type === 'opaque' ||
         response.status === 206 ||
-        response.headers.has('content-range')
+        response.headers.has('content-range') ||
+        response.headers.get('cache-control')?.includes('no-store')
       ) {
         return response;
       }

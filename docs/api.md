@@ -15,6 +15,20 @@ All documented routes come from `server/src/routes/api.ts`.
 | `/thumbnails` | Static thumbnail derivatives |
 | `/previews` | Static preview derivatives |
 
+## Authentication and protected routes
+
+Foldergram can optionally require a shared-password session.
+
+When password protection is enabled:
+
+- most `/api` routes return `401` until the browser logs in
+- `GET /api/health`, `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout` stay reachable without an authenticated session
+- `PUT /api/auth/password` is public only when password protection is currently disabled, so the first password can be set
+- `/thumbnails/...` and `/previews/...` also require the same authenticated session
+
+The frontend sends same-origin credentials automatically and uses a signed
+cookie-based session.
+
 ## Mutation requirements
 
 All mutating API routes are protected by `requireTrustedMutationRequest`.
@@ -41,6 +55,7 @@ The shipped frontend adds `x-foldergram-intent: 1` automatically for `POST`,
 
 | Status | When it happens |
 | --- | --- |
+| `401` | Password protection is enabled and the request is not authenticated. |
 | `400` | Validation or request-shape errors surfaced through the Express error handler. |
 | `403` | Missing intent header or failed local-origin check on a mutating route. |
 | `404` | Missing folder, post, moment, or original media. |
@@ -63,6 +78,19 @@ Example shape:
     "reason": null,
     "usingInMemoryDatabase": false
   }
+}
+```
+
+### `GET /api/auth/status`
+
+Returns the current auth state for the browser session.
+
+Example shape:
+
+```json
+{
+  "enabled": true,
+  "authenticated": false
 }
 ```
 
@@ -273,6 +301,93 @@ Notable fields:
 | `lastScan` | Last completed scan run. |
 
 ## Mutating endpoints
+
+### `POST /api/auth/login`
+
+Body:
+
+```json
+{
+  "password": "your-shared-password"
+}
+```
+
+Success:
+
+```json
+{
+  "ok": true,
+  "auth": {
+    "enabled": true,
+    "authenticated": true
+  }
+}
+```
+
+Errors:
+
+- `400` if password protection is not enabled
+- `401` if the password is incorrect
+- `403` when trust requirements are missing
+
+### `POST /api/auth/logout`
+
+Clears the current browser session cookie.
+
+Success:
+
+```json
+{
+  "ok": true,
+  "auth": {
+    "enabled": true,
+    "authenticated": false
+  }
+}
+```
+
+### `PUT /api/auth/password`
+
+Sets or changes the shared password.
+
+Body when protection is disabled:
+
+```json
+{
+  "password": "new-password"
+}
+```
+
+Body when protection is already enabled:
+
+```json
+{
+  "currentPassword": "old-password",
+  "password": "new-password"
+}
+```
+
+Notes:
+
+- password minimum length is `8`
+- changing the password invalidates older sessions
+
+### `DELETE /api/auth/password`
+
+Disables shared-password protection.
+
+Body:
+
+```json
+{
+  "currentPassword": "current-password"
+}
+```
+
+Errors:
+
+- `400` if protection is already disabled
+- `401` if the password is incorrect
 
 ### `POST /api/images/:id/like`
 

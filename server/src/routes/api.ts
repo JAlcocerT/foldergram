@@ -1,6 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 
+import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, authService } from '../services/auth-service.js';
 import { galleryService } from '../services/gallery-service.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { LIBRARY_REBUILD_REQUIRED_MESSAGE, scannerService } from '../services/scanner-service.js';
@@ -48,6 +49,45 @@ const momentIdSchema = z.object({
 const imageIdSchema = z.object({
   id: z.coerce.number().int().positive()
 });
+const submittedPasswordSchema = z
+  .string()
+  .min(1, 'Password is required.')
+  .max(AUTH_PASSWORD_MAX_LENGTH, `Password must be at most ${AUTH_PASSWORD_MAX_LENGTH} characters.`);
+const submittedCurrentPasswordSchema = z
+  .string()
+  .min(1, 'Current password is required.')
+  .max(AUTH_PASSWORD_MAX_LENGTH, `Current password must be at most ${AUTH_PASSWORD_MAX_LENGTH} characters.`);
+const passwordFieldSchema = z
+  .string()
+  .min(AUTH_PASSWORD_MIN_LENGTH, `Password must be at least ${AUTH_PASSWORD_MIN_LENGTH} characters.`)
+  .max(AUTH_PASSWORD_MAX_LENGTH, `Password must be at most ${AUTH_PASSWORD_MAX_LENGTH} characters.`)
+  .refine((value) => value.trim().length > 0, 'Password cannot be empty.');
+const loginBodySchema = z.object({
+  password: submittedPasswordSchema
+});
+const configurePasswordBodySchema = z.object({
+  password: passwordFieldSchema
+});
+const changePasswordBodySchema = z.object({
+  currentPassword: submittedCurrentPasswordSchema,
+  password: passwordFieldSchema
+});
+const disablePasswordBodySchema = z.object({
+  currentPassword: submittedCurrentPasswordSchema
+});
+
+export const authRequestBodySchemas = {
+  login: loginBodySchema,
+  configurePassword: configurePasswordBodySchema,
+  changePassword: changePasswordBodySchema,
+  disablePassword: disablePasswordBodySchema
+};
+
+const authRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: 'Too many authentication attempts. Please try again in a minute.'
+});
 
 router.get('/health', (_request, response) => {
   const storageState = storageService.getState();
@@ -59,6 +99,91 @@ router.get('/health', (_request, response) => {
       reason: storageState.reason,
       usingInMemoryDatabase: storageState.usingInMemoryDatabase
     }
+  });
+});
+
+router.get('/auth/status', (request, response) => {
+  authService.setNoStoreHeaders(response);
+  response.json(authService.getStatus(request));
+});
+
+router.post('/auth/login', authRateLimiter, (request, response) => {
+  authService.setNoStoreHeaders(response);
+
+  if (!authService.isEnabled()) {
+    response.status(400).json({ message: 'Password protection is not enabled.' });
+    return;
+  }
+
+  const body = loginBodySchema.parse(request.body);
+  if (!authService.verifyPassword(body.password)) {
+    response.status(401).json({ message: 'Incorrect password.' });
+    return;
+  }
+
+  authService.setAuthenticatedSession(response, request);
+  response.json({
+    ok: true,
+    auth: authService.getAuthenticatedStatus()
+  });
+});
+
+router.post('/auth/logout', (request, response) => {
+  authService.setNoStoreHeaders(response);
+  authService.clearAuthenticatedSession(response, request);
+  response.json({
+    ok: true,
+    auth: authService.getLoggedOutStatus()
+  });
+});
+
+router.put('/auth/password', authRateLimiter, (request, response) => {
+  authService.setNoStoreHeaders(response);
+
+  if (!authService.isEnabled()) {
+    const body = configurePasswordBodySchema.parse(request.body);
+    const auth = authService.setPassword(body.password);
+    authService.setAuthenticatedSession(response, request);
+    response.json({
+      ok: true,
+      auth
+    });
+    return;
+  }
+
+  const body = changePasswordBodySchema.parse(request.body);
+  if (!authService.verifyPassword(body.currentPassword)) {
+    response.status(401).json({ message: 'Incorrect current password.' });
+    return;
+  }
+
+  const auth = authService.setPassword(body.password);
+  authService.setAuthenticatedSession(response, request);
+  response.json({
+    ok: true,
+    auth
+  });
+});
+
+router.delete('/auth/password', authRateLimiter, (request, response) => {
+  authService.setNoStoreHeaders(response);
+
+  if (!authService.isEnabled()) {
+    response.status(400).json({ message: 'Password protection is already disabled.' });
+    return;
+  }
+
+  const body = disablePasswordBodySchema.parse(request.body);
+  if (!authService.verifyPassword(body.currentPassword)) {
+    response.status(401).json({ message: 'Incorrect current password.' });
+    return;
+  }
+
+  const auth = authService.disable();
+  authService.clearAuthenticatedSession(response, request);
+  response.json({
+    ok: true,
+    auth
   });
 });
 

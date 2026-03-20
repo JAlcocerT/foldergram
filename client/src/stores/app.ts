@@ -222,6 +222,14 @@ export const useAppStore = defineStore('app', {
       this.statsPollFailures = 0;
     },
 
+    resetProtectedState() {
+      this.stopStatsPolling();
+      this.stats = null;
+      this.loadingStats = false;
+      this.error = null;
+      this.imageModalBackgroundPath = null;
+    },
+
     removeIndexedImage(removedFolderCount = 0, mediaType: 'image' | 'video' = 'image') {
       if (!this.stats) {
         return;

@@ -1,5 +1,7 @@
 import type {
   AppStats,
+  AuthMutationResult,
+  AuthStatus,
   DeleteImageResult,
   DeleteFolderResult,
   FeedMode,
@@ -126,6 +128,56 @@ export function deleteFolder(slug: string, options: { deleteSourceFolder?: boole
 
 export function fetchStats() {
   return requestJson<AppStats>('/api/admin/stats');
+}
+
+export function fetchAuthStatus() {
+  return requestJson<AuthStatus>('/api/auth/status');
+}
+
+export function loginWithPassword(password: string) {
+  return requestJson<AuthMutationResult>('/api/auth/login', {
+    body: JSON.stringify({ password }),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'POST'
+  });
+}
+
+export function logout() {
+  return requestJson<AuthMutationResult>('/api/auth/logout', {
+    method: 'POST'
+  });
+}
+
+export function enablePasswordProtection(password: string) {
+  return requestJson<AuthMutationResult>('/api/auth/password', {
+    body: JSON.stringify({ password }),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'PUT'
+  });
+}
+
+export function changePasswordProtection(currentPassword: string, password: string) {
+  return requestJson<AuthMutationResult>('/api/auth/password', {
+    body: JSON.stringify({ currentPassword, password }),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'PUT'
+  });
+}
+
+export function disablePasswordProtection(currentPassword: string) {
+  return requestJson<AuthMutationResult>('/api/auth/password', {
+    body: JSON.stringify({ currentPassword }),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'DELETE'
+  });
 }
 
 export function triggerManualScan() {

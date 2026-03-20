@@ -35,10 +35,11 @@ Foldergram indexes supported media from a configured `GALLERY_ROOT`, stores meta
 - App Folder pages with a posts grid and a `Reels` tab when videos exist.
 - Local likes stored in SQLite.
 - Image and video support with generated derivatives for fast browsing.
+- Optional shared-password protection for local and homelab access.
 - Settings actions for manual scan, thumbnail rebuild, and full library rebuild.
 - A web app manifest plus production service worker registration.
 - A debounced filesystem watcher in development mode only.
-- No auth, cloud sync, uploads, comments, messaging, notifications, or remote APIs.
+- No multi-user accounts, cloud sync, uploads, comments, messaging, notifications, or remote APIs.
 
 ## How It Works
 
@@ -210,6 +211,13 @@ data/
 The shipped `.env.example` only includes the `DEV_*` port values. Docker uses
 the fixed internal container port `4141`, and other production runtimes
 continue to use `SERVER_PORT`, which defaults to `4141` in the Docker image.
+
+### Access Protection
+
+Shared-password protection is configured from the Settings page, not from
+`.env`. When enabled, Foldergram stores a one-way password hash plus session
+metadata in SQLite and requires that password before serving protected API or
+media routes.
 
 ### Public Demo Deployments
 

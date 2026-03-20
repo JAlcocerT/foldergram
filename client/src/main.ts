@@ -1,8 +1,10 @@
 import { createApp } from 'vue';
 
 import App from './App.vue';
+import { AUTH_REQUIRED_EVENT } from './api/http';
 import { router } from './router';
 import { useAppStore } from './stores/app';
+import { useAuthStore } from './stores/auth';
 import { pinia } from './stores/pinia';
 import './styles/base.css';
 import 'virtual:uno.css';
@@ -48,6 +50,7 @@ async function bootstrap() {
   app.use(router);
 
   const appStore = useAppStore(pinia);
+  const authStore = useAuthStore(pinia);
 
   appStore.initializeTheme();
 
@@ -56,6 +59,16 @@ async function bootstrap() {
   }
 
   appStore.initializeLastOpenedFolder();
+
+  window.addEventListener(AUTH_REQUIRED_EVENT, () => {
+    authStore.handleUnauthorized();
+  });
+
+  try {
+    await authStore.initialize();
+  } catch {
+    // Keep the shell mountable so the auth gate can surface the error state.
+  }
 
   router.afterEach((to) => {
     if (to.name === 'folder' && typeof to.params.slug === 'string') {

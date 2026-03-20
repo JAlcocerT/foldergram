@@ -1,19 +1,36 @@
 ---
 title: Security
-description: The real security posture of Foldergram, including mutation trust checks and local-only caveats.
+description: The real security posture of Foldergram, including shared-password protection, mutation trust checks, and local-only caveats.
 ---
 
 # Security
 
-Foldergram is built for local-only, self-hosted browsing on loopback addresses.
-Its security model is intentionally narrow.
+Foldergram is built for local-only and self-hosted browsing.
+Its security model is intentionally narrow even though it now supports an
+optional shared-password gate for homelab and LAN use.
 
 ## What Foldergram assumes
 
-- you run it on your own machine or trusted local network setup
-- the primary browser origin is `localhost`, `127.0.0.1`, or `::1`
-- there is no multi-user auth layer
-- the app is not exposed directly to the public internet
+- you run it on your own machine or behind a trusted local-network or reverse-proxy setup
+- the app is not exposed directly to the public internet without additional protection
+- the built-in auth story is a single shared password, not a multi-user account system
+
+## Shared-password protection
+
+Foldergram can optionally protect the library with one shared password
+configured from the Settings page.
+
+When enabled:
+
+- Foldergram stores a one-way password hash, salt, and session metadata in SQLite `app_settings`
+- the browser unlocks access with a signed `HttpOnly` session cookie
+- `/api` routes require that session, except for `GET /api/health`, `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout`
+- generated media under `/thumbnails` and `/previews` also require that session
+- authenticated API and media responses are marked `Cache-Control: no-store` and `Vary: Cookie`
+- the production service worker skips caching protected thumbnail and preview responses
+
+Changing the password rotates the session version, which invalidates older
+sessions. Disabling password protection clears the stored auth settings.
 
 ## Mutation protection
 
@@ -34,14 +51,20 @@ Allowed ports are:
 
 - `DEV_SERVER_PORT` and the reserved `DEV_CLIENT_PORT` through `DEV_CLIENT_PORT + 3` range in development or test
 - `SERVER_PORT` in production, with loopback origins or the exact host that served the app accepted for browser mutations
+- explicit extra origins can be allowed through `CSRF_TRUSTED_ORIGINS`
 
 ## What this protects against
 
-This design helps reduce accidental or cross-site browser-triggered mutations
-from untrusted origins when the app is being used locally.
+With password protection enabled, this design helps reduce opportunistic
+browsing of the library from other machines on the same network.
+
+Separately, the mutation checks help reduce accidental or cross-site
+browser-triggered mutations from untrusted origins.
 
 It is especially relevant for:
 
+- feed and folder reads when password protection is enabled
+- generated thumbnails and previews when password protection is enabled
 - delete actions
 - like toggles
 - manual rescans
@@ -81,24 +104,37 @@ is marked unavailable and the UI receives explicit storage-state information.
 
 This is a resilience measure, not a security feature.
 
+## Rate limiting
+
+Foldergram includes small in-memory rate limiters for:
+
+- authentication attempts
+- admin mutation routes such as rescan and rebuild operations
+
+These limiters are process-local and intentionally simple. They are useful for
+basic abuse reduction, not for hardened distributed deployments.
+
 ## Important limitations
 
 Foldergram does **not** currently provide:
 
-- authentication
-- authorization
+- multi-user authentication
+- per-user authorization
 - TLS termination
-- rate limiting
 - audit logging
 - hardened remote deployment defaults
+- external identity provider integration
 - per-user isolation
 
 ## Practical advice
 
 Use Foldergram like a local app:
 
+- use a strong shared password if you expose it on a homelab or LAN
 - keep it on loopback unless you know exactly how you are proxying and protecting it
-- do not assume the mutation checks are a full internet-facing security boundary
+- terminate HTTPS upstream if the app is reachable off-box
+- remember that on plain HTTP, both the password and session cookie are visible to anyone who can sniff that local network traffic
+- do not assume the shared-password layer and mutation checks are a full internet-facing security boundary
 - treat delete actions as destructive and permanent
 
 ## A precise caveat about headers
