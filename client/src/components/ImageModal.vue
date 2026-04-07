@@ -204,7 +204,10 @@
         <div class="grid gap-[0.3rem] px-5 pt-[1.1rem]">
           <p class="m-0 text-text">
             <strong class="mr-[0.35rem]">{{ image.folderName }}</strong>
-            {{ readableFilename }}
+            {{ caption }}
+          </p>
+          <p v-if="image.folderDescription" class="m-0 text-[0.9rem] text-muted">
+            {{ image.folderDescription }}
           </p>
           <p class="m-0 text-muted">{{ image.relativePath }}</p>
         </div>
@@ -412,6 +415,7 @@
           .trim()
       : "",
   )
+  const caption = computed(() => props.image?.caption ?? readableFilename.value)
   const formattedDate = computed(() =>
     props.image
       ? new Date(

@@ -80,6 +80,9 @@ export interface ImageDetail extends FeedItem {
   originalUrl: string;
   nextImageId: number | null;
   previousImageId: number | null;
+  caption?: string;
+  captionSource?: 'filename' | 'frontmatter';
+  folderDescription?: string | null;
 }
 
 export interface TrashItem extends FeedItem {

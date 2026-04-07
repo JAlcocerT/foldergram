@@ -103,6 +103,9 @@ export interface ImageDetail extends FeedImage {
   originalUrl: string;
   nextImageId: number | null;
   previousImageId: number | null;
+  caption?: string;
+  captionSource?: 'filename' | 'frontmatter';
+  folderDescription?: string | null;
 }
 
 export interface TrashImage extends FeedImage {

@@ -14,6 +14,7 @@ import { buildMonthDayKey, countFeedBursts, diversifyFeedCandidates, groupFeedBu
 import { shouldPreferMomentRail, type FeedRailKind } from '../utils/feed-rail-utils.js';
 import { countSupportedRootMediaFiles } from '../utils/gallery-root-utils.js';
 import { getPathBreadcrumb } from '../utils/path-utils.js';
+import { folderMetadataService } from './folder-metadata-service.js';
 import { scannerService } from './scanner-service.js';
 import { storageService } from './storage-service.js';
 
@@ -699,7 +700,13 @@ export const galleryService = {
       return null;
     }
 
-    return mapImageDetail(detail, getThumbnailAssetVersion());
+    const mappedDetail = mapImageDetail(detail, getThumbnailAssetVersion());
+    const metadata = folderMetadataService.getImageDetailMetadata(mappedDetail.folderPath, mappedDetail.filename);
+
+    return {
+      ...mappedDetail,
+      ...metadata
+    };
   },
 
   getTrashImages(page: number, limit: number) {
