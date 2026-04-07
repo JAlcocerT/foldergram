@@ -151,8 +151,10 @@ function isSameOrDescendantFolderPath(rootFolderPath: string, candidateFolderPat
 
 function mapFeedImage(image: IndexedFeedImage, thumbnailVersion = getThumbnailAssetVersion()): FeedImage {
   const { playbackStrategy, ...rest } = image;
+  const metadata = folderMetadataService.getFeedImageMetadata(rest.folderPath, rest.filename);
   return {
     ...rest,
+    ...metadata,
     folderBreadcrumb: getPathBreadcrumb(rest.folderPath),
     thumbnailUrl: toPublicMediaUrl('/thumbnails', rest.thumbnailUrl, thumbnailVersion),
     previewUrl: buildPreviewUrl({
@@ -199,6 +201,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
   const thumbnailVersion = getThumbnailAssetVersion();
   const avatarImageId = folder.avatar_image_id ?? imageRepository.getLatestFolderImageId(folder.id);
   const avatar = avatarImageId ? imageRepository.getImageDetail(avatarImageId) : undefined;
+  const metadata = folderMetadataService.getFolderMetadata(folder.folder_path);
 
   return {
     id: folder.id,
@@ -206,6 +209,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
     name: folder.name,
     folderPath: folder.folder_path,
     breadcrumb: getPathBreadcrumb(folder.folder_path),
+    folderDescription: metadata.folderDescription,
     imageCount: folder.image_count,
     videoCount: folder.video_count,
     latestImageMtimeMs: folder.latest_image_mtime_ms,

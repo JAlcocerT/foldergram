@@ -155,6 +155,42 @@ description: Broken file without closing delimiter
     });
   });
 
+  it('propagates imported metadata to feed items and folder summaries', async () => {
+    const image = await createIndexedImage('showcase', 'hero-shot.jpg', {
+      metadataFilename: 'index.md',
+      metadataSource: `---
+description: Showcase collection from Hugo
+resources:
+  - src: hero-shot.jpg
+    title: Imported feed caption
+---
+`
+    });
+
+    const feedItem = galleryService.getFeed(1, 20, 'recent').items.find((item) => item.id === image.id);
+    const folder = galleryService.getFolderBySlug('showcase');
+    const folderImages = galleryService.getFolderImages('showcase', 1, 20);
+
+    expect(feedItem).toMatchObject({
+      id: image.id,
+      caption: 'Imported feed caption',
+      captionSource: 'frontmatter'
+    });
+    expect(folder).toMatchObject({
+      slug: 'showcase',
+      folderDescription: 'Showcase collection from Hugo'
+    });
+    expect(folderImages?.folder).toMatchObject({
+      slug: 'showcase',
+      folderDescription: 'Showcase collection from Hugo'
+    });
+    expect(folderImages?.items[0]).toMatchObject({
+      id: image.id,
+      caption: 'Imported feed caption',
+      captionSource: 'frontmatter'
+    });
+  });
+
   async function createIndexedImage(
     relativeFolderPath: string,
     filename: string,

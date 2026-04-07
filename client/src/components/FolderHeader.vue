@@ -18,6 +18,9 @@
         <span><strong class="mr-[0.35rem] font-semibold">{{ folder.videoCount }}</strong>reels</span>
         <span v-if="folder.latestImageMtimeMs"><strong class="mr-[0.35rem] font-semibold">{{ formattedUpdatedDate }}</strong>updated</span>
       </div>
+      <p v-if="folder.folderDescription" class="m-0 max-w-[32rem] text-[0.95rem] leading-[1.55] text-text max-sm:max-w-none">
+        {{ folder.folderDescription }}
+      </p>
       <div class="grid max-w-[29rem] gap-[0.28rem] max-sm:max-w-none">
         <span class="text-[0.74rem] font-bold tracking-[0.1em] text-muted uppercase">Library path</span>
         <p class="m-0 font-mono text-[0.8rem] leading-[1.5] text-muted break-all">{{ folder.folderPath }}</p>

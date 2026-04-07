@@ -327,6 +327,16 @@ export function formatFilenameCaption(filename: string): string {
 }
 
 export const folderMetadataService = {
+  getFolderMetadata(folderPath: string): {
+    folderDescription: string | null;
+  } {
+    const metadata = readFolderMetadata(folderPath);
+
+    return {
+      folderDescription: metadata?.description?.trim() || null
+    };
+  },
+
   getImageDetailMetadata(folderPath: string, filename: string): {
     caption: string;
     captionSource: CaptionSource;
@@ -341,6 +351,18 @@ export const folderMetadataService = {
       caption: importedCaption ?? fallbackCaption,
       captionSource: importedCaption ? 'frontmatter' : 'filename',
       folderDescription: metadata?.description?.trim() || null
+    };
+  },
+
+  getFeedImageMetadata(folderPath: string, filename: string): {
+    caption: string;
+    captionSource: CaptionSource;
+  } {
+    const detail = this.getImageDetailMetadata(folderPath, filename);
+
+    return {
+      caption: detail.caption,
+      captionSource: detail.captionSource
     };
   }
 };

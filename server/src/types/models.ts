@@ -86,6 +86,8 @@ export interface FeedImage {
   folderPath: string;
   folderBreadcrumb?: string | null;
   filename: string;
+  caption?: string;
+  captionSource?: 'filename' | 'frontmatter';
   width: number;
   height: number;
   mediaType: MediaType;

@@ -330,6 +330,7 @@ const imageRoute = computed(() => `/image/${props.item.id}`);
 const isHomeContext = computed(() => props.context === 'home');
 const shouldOpenPostInModal = computed(() => props.context !== 'home');
 const caption = computed(() =>
+  props.item.caption ??
   props.item.filename
     .replace(/\.[^.]+$/, '')
     .replace(/[_-]+/g, ' ')

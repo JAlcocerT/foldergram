@@ -1,226 +1,199 @@
 # Hugo Frontmatter Metadata Import
 
-## Goal
+## Status
 
-Add support for reading Hugo-style `index.md` and `_index.md` files inside gallery folders so Foldergram can show:
+Implemented.
 
-- per-image imported captions from `resources[].title`
-- optional folder descriptions from frontmatter `description`
+This feature now reads Hugo-style `index.md` and `_index.md` files from gallery folders and uses that metadata in Foldergram without changing the database schema.
 
-Initial target:
+## What it does
 
-- image detail route: `/image/:id`
+Foldergram now imports these Hugo frontmatter fields:
 
-Possible later expansion:
+- folder `description`
+- `resources[].src`
+- `resources[].title`
 
-- feed cards
-- folder pages
-- library cards
+Current behavior:
 
-## Why this feature exists
-
-The migrated Hugo gallery already contains useful metadata that Foldergram currently ignores.
-
-Examples:
-
-- `description: Mantas multi-proposito`
-- `resources:`
-  - `src: manta1.jpeg`
-  - `title: Manta para bebe`
-
-Today Foldergram shows a filename-derived caption instead.
-
-## Current behavior
-
-Right now:
-
-- the scanner only indexes supported media files
-- Markdown files are ignored
-- `/api/images/:id` does not return caption or folder description fields
-- the image detail UI renders a readable filename as the post text
-
-This means the metadata is present on disk but not used by the app.
-
-## Proposed MVP
-
-Implement imported metadata only for image detail pages.
-
-When a user opens `/image/:id`:
-
-1. Resolve the image's folder path.
-2. Look for `index.md` or `_index.md` in that folder.
-3. Parse frontmatter.
-4. Read:
-   - `description` as folder description
-   - `resources[].src` matched to the current image filename
-   - `resources[].title` as imported caption
-5. Return those fields from `GET /api/images/:id`.
-6. Render them in the image detail UI.
+- image detail pages use imported captions when a `resources[].title` matches the current file
+- image detail pages show the folder `description` when present
+- feed cards use imported captions when available
+- folder pages show the folder `description` in the header
 
 Fallback behavior:
 
-- if no Markdown file exists, keep current behavior
-- if metadata is missing for a file, keep current filename-based caption
-- if parsing fails, log it and fall back safely
+- if no Markdown file exists, Foldergram keeps the old filename-based caption
+- if a file is not listed in `resources`, Foldergram keeps the filename-based caption
+- if frontmatter parsing fails, Foldergram ignores the metadata and falls back safely
 
-## Recommended implementation
+## Surfaces covered
 
-### Backend
+Implemented surfaces:
 
-Add a small metadata reader in the server.
+- `/image/:id`
+- feed-style card views that render `FeedCard`
+- folder pages such as `/folders/:slug`
 
-Suggested new module:
+Not implemented yet:
 
-- `server/src/services/folder-metadata-service.ts`
+- library list cards
+- search result metadata
+- metadata indexed into SQLite
 
-Responsibilities:
+## How it works
 
-- locate `index.md` or `_index.md`
-- parse frontmatter
-- normalize `resources[].src`
-- expose:
-  - `caption`
-  - `folderDescription`
+The implementation is request-time and additive.
 
-Suggested response shape addition for `GET /api/images/:id`:
+Flow:
 
-```ts
-interface ImageDetail {
-  // existing fields...
-  caption?: string | null;
-  folderDescription?: string | null;
-  captionSource?: 'filename' | 'frontmatter';
-}
-```
+1. Resolve the folder path for the current image or folder.
+2. Look for `index.md` first, then `_index.md`.
+3. Parse the frontmatter.
+4. Read:
+   - `description` as folder description
+   - `resources[].src` matched by normalized basename
+   - `resources[].title` as imported caption
+5. Return those fields through the existing API payloads.
+6. Render them in the client where supported.
 
-Implementation choice:
-
-- keep this out of SQLite for the MVP
-- resolve metadata at request time in `galleryService.getImageDetail`
-
-Why:
-
-- smallest code change
-- no schema migration
-- no rebuild requirement
-- easier to prove value before widening scope
-
-### Frontend
-
-Update the image detail UI in:
-
-- `client/src/components/ImageModal.vue`
-
-Behavior:
-
-- prefer `image.caption` when present
-- otherwise keep the current readable filename
-- optionally render `image.folderDescription` below the caption or in the folder context area
-
-No route changes are required.
-
-## Parsing strategy
-
-The repo does not currently include a dedicated frontmatter parser in the server package.
-
-Recommended approach:
-
-- add a small parsing dependency rather than writing a fragile custom parser
-- use a well-known frontmatter parser and YAML parser
-
-Good options:
-
-- `gray-matter`
-- `yaml` plus a small frontmatter splitter
-
-Recommendation:
-
-- `gray-matter`
-
-Reason:
-
-- simplest implementation
-- clearer failure behavior
-- less likely to break on real-world Hugo frontmatter
+No scan rebuild and no schema migration are required.
 
 ## Matching rules
 
-For the MVP, match imported captions by basename only:
+Imported captions are matched by normalized basename.
+
+Examples:
 
 - image filename: `manta1.jpeg`
 - frontmatter `resources[].src`: `manta1.jpeg`
+- frontmatter `resources[].src`: `nested/MANTA1.JPEG`
 
-Normalization should include:
+Normalization includes:
 
 - case-insensitive compare
 - slash normalization
-- basename extraction when Hugo stored a relative path
+- basename extraction
 
-If multiple entries match, take the first exact basename match.
+If there is no match, Foldergram falls back to the readable filename caption.
 
-## What could break
+## Files changed
 
-If implemented as described, the break risk is low.
+Backend:
 
-### Things that should not break
+- [folder-metadata-service.ts](/C:/Users/j--e-/Desktop/foldergram/server/src/services/folder-metadata-service.ts)
+- [gallery-service.ts](/C:/Users/j--e-/Desktop/foldergram/server/src/services/gallery-service.ts)
+- [models.ts](/C:/Users/j--e-/Desktop/foldergram/server/src/types/models.ts)
 
-- existing scans
+Frontend:
+
+- [api.ts](/C:/Users/j--e-/Desktop/foldergram/client/src/types/api.ts)
+- [ImageModal.vue](/C:/Users/j--e-/Desktop/foldergram/client/src/components/ImageModal.vue)
+- [FeedCard.vue](/C:/Users/j--e-/Desktop/foldergram/client/src/components/FeedCard.vue)
+- [FolderHeader.vue](/C:/Users/j--e-/Desktop/foldergram/client/src/components/FolderHeader.vue)
+
+Tests:
+
+- [folder-metadata.test.ts](/C:/Users/j--e-/Desktop/foldergram/server/test/folder-metadata.test.ts)
+
+## API impact
+
+The API was extended additively.
+
+`FeedItem` may now include:
+
+```ts
+caption?: string
+captionSource?: 'filename' | 'frontmatter'
+```
+
+`FolderSummary` may now include:
+
+```ts
+folderDescription?: string | null
+```
+
+`ImageDetail` may now include:
+
+```ts
+caption?: string
+captionSource?: 'filename' | 'frontmatter'
+folderDescription?: string | null
+```
+
+These fields are optional so existing consumers do not break.
+
+## Examples that should work now
+
+Image detail examples:
+
+- `http://localhost:4141/image/11`
+  - file: `my-favourite-projects/conjunto-18meses.png`
+  - caption: `Conjunto pantalón corto y chaqueta con capucha, talla 18 meses`
+  - folder description: `Mis Proyectos Favoritos de costura...`
+
+- `http://localhost:4141/image/111`
+  - file: `Variados/Mantas/manta1.jpeg`
+  - caption: `Manta para bebe`
+  - folder description: `Mantas multi-proposito`
+
+- `http://localhost:4141/image/117`
+  - file: `Variados/Mantas/WhatsApp Image 2024-12-21 at 5.20.16 PM11.jpeg`
+  - caption: `Manta de lana para sofa. Tejida a dos agujas`
+  - folder description: `Mantas multi-proposito`
+
+Folder page example:
+
+- open the folder for `Variados/Mantas`
+- the header should show `Mantas multi-proposito`
+
+Feed behavior:
+
+- any feed card for those same images should now show the imported caption instead of the filename-derived caption
+
+## Safety and break risk
+
+This implementation is low-risk because it is additive.
+
+Things it does not change:
+
+- scan behavior
 - database schema
-- existing routes
-- existing folders with no Markdown metadata
-- current filename-based captions
+- existing routing
+- existing media indexing
 
-### Real risks
+Known risks:
 
-- invalid or unusual frontmatter may fail to parse
-- some Hugo metadata may use encodings or characters that display oddly
-- matching by filename alone may fail if `resources[].src` does not reflect the actual file name
-- reading Markdown from disk on every image request adds some overhead
+- malformed or unexpected frontmatter may be ignored
+- some old Hugo files may contain encoding artifacts
+- request-time metadata reads add a small amount of overhead
 
-## How to avoid breakage
+Mitigations in place:
 
-Use defensive rules:
+- metadata is optional
+- failures fall back to old behavior
+- parsed metadata is cached by file path and mtime
 
-- treat metadata as optional
-- never fail the route because metadata parsing failed
-- keep the current filename caption as the fallback
-- log parse problems at warning level only
-- cache parsed metadata per folder path and invalidate when the Markdown file mtime changes
+## Verification performed
 
-That keeps the feature additive rather than disruptive.
+Verified with:
 
-## Performance note
+- `npx vitest run --pool=threads test/folder-metadata.test.ts`
+- `npm run build`
 
-For `/image/:id` only, request-time parsing is acceptable.
+The test coverage includes:
 
-If the feature expands to feed cards or folder listings, request-time parsing becomes the wrong design. At that point the metadata should move into scan-time indexing and likely into SQLite.
+- imported caption on image detail
+- folder description on image detail
+- `_index.md` fallback
+- basename matching for `resources[].src`
+- invalid frontmatter fallback
+- propagation into feed items and folder summaries
 
-## Later phase
+## Remaining next steps
 
-If the MVP works well, phase 2 would be:
+If the feature needs to go further, the next reasonable expansions are:
 
-- add folder description support to folder pages
-- add imported captions to feed cards
-- store parsed metadata in the database during scans
-- refresh metadata when `index.md` or `_index.md` changes
-
-## Testing plan
-
-Minimum tests:
-
-- image detail returns filename caption when no Markdown exists
-- image detail returns imported caption when `resources[].title` matches the file
-- image detail returns folder description when present
-- invalid frontmatter does not break the route
-- `_index.md` works when `index.md` is absent
-
-## Bottom line
-
-Yes, this can be implemented without breaking the current app if it is done as an additive image-detail-only feature first.
-
-The safest path is:
-
-1. parse Hugo frontmatter on demand for `/api/images/:id`
-2. expose optional caption and folder description fields
-3. keep the current filename text as fallback
-4. defer scan-time/database integration until the feature expands beyond `/image/:id`
+- show imported metadata in library cards
+- expose richer folder metadata such as Hugo `title`
+- move metadata extraction into scan-time indexing if request-time lookup becomes too broad

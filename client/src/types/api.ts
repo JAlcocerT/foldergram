@@ -9,6 +9,8 @@ export interface FeedItem {
   folderPath: string;
   folderBreadcrumb: string | null;
   filename: string;
+  caption?: string;
+  captionSource?: 'filename' | 'frontmatter';
   width: number;
   height: number;
   mediaType: 'image' | 'video';
@@ -25,6 +27,7 @@ export interface FolderSummary {
   name: string;
   folderPath: string;
   breadcrumb: string | null;
+  folderDescription?: string | null;
   imageCount: number;
   videoCount: number;
   latestImageMtimeMs: number | null;
