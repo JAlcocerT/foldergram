@@ -68,6 +68,16 @@ If you want the published Foldergram image:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.filebrowser.yml up -d
+
+#Rebuilding after code changes:
+# Force rebuild (don't use cached layers)
+#docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build --force-recreate
+
+## Or just rebuild the image without restarting yet
+#docker compose -f docker-compose.yml -f docker-compose.local.yml build
+
+#To go back to the pre-built GHCR image:
+#docker compose up -d   # just the base file, no local override
 ```
 
 If you want to build Foldergram locally from this repository:

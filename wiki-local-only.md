@@ -31,7 +31,9 @@ Rules that matter:
 - Files placed directly in `GALLERY_ROOT` are ignored.
 - Nested folders do not merge into their parent folder. If a nested folder contains media, it becomes its own app folder.
 
-In development, the filesystem watcher should pick up new files automatically. If not, use Settings -> Scan Library or run:
+In development, the filesystem watcher should pick up new files automatically. 
+
+If not, use Settings -> Scan Library or run:
 
 ```powershell
 npm run rescan
@@ -69,3 +71,15 @@ Foldergram should be treated as a gallery and index over your folders.
 
 Use the filesystem to add media.
 Use the web app to browse, like, rescan, rebuild, trash, restore, and optionally permanently delete media.
+
+---
+
+```sh
+# One-time copy
+scp -r ./data/gallery/ jalcocert@192.168.1.2:/home/jalcocert/foldergram/data/gallery/
+
+#But for photos, rsync is much better — it's incremental (only copies new/changed files) and shows progress:
+
+# First time or any subsequent sync
+#rsync -avz --progress ./data/gallery/ jalcocert@192.168.1.2:~/foldergram/data/gallery/
+```

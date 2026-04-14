@@ -164,6 +164,7 @@ Cost breakdown:
 ### **Approach 1: SFTP/Rsync Upload (My Recommendation)**
 
 **How it works:**
+
 ```
 Your Knitting:
 1. Opens SFTP client (Transmit, WinSCP, Filezilla)
@@ -173,6 +174,7 @@ Your Knitting:
 ```
 
 **Setup (one-time):**
+
 ```bash
 # On server:
 mkdir -p /data/gallery/new-project
