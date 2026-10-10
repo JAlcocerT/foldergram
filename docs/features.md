@@ -132,14 +132,15 @@ It exposes:
 - thumbnail-only rebuild
 - full library rebuild
 
-### Shared-password protection
+### Viewer and administrator protection
 
-Settings can optionally enable a single shared password for the app.
+Settings can enable a viewer password for browsing and likes, then a distinct
+administrator password for content and library management.
 
 That flow supports:
 
 - turning password protection on
-- changing the shared password
+- changing either password
 - disabling protection again
 - signing the current browser session out
 
@@ -156,7 +157,7 @@ separate file browser or CMS. It supports:
 - writing metadata to `index.md`, or to `_index.md` when that file already exists
 - triggering a normal library scan after changes
 
-Content management requires shared-password protection to be enabled. Folder
+Content management requires an administrator session. Folder
 paths are confined to `GALLERY_ROOT`; hidden and traversal paths, unsupported
 extensions, duplicate upload names, and existing filename collisions are
 rejected.

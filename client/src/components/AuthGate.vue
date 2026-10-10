@@ -12,7 +12,7 @@
       </div>
 
       <p class="mt-5 mb-0 text-[0.95rem] leading-[1.65] text-muted">
-        This library is protected with a single shared password for local and homelab access.
+        Enter the viewer password to browse, or the administrator password to manage the library.
       </p>
 
       <form class="mt-6 grid gap-4" @submit.prevent="submitLogin">
@@ -23,7 +23,7 @@
             class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
             type="password"
             autocomplete="current-password"
-            placeholder="Enter the shared password"
+            placeholder="Enter viewer or admin password"
             :disabled="submitting"
           />
         </label>

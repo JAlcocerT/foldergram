@@ -95,7 +95,9 @@ describe.sequential('auth protection', () => {
     expect(authService.isEnabled()).toBe(false);
     expect(authService.getStatus(request)).toEqual({
       enabled: false,
-      authenticated: true
+      authenticated: true,
+      adminEnabled: false,
+      role: 'admin'
     });
     expect(next).toHaveBeenCalledOnce();
     expect(response.status).not.toHaveBeenCalled();
@@ -155,7 +157,9 @@ describe.sequential('auth protection', () => {
     expect(authService.isAuthenticatedRequest(authenticatedRequest)).toBe(true);
     expect(authService.getStatus(authenticatedRequest)).toEqual({
       enabled: true,
-      authenticated: true
+      authenticated: true,
+      adminEnabled: false,
+      role: 'admin'
     });
     expect(next).toHaveBeenCalledOnce();
     expect(authenticatedResponse.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');

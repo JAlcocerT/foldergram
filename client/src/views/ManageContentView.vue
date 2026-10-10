@@ -9,7 +9,7 @@
         <p class="m-0 mt-1 text-muted">Create galleries, upload media, and edit Hugo-compatible metadata.</p>
       </div>
       <button
-        v-if="authStore.enabled"
+        v-if="authStore.isAdmin"
         class="btn-primary"
         type="button"
         :disabled="scanning || appStore.isScanning"
@@ -19,11 +19,11 @@
       </button>
     </header>
 
-    <section v-if="!authStore.enabled" class="card p-8 grid gap-4">
+    <section v-if="!authStore.isAdmin" class="card p-8 grid gap-4">
       <div>
         <h2 class="m-0 text-[1.1rem]">Password protection required</h2>
         <p class="m-0 mt-2 text-muted">
-          Content management stays disabled until shared-password protection is enabled.
+          Content management requires an administrator session.
         </p>
       </div>
       <RouterLink class="btn-primary w-fit" :to="{ name: 'settings' }">Open settings</RouterLink>

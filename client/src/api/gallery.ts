@@ -174,6 +174,16 @@ export function changePasswordProtection(currentPassword: string, password: stri
   });
 }
 
+export function setAdminPassword(password: string, currentPassword?: string) {
+  return requestJson<AuthMutationResult>('/api/auth/admin-password', {
+    body: JSON.stringify(currentPassword ? { currentPassword, password } : { password }),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'PUT'
+  });
+}
+
 export function disablePasswordProtection(currentPassword: string) {
   return requestJson<AuthMutationResult>('/api/auth/password', {
     body: JSON.stringify({ currentPassword }),

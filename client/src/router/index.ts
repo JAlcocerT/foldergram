@@ -9,6 +9,7 @@ import FolderView from '../views/FolderView.vue';
 import MomentView from '../views/MomentView.vue';
 import TrashView from '../views/TrashView.vue';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { pinia } from '../stores/pinia';
 import SettingsView from '../views/SettingsView.vue';
 import ManageContentView from '../views/ManageContentView.vue';
@@ -63,17 +64,20 @@ export const router = createRouter({
     {
       path: '/trash',
       name: 'trash',
-      component: TrashView
+      component: TrashView,
+      meta: { requiresAdmin: true }
     },
     {
       path: '/settings',
       name: 'settings',
-      component: SettingsView
+      component: SettingsView,
+      meta: { requiresAdmin: true }
     },
     {
       path: '/manage',
       name: 'manage',
-      component: ManageContentView
+      component: ManageContentView,
+      meta: { requiresAdmin: true }
     },
     {
       path: '/moments/:id',
@@ -100,4 +104,13 @@ export const router = createRouter({
 
     return { top: 0 };
   }
+});
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAdmin) {
+    return true;
+  }
+  const authStore = useAuthStore(pinia);
+  await authStore.initialize();
+  return authStore.isAdmin ? true : { name: 'home' };
 });

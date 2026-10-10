@@ -17,13 +17,15 @@ All documented routes come from `server/src/routes/api.ts`.
 
 ## Authentication and protected routes
 
-Foldergram can optionally require a shared-password session.
+Foldergram can optionally require a viewer or administrator session.
 
 When password protection is enabled:
 
 - most `/api` routes return `401` until the browser logs in
 - `GET /api/health`, `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout` stay reachable without an authenticated session
 - `PUT /api/auth/password` is public only when password protection is currently disabled, so the first password can be set
+- `PUT /api/auth/admin-password` creates or changes the distinct administrator password
+- uploads, metadata writes, scans, Trash, restore, and delete routes return `403` for viewer sessions
 - `/thumbnails/...` and `/previews/...` also require the same authenticated session
 
 The frontend sends same-origin credentials automatically and uses a signed
@@ -90,7 +92,9 @@ Example shape:
 ```json
 {
   "enabled": true,
-  "authenticated": false
+  "authenticated": false,
+  "adminEnabled": true,
+  "role": null
 }
 ```
 
@@ -302,8 +306,7 @@ Notable fields:
 
 ### `GET /api/admin/content/metadata`
 
-Requires shared-password protection to be enabled and the current session to be
-authenticated.
+Requires an administrator session.
 
 Query parameter: `folderPath`, a relative path inside `GALLERY_ROOT`.
 
@@ -312,7 +315,7 @@ with their current captions.
 
 ### `GET /api/admin/content/folders`
 
-Requires shared-password protection and an authenticated session. Lists indexed
+Requires an administrator session. Lists indexed
 folders plus unindexed folders that already contain metadata or direct media,
 so a newly created empty gallery remains manageable before its first upload.
 
@@ -320,8 +323,8 @@ so a newly created empty gallery remains manageable before its first upload.
 
 ### Content management
 
-All content-management mutations require shared-password protection, an
-authenticated session, and the normal mutation headers.
+All content-management mutations require an administrator session and the
+normal mutation headers.
 
 - `POST /api/admin/content/folders` creates a relative gallery folder and its
   `index.md`. JSON fields: `folderPath`, `title`, and `description`.
@@ -340,7 +343,7 @@ Body:
 
 ```json
 {
-  "password": "your-shared-password"
+  "password": "your-viewer-or-admin-password"
 }
 ```
 
@@ -351,7 +354,9 @@ Success:
   "ok": true,
   "auth": {
     "enabled": true,
-    "authenticated": true
+    "authenticated": true,
+    "adminEnabled": true,
+    "role": "viewer"
   }
 }
 ```
@@ -373,14 +378,16 @@ Success:
   "ok": true,
   "auth": {
     "enabled": true,
-    "authenticated": false
+    "authenticated": false,
+    "adminEnabled": true,
+    "role": null
   }
 }
 ```
 
 ### `PUT /api/auth/password`
 
-Sets or changes the shared password.
+Sets or changes the viewer password.
 
 Body when protection is disabled:
 
@@ -404,9 +411,16 @@ Notes:
 - password minimum length is `8`
 - changing the password invalidates older sessions
 
+### `PUT /api/auth/admin-password`
+
+Creates or changes the administrator password. The first call requires the
+current pre-split administrator session. Later changes also require
+`currentPassword`. The administrator password must differ from the viewer
+password, and changing it invalidates older sessions.
+
 ### `DELETE /api/auth/password`
 
-Disables shared-password protection.
+Disables viewer/admin password protection.
 
 Body:
 

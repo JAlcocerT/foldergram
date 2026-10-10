@@ -193,6 +193,8 @@ export interface AppStats {
 export interface AuthStatus {
   enabled: boolean;
   authenticated: boolean;
+  adminEnabled: boolean;
+  role: 'viewer' | 'admin' | null;
 }
 
 export interface AuthMutationResult {

@@ -49,15 +49,54 @@ describe.sequential('content management authentication', () => {
     const { authService } = await import('../src/services/auth-service.js');
     const { requireContentManagementAuthentication } = await import('../src/middleware/content-management-auth.js');
     authService.setPassword('password123');
+    const loginResponse = {
+      cookie: vi.fn().mockReturnThis()
+    } as unknown as express.Response;
+    const baseRequest = {
+      secure: false,
+      get: vi.fn().mockReturnValue(undefined)
+    } as unknown as express.Request;
+    authService.setAuthenticatedSession(loginResponse, baseRequest);
+    const [, cookieValue] = (loginResponse.cookie as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const request = {
+      get: (name: string) => name.toLowerCase() === 'cookie' ? `foldergram_session=${cookieValue}` : undefined
+    } as unknown as express.Request;
     const response = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
+      json: vi.fn().mockReturnThis(),
+      setHeader: vi.fn()
     } as unknown as express.Response;
     const next = vi.fn();
 
-    requireContentManagementAuthentication({} as express.Request, response, next);
+    requireContentManagementAuthentication(request, response, next);
 
     expect(next).toHaveBeenCalledOnce();
     expect(response.status).not.toHaveBeenCalled();
+  });
+
+  it('rejects a viewer session after an administrator password is configured', async () => {
+    const { authService } = await import('../src/services/auth-service.js');
+    const { requireContentManagementAuthentication } = await import('../src/middleware/content-management-auth.js');
+    authService.setPassword('viewer-password');
+    authService.setAdminPassword('admin-password');
+
+    const loginResponse = { cookie: vi.fn().mockReturnThis() } as unknown as express.Response;
+    const baseRequest = { secure: false, get: vi.fn().mockReturnValue(undefined) } as unknown as express.Request;
+    authService.setAuthenticatedSession(loginResponse, baseRequest, 'viewer');
+    const [, cookieValue] = (loginResponse.cookie as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const request = {
+      get: (name: string) => name.toLowerCase() === 'cookie' ? `foldergram_session=${cookieValue}` : undefined
+    } as unknown as express.Request;
+    const response = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+      setHeader: vi.fn()
+    } as unknown as express.Response;
+    const next = vi.fn();
+
+    requireContentManagementAuthentication(request, response, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(403);
   });
 });

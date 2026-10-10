@@ -35,7 +35,7 @@ Foldergram indexes supported media from a configured `GALLERY_ROOT`, stores meta
 - App Folder pages with a posts grid and a `Reels` tab when videos exist.
 - Local likes stored in SQLite.
 - Image and video support with generated derivatives for fast browsing.
-- Optional shared-password protection for local and homelab access.
+- Separate viewer and administrator passwords for local and homelab access.
 - Authenticated content management for creating folders, uploading media, and editing Hugo-compatible descriptions and captions.
 - Settings actions for manual scan, thumbnail rebuild, and full library rebuild.
 - A web app manifest plus production service worker registration.
@@ -209,11 +209,11 @@ The shipped `.env.example` only includes the `DEV_*` port values. Docker uses th
 
 ### Access Protection
 
-Shared-password protection is configured from the Settings page, not from `.env`. When enabled, Foldergram stores a one-way password hash plus session metadata in SQLite and requires that password before serving protected API or media routes.
+Access protection is configured from the Settings page, not from `.env`. The viewer password unlocks browsing and likes. A separate administrator password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. Passwords are stored as one-way hashes and sessions use signed cookies.
 
 ### Content Management
 
-Enable shared-password protection, then open **More → Manage content** to:
+Enable the viewer password, create a separate administrator password, then sign in as administrator and open **More → Manage content** to:
 
 - create top-level or nested gallery folders
 - upload up to 100 supported photos or videos at once
@@ -222,7 +222,7 @@ Enable shared-password protection, then open **More → Manage content** to:
 - save those fields to Hugo-compatible `index.md` or an existing `_index.md`
 - run a library scan after uploading
 
-Content management is unavailable until password protection is enabled. Uploads are limited to 100 MB per file, remain under `GALLERY_ROOT`, reject filename collisions, and continue to follow the configured gallery volume and backup strategy.
+Content management is available only to administrator sessions. Uploads are limited to 100 MB per file, remain under `GALLERY_ROOT`, reject filename collisions, and continue to follow the configured gallery volume and backup strategy.
 
 ### Public Demo Deployments
 

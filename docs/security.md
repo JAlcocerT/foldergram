@@ -1,6 +1,6 @@
 ---
 title: Security
-description: The real security posture of Foldergram, including shared-password protection, mutation trust checks, and local-only caveats.
+description: The real security posture of Foldergram, including viewer/admin password protection, mutation trust checks, and local-only caveats.
 ---
 
 # Security
@@ -13,12 +13,13 @@ optional shared-password gate for homelab and LAN use.
 
 - you run it on your own machine or behind a trusted local-network or reverse-proxy setup
 - the app is not exposed directly to the public internet without additional protection
-- the built-in auth story is a single shared password, not a multi-user account system
+- the built-in auth story has shared viewer and administrator roles, not individual user accounts
 
-## Shared-password protection
+## Viewer and administrator protection
 
-Foldergram can optionally protect the library with one shared password
-configured from the Settings page.
+Foldergram can optionally protect the library with a shared viewer password and
+a separate administrator password configured from the Settings page. Either
+password can log in; the resulting signed session records its role.
 
 When enabled:
 
@@ -29,8 +30,10 @@ When enabled:
 - authenticated API and media responses are marked `Cache-Control: no-store` and `Vary: Cookie`
 - the production service worker skips caching protected thumbnail and preview responses
 
-Changing the password rotates the session version, which invalidates older
-sessions. Disabling password protection clears the stored auth settings.
+Changing either password rotates the session version, which invalidates older
+sessions. Disabling protection clears both password roles. Existing installations
+temporarily treat their current password session as administrator access so the
+first distinct administrator password can be created safely in Settings.
 
 ## Mutation protection
 
@@ -73,9 +76,9 @@ It is especially relevant for:
 
 ## Content-management boundary
 
-Unlike normal browsing, content-management routes refuse to operate unless the
-shared password has been configured. An authenticated session is then required
-by the normal API gate.
+Unlike normal browsing and likes, content-management, scan, settings, Trash,
+restore, and delete operations require an administrator session. The server
+enforces this independently of which controls the frontend displays.
 
 The upload and metadata layer also:
 

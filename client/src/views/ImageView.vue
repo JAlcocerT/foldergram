@@ -10,6 +10,7 @@
       :folder="folder"
       :is-modal="modal"
       :deleting="viewerStore.deleting"
+      :can-delete="authStore.isAdmin"
       @close="emit('close')"
       @delete="openDeleteDialog"
     />
@@ -60,6 +61,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue';
 import ErrorState from '../components/ErrorState.vue';
 import ImageModal from '../components/ImageModal.vue';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
@@ -76,6 +78,7 @@ const emit = defineEmits<{
 }>();
 
 const appStore = useAppStore();
+const authStore = useAuthStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const viewerStore = useViewerStore();
@@ -109,6 +112,7 @@ onMounted(loadImage);
 watch(() => [imageId.value, activeMediaType.value] as const, loadImage);
 
 function openDeleteDialog() {
+  if (!authStore.isAdmin) return;
   deleteOriginalFromDisk.value = false;
   deleteError.value = null;
   confirmDeleteOpen.value = true;

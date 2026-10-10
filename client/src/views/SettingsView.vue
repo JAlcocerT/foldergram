@@ -12,8 +12,8 @@
       <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
         <div>
           <span class="eyebrow text-accent-strong">Access Protection</span>
-          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Shared password lock</h2>
-          <p class="m-0 mt-[0.35rem] text-muted">Protect the gallery, API, and generated media with one shared password for your local or homelab network.</p>
+          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Viewer password</h2>
+          <p class="m-0 mt-[0.35rem] text-muted">This password lets family and friends browse the gallery and use likes.</p>
         </div>
         <span
           class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
@@ -68,8 +68,8 @@
       <section v-else class="grid gap-[1rem]">
         <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[color-mix(in_srgb,var(--border)_78%,var(--accent)_22%)] p-5">
           <div>
-            <h3 class="m-0 text-[1rem]">Change password</h3>
-            <p class="m-0 mt-[0.25rem] text-muted">Update the shared password and invalidate older sessions.</p>
+            <h3 class="m-0 text-[1rem]">Change viewer password</h3>
+            <p class="m-0 mt-[0.25rem] text-muted">Update viewer access and invalidate older sessions.</p>
           </div>
 
           <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
@@ -139,6 +139,31 @@
           </div>
         </div>
       </section>
+    </section>
+
+    <section v-if="authStore.enabled" class="card grid gap-[1rem] p-8">
+      <div>
+        <span class="eyebrow text-accent-strong">Administrator Access</span>
+        <h2 class="m-0 mt-1 text-[1.18rem]">{{ authStore.adminEnabled ? 'Change admin password' : 'Create admin password' }}</h2>
+        <p class="m-0 mt-1 text-muted">The admin password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. It must differ from the viewer password.</p>
+      </div>
+      <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
+        <label v-if="authStore.adminEnabled" class="grid gap-2">
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Current admin password</span>
+          <input v-model="currentAdminPassword" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="current-password" />
+        </label>
+        <label class="grid gap-2">
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New admin password</span>
+          <input v-model="nextAdminPassword" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="new-password" />
+        </label>
+        <label class="grid gap-2">
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm admin password</span>
+          <input v-model="nextAdminPasswordConfirmation" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="new-password" />
+        </label>
+      </div>
+      <button class="btn-primary w-fit min-w-[12rem]" type="button" :disabled="authStore.loading" @click="saveAdminPassword">
+        {{ authStore.loading ? 'Saving...' : authStore.adminEnabled ? 'Change Admin Password' : 'Create Admin Password' }}
+      </button>
     </section>
 
     <section
@@ -400,6 +425,9 @@ const currentPassword = ref('');
 const nextPassword = ref('');
 const nextPasswordConfirmation = ref('');
 const disablePassword = ref('');
+const currentAdminPassword = ref('');
+const nextAdminPassword = ref('');
+const nextAdminPasswordConfirmation = ref('');
 const SCAN_ERROR_NOTICE_STORAGE_KEY = 'foldergram-scan-error-notice-dismissal';
 const IGNORED_ROOT_MEDIA_NOTICE_STORAGE_KEY = 'foldergram-ignored-root-media-notice-dismissal';
 const NOTICE_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -881,6 +909,28 @@ async function disableAccessProtection() {
     setAuthSuccess('Password protection has been disabled.');
   } catch (error) {
     setAuthError(error instanceof Error ? error.message : 'Unable to disable password protection.');
+  }
+}
+
+async function saveAdminPassword() {
+  clearAuthFeedback();
+  if (authStore.adminEnabled && currentAdminPassword.value.length === 0) {
+    setAuthError('Enter the current administrator password.');
+    return;
+  }
+  const validationError = validatePasswordConfirmation(nextAdminPassword.value, nextAdminPasswordConfirmation.value);
+  if (validationError) {
+    setAuthError(validationError);
+    return;
+  }
+  try {
+    await authStore.changeAdminPassword(nextAdminPassword.value, authStore.adminEnabled ? currentAdminPassword.value : undefined);
+    currentAdminPassword.value = '';
+    nextAdminPassword.value = '';
+    nextAdminPasswordConfirmation.value = '';
+    setAuthSuccess('The administrator password was saved. Viewer sessions can no longer access management controls.');
+  } catch (error) {
+    setAuthError(error instanceof Error ? error.message : 'Unable to save the administrator password.');
   }
 }
 

@@ -216,6 +216,7 @@
           class="absolute bottom-[calc(100%+0.35rem)] left-0 w-[18rem] overflow-hidden rounded-[1.55rem] border border-border bg-[color-mix(in_srgb,var(--surface)_96%,var(--bg)_4%)] shadow-[0_28px_70px_rgba(0,0,0,0.24)]"
         >
           <RouterLink
+            v-if="authStore.isAdmin"
             class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
             :to="{ name: 'trash' }"
             @click="closeMoreMenu"
@@ -238,6 +239,7 @@
           </RouterLink>
 
           <RouterLink
+            v-if="authStore.isAdmin"
             class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
             :to="{ name: 'manage' }"
             @click="closeMoreMenu"
@@ -250,6 +252,7 @@
           </RouterLink>
 
           <RouterLink
+            v-if="authStore.isAdmin"
             class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
             :to="{ name: 'settings' }"
             @click="closeMoreMenu"
@@ -299,6 +302,15 @@
             </svg>
             <span>Switch appearance</span>
           </button>
+          <button
+            v-if="authStore.enabled"
+            class="flex items-center gap-[0.95rem] w-full px-[1.2rem] py-[1rem] border-0 bg-transparent text-[0.98rem] text-text cursor-pointer text-left transition-colors duration-150 hover:bg-surface-hover"
+            type="button"
+            @click="handleLogout"
+          >
+            <span class="i-fluent-sign-out-20-regular w-[1.18rem] h-[1.18rem] shrink-0" aria-hidden="true" />
+            <span>Sign out</span>
+          </button>
         </div>
 
         <button
@@ -334,6 +346,7 @@
   import { RouterLink, useRoute } from "vue-router"
 
   import { useAppStore } from "../stores/app"
+  import { useAuthStore } from "../stores/auth"
   import { useLikesStore } from "../stores/likes"
   import { useFoldersStore } from "../stores/folders"
   import { buildLikedCountByFolder } from "../utils/home-recommendations"
@@ -343,6 +356,7 @@
 
   const appVersion = __APP_VERSION__
   const appStore = useAppStore()
+  const authStore = useAuthStore()
   const likesStore = useLikesStore()
   const foldersStore = useFoldersStore()
   const route = useRoute()
@@ -375,6 +389,11 @@
   function handleAppearanceToggle() {
     appStore.toggleTheme()
     closeMoreMenu()
+  }
+
+  async function handleLogout() {
+    closeMoreMenu()
+    await authStore.logout()
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {

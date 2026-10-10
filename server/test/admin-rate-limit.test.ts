@@ -87,7 +87,7 @@ describe.sequential('admin route rate limiting', () => {
       const response = createResponse();
       const next = vi.fn();
 
-      handlers[0](request, response as unknown as express.Response, next);
+      handlers[1](request, response as unknown as express.Response, next);
 
       expect(next).toHaveBeenCalledOnce();
       expect(response.status).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe.sequential('admin route rate limiting', () => {
     const response = createResponse();
     const next = vi.fn();
 
-    handlers[0](request, response as unknown as express.Response, next);
+    handlers[1](request, response as unknown as express.Response, next);
 
     expect(next).not.toHaveBeenCalled();
     expect(response.status).toHaveBeenCalledWith(429);

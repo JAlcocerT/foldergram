@@ -6,7 +6,8 @@ import {
   enablePasswordProtection,
   fetchAuthStatus,
   loginWithPassword,
-  logout
+  logout,
+  setAdminPassword
 } from '../api/gallery';
 import type { AuthStatus } from '../types/api';
 
@@ -15,6 +16,8 @@ interface AuthState {
   loading: boolean;
   enabled: boolean;
   authenticated: boolean;
+  adminEnabled: boolean;
+  role: 'viewer' | 'admin' | null;
   error: string | null;
 }
 
@@ -33,16 +36,21 @@ export const useAuthStore = defineStore('auth', {
     loading: false,
     enabled: false,
     authenticated: true,
+    adminEnabled: false,
+    role: 'admin',
     error: null
   }),
   getters: {
     accessGranted: (state) => !state.enabled || state.authenticated,
-    requiresLogin: (state) => state.enabled && !state.authenticated
+    requiresLogin: (state) => state.enabled && !state.authenticated,
+    isAdmin: (state) => state.authenticated && state.role === 'admin'
   },
   actions: {
     applyStatus(status: AuthStatus) {
       this.enabled = status.enabled;
       this.authenticated = status.authenticated;
+      this.adminEnabled = status.adminEnabled;
+      this.role = status.role;
       this.ready = true;
     },
 
@@ -58,6 +66,7 @@ export const useAuthStore = defineStore('auth', {
       this.ready = true;
       this.loading = false;
       this.authenticated = false;
+      this.role = null;
       this.error = message;
     },
 
@@ -142,6 +151,21 @@ export const useAuthStore = defineStore('auth', {
         await clearAppCaches();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Unable to change the password.';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async changeAdminPassword(password: string, currentPassword?: string) {
+      this.loading = true;
+      try {
+        const payload = await setAdminPassword(password, currentPassword);
+        this.applyStatus(payload.auth);
+        this.error = null;
+        await clearAppCaches();
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unable to update the administrator password.';
         throw error;
       } finally {
         this.loading = false;

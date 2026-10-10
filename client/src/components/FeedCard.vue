@@ -188,6 +188,7 @@
           <span>Open original</span>
         </button>
         <button
+          v-if="authStore.isAdmin"
           class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 border-b border-border text-[#d93025] bg-transparent cursor-pointer text-left disabled:opacity-70 disabled:cursor-wait"
           type="button"
           :disabled="deleting"
@@ -270,6 +271,7 @@ import { RouterLink, useRoute } from 'vue-router';
 
 import { deleteImage, trashImage } from '../api/gallery';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
@@ -308,6 +310,7 @@ const emit = defineEmits<{
 }>();
 
 const appStore = useAppStore();
+const authStore = useAuthStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();

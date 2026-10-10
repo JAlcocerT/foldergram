@@ -3,6 +3,8 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import type express from 'express';
 
 import {
+  AUTH_ADMIN_PASSWORD_HASH_SETTING_KEY,
+  AUTH_ADMIN_PASSWORD_SALT_SETTING_KEY,
   AUTH_PASSWORD_HASH_SETTING_KEY,
   AUTH_PASSWORD_SALT_SETTING_KEY,
   AUTH_SESSION_SECRET_SETTING_KEY,
@@ -12,8 +14,11 @@ import { appSettingsRepository } from '../db/repositories.js';
 
 interface AuthConfigSnapshot {
   enabled: boolean;
+  adminEnabled: boolean;
   passwordHash: Buffer | null;
   passwordSalt: Buffer | null;
+  adminPasswordHash: Buffer | null;
+  adminPasswordSalt: Buffer | null;
   sessionSecret: Buffer | null;
   sessionVersion: number;
 }
@@ -21,11 +26,16 @@ interface AuthConfigSnapshot {
 interface SessionPayload {
   exp: number;
   sv: number;
+  role: AuthRole;
 }
+
+export type AuthRole = 'viewer' | 'admin';
 
 export interface AuthStatus {
   enabled: boolean;
   authenticated: boolean;
+  adminEnabled: boolean;
+  role: AuthRole | null;
 }
 
 export const AUTH_SESSION_COOKIE_NAME = 'foldergram_session';
@@ -62,11 +72,17 @@ function loadAuthConfig(): AuthConfigSnapshot {
   const sessionSecret = decodeBase64Url(appSettingsRepository.get(AUTH_SESSION_SECRET_SETTING_KEY));
   const sessionVersion = parseSessionVersion(appSettingsRepository.get(AUTH_SESSION_VERSION_SETTING_KEY));
   const enabled = passwordHash !== null && passwordSalt !== null && sessionSecret !== null && sessionVersion > 0;
+  const adminPasswordHash = decodeBase64Url(appSettingsRepository.get(AUTH_ADMIN_PASSWORD_HASH_SETTING_KEY));
+  const adminPasswordSalt = decodeBase64Url(appSettingsRepository.get(AUTH_ADMIN_PASSWORD_SALT_SETTING_KEY));
+  const adminEnabled = enabled && adminPasswordHash !== null && adminPasswordSalt !== null;
 
   return {
     enabled,
+    adminEnabled,
     passwordHash: enabled ? passwordHash : null,
     passwordSalt: enabled ? passwordSalt : null,
+    adminPasswordHash: adminEnabled ? adminPasswordHash : null,
+    adminPasswordSalt: adminEnabled ? adminPasswordSalt : null,
     sessionSecret: enabled ? sessionSecret : null,
     sessionVersion: enabled ? sessionVersion : 0
   };
@@ -137,9 +153,11 @@ function parseSessionToken(token: string, secret: Buffer): SessionPayload | null
       return null;
     }
 
+    const role: AuthRole = payload.role === 'viewer' ? 'viewer' : 'admin';
     return {
       exp: payload.exp,
-      sv: payload.sv
+      sv: payload.sv,
+      role
     };
   } catch {
     return null;
@@ -166,11 +184,32 @@ function isSecureRequest(request: express.Request): boolean {
 
 let authConfig = loadAuthConfig();
 
-function createAuthenticatedStatus(): AuthStatus {
+function createAuthenticatedStatus(role: AuthRole): AuthStatus {
   return {
     enabled: authConfig.enabled,
-    authenticated: true
+    authenticated: true,
+    adminEnabled: authConfig.adminEnabled,
+    role
   };
+}
+
+function getSessionPayload(request: express.Request): SessionPayload | null {
+  if (!authConfig.enabled || !authConfig.sessionSecret) {
+    return null;
+  }
+
+  const cookieHeader = request.get('cookie') ?? undefined;
+  const token = parseCookieValue(cookieHeader, AUTH_SESSION_COOKIE_NAME);
+  if (!token) {
+    return null;
+  }
+
+  const payload = parseSessionToken(token, authConfig.sessionSecret);
+  if (!payload || payload.exp <= Date.now() || payload.sv !== authConfig.sessionVersion) {
+    return null;
+  }
+
+  return payload;
 }
 
 export const authService = {
@@ -182,17 +221,26 @@ export const authService = {
     return authConfig.enabled;
   },
 
+  isAdminEnabled(): boolean {
+    return authConfig.adminEnabled;
+  },
+
   getStatus(request: express.Request): AuthStatus {
     if (!authConfig.enabled) {
       return {
         enabled: false,
-        authenticated: true
+        authenticated: true,
+        adminEnabled: false,
+        role: 'admin'
       };
     }
 
+    const payload = getSessionPayload(request);
     return {
       enabled: true,
-      authenticated: this.isAuthenticatedRequest(request)
+      authenticated: payload !== null,
+      adminEnabled: authConfig.adminEnabled,
+      role: payload ? (authConfig.adminEnabled ? payload.role : 'admin') : null
     };
   },
 
@@ -200,39 +248,35 @@ export const authService = {
     return authConfig.enabled
       ? {
           enabled: true,
-          authenticated: false
+          authenticated: false,
+          adminEnabled: authConfig.adminEnabled,
+          role: null
         }
       : {
           enabled: false,
-          authenticated: true
+          authenticated: true,
+          adminEnabled: false,
+          role: 'admin'
         };
   },
 
-  getAuthenticatedStatus(): AuthStatus {
-    return createAuthenticatedStatus();
+  getAuthenticatedStatus(role: AuthRole): AuthStatus {
+    return createAuthenticatedStatus(authConfig.adminEnabled ? role : 'admin');
   },
 
   isAuthenticatedRequest(request: express.Request): boolean {
-    if (!authConfig.enabled || !authConfig.sessionSecret) {
+    if (!authConfig.enabled) {
       return true;
     }
+    return getSessionPayload(request) !== null;
+  },
 
-    const cookieHeader = request.get('cookie') ?? undefined;
-    const token = parseCookieValue(cookieHeader, AUTH_SESSION_COOKIE_NAME);
-    if (!token) {
+  isAdminRequest(request: express.Request): boolean {
+    if (!authConfig.enabled) {
       return false;
     }
-
-    const payload = parseSessionToken(token, authConfig.sessionSecret);
-    if (!payload) {
-      return false;
-    }
-
-    if (payload.exp <= Date.now()) {
-      return false;
-    }
-
-    return payload.sv === authConfig.sessionVersion;
+    const payload = getSessionPayload(request);
+    return payload !== null && (!authConfig.adminEnabled || payload.role === 'admin');
   },
 
   verifyPassword(password: string): boolean {
@@ -247,7 +291,22 @@ export const authService = {
     );
   },
 
+  verifyAdminPassword(password: string): boolean {
+    if (!authConfig.adminEnabled || !authConfig.adminPasswordHash || !authConfig.adminPasswordSalt) {
+      return false;
+    }
+
+    const expectedHash = hashPassword(password, authConfig.adminPasswordSalt);
+    return (
+      expectedHash.length === authConfig.adminPasswordHash.length &&
+      timingSafeEqual(expectedHash, authConfig.adminPasswordHash)
+    );
+  },
+
   setPassword(password: string): AuthStatus {
+    if (this.verifyAdminPassword(password)) {
+      throw new Error('Viewer and administrator passwords must be different.');
+    }
     const salt = randomBytes(16);
     const sessionSecret = randomBytes(32);
     const passwordHash = hashPassword(password, salt);
@@ -259,7 +318,25 @@ export const authService = {
     appSettingsRepository.set(AUTH_SESSION_VERSION_SETTING_KEY, String(nextSessionVersion));
 
     this.refresh();
-    return createAuthenticatedStatus();
+    return createAuthenticatedStatus('admin');
+  },
+
+  setAdminPassword(password: string): AuthStatus {
+    if (!authConfig.enabled) {
+      throw new Error('Enable viewer password protection before configuring an administrator password.');
+    }
+    if (this.verifyPassword(password)) {
+      throw new Error('Administrator and viewer passwords must be different.');
+    }
+
+    const salt = randomBytes(16);
+    const passwordHash = hashPassword(password, salt);
+    const nextSessionVersion = Math.max(1, authConfig.sessionVersion + 1);
+    appSettingsRepository.set(AUTH_ADMIN_PASSWORD_HASH_SETTING_KEY, passwordHash.toString('base64url'));
+    appSettingsRepository.set(AUTH_ADMIN_PASSWORD_SALT_SETTING_KEY, salt.toString('base64url'));
+    appSettingsRepository.set(AUTH_SESSION_VERSION_SETTING_KEY, String(nextSessionVersion));
+    this.refresh();
+    return createAuthenticatedStatus('admin');
   },
 
   disable(): AuthStatus {
@@ -267,22 +344,27 @@ export const authService = {
     appSettingsRepository.remove(AUTH_PASSWORD_SALT_SETTING_KEY);
     appSettingsRepository.remove(AUTH_SESSION_SECRET_SETTING_KEY);
     appSettingsRepository.remove(AUTH_SESSION_VERSION_SETTING_KEY);
+    appSettingsRepository.remove(AUTH_ADMIN_PASSWORD_HASH_SETTING_KEY);
+    appSettingsRepository.remove(AUTH_ADMIN_PASSWORD_SALT_SETTING_KEY);
 
     this.refresh();
     return {
       enabled: false,
-      authenticated: true
+      authenticated: true,
+      adminEnabled: false,
+      role: 'admin'
     };
   },
 
-  setAuthenticatedSession(response: express.Response, request: express.Request): void {
+  setAuthenticatedSession(response: express.Response, request: express.Request, role: AuthRole = 'admin'): void {
     if (!authConfig.enabled || !authConfig.sessionSecret) {
       return;
     }
 
     const payload: SessionPayload = {
       exp: Date.now() + SESSION_DURATION_MS,
-      sv: authConfig.sessionVersion
+      sv: authConfig.sessionVersion,
+      role: authConfig.adminEnabled ? role : 'admin'
     };
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const signature = signValue(encodedPayload, authConfig.sessionSecret);
