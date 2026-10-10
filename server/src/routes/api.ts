@@ -1,8 +1,14 @@
 import express from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
+import multer from 'multer';
 import { z } from 'zod';
 
+import { appConfig } from '../config/env.js';
 import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, authService } from '../services/auth-service.js';
+import { contentManagementService } from '../services/content-management-service.js';
 import { galleryService } from '../services/gallery-service.js';
+import { requireContentManagementAuthentication } from '../middleware/content-management-auth.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { LIBRARY_REBUILD_REQUIRED_MESSAGE, scannerService } from '../services/scanner-service.js';
 import { storageService } from '../services/storage-service.js';
@@ -48,6 +54,28 @@ const momentIdSchema = z.object({
 
 const imageIdSchema = z.object({
   id: z.coerce.number().int().positive()
+});
+const managedFolderPathSchema = z.string().trim().min(1).max(500);
+const managedTitleSchema = z.string().max(200).default('');
+const managedDescriptionSchema = z.string().max(5000).default('');
+const createManagedFolderBodySchema = z.object({
+  folderPath: managedFolderPathSchema,
+  title: managedTitleSchema,
+  description: managedDescriptionSchema
+});
+const managedFolderQuerySchema = z.object({
+  folderPath: managedFolderPathSchema
+});
+const updateManagedMetadataBodySchema = createManagedFolderBodySchema.extend({
+  captions: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(240),
+        title: z.string().max(1000)
+      })
+    )
+    .max(500)
+    .default([])
 });
 const submittedPasswordSchema = z
   .string()
@@ -372,6 +400,56 @@ const adminMutationRateLimiter = createRateLimiter({
   max: 10,
   message: 'Too many administrative requests. Please try again in a minute.'
 });
+
+const uploadTemporaryDirectory = path.join(appConfig.dataRoot, '.content-uploads');
+fs.mkdirSync(uploadTemporaryDirectory, { recursive: true });
+const contentUpload = multer({
+  dest: uploadTemporaryDirectory,
+  limits: {
+    fileSize: 100 * 1024 * 1024,
+    files: 100
+  }
+});
+
+router.use('/admin/content', requireContentManagementAuthentication);
+
+router.get('/admin/content/folders', async (_request, response) => {
+  response.json({ items: await contentManagementService.listFolders() });
+});
+
+router.post('/admin/content/folders', adminMutationRateLimiter, async (request, response) => {
+  const body = createManagedFolderBodySchema.parse(request.body);
+  const folder = await contentManagementService.createFolder(body);
+  response.status(201).json({ ok: true, folder });
+});
+
+router.get('/admin/content/metadata', async (request, response) => {
+  const query = managedFolderQuerySchema.parse(request.query);
+  response.json({ folder: await contentManagementService.getMetadata(query.folderPath) });
+});
+
+router.put('/admin/content/metadata', adminMutationRateLimiter, async (request, response) => {
+  const body = updateManagedMetadataBodySchema.parse(request.body);
+  const folder = await contentManagementService.updateMetadata(body);
+  response.json({ ok: true, folder });
+});
+
+router.post(
+  '/admin/content/upload',
+  adminMutationRateLimiter,
+  contentUpload.array('files', 100),
+  async (request, response) => {
+    const files = (request.files ?? []) as Express.Multer.File[];
+    try {
+      const body = managedFolderQuerySchema.parse(request.body);
+      const filenames = await contentManagementService.uploadFiles(body.folderPath, files);
+      response.status(201).json({ ok: true, filenames });
+    } catch (error) {
+      await Promise.all(files.map((file) => fs.promises.rm(file.path, { force: true })));
+      throw error;
+    }
+  }
+);
 
 const requireNoScanInProgress = (_request: express.Request, response: express.Response, next: express.NextFunction) => {
   if (scannerService.getProgress().isScanning) {

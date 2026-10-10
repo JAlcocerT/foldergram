@@ -69,6 +69,22 @@ It is especially relevant for:
 - like toggles
 - manual rescans
 - rebuild operations
+- gallery creation, media uploads, and frontmatter edits
+
+## Content-management boundary
+
+Unlike normal browsing, content-management routes refuse to operate unless the
+shared password has been configured. An authenticated session is then required
+by the normal API gate.
+
+The upload and metadata layer also:
+
+- confines all target folders to `GALLERY_ROOT`
+- rejects absolute, traversal, and hidden paths
+- accepts only Foldergram's supported media extensions
+- limits requests to 100 files and 100 MB per file
+- rejects case-insensitive filename collisions instead of overwriting media
+- writes frontmatter through a temporary file and atomic rename
 
 ## Path confinement
 

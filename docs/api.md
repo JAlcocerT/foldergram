@@ -300,7 +300,39 @@ Notable fields:
 | `libraryIndex` | Current and previous gallery-root state, plus rebuild requirement. |
 | `lastScan` | Last completed scan run. |
 
+### `GET /api/admin/content/metadata`
+
+Requires shared-password protection to be enabled and the current session to be
+authenticated.
+
+Query parameter: `folderPath`, a relative path inside `GALLERY_ROOT`.
+
+Returns the folder title, description, metadata filename, and direct media files
+with their current captions.
+
+### `GET /api/admin/content/folders`
+
+Requires shared-password protection and an authenticated session. Lists indexed
+folders plus unindexed folders that already contain metadata or direct media,
+so a newly created empty gallery remains manageable before its first upload.
+
 ## Mutating endpoints
+
+### Content management
+
+All content-management mutations require shared-password protection, an
+authenticated session, and the normal mutation headers.
+
+- `POST /api/admin/content/folders` creates a relative gallery folder and its
+  `index.md`. JSON fields: `folderPath`, `title`, and `description`.
+- `PUT /api/admin/content/metadata` updates `title`, `description`, and a
+  `captions` array containing `{ "filename", "title" }`. Existing unrelated
+  frontmatter and Markdown body content are preserved.
+- `POST /api/admin/content/upload` accepts `multipart/form-data` with
+  `folderPath` and up to 100 `files` fields, each limited to 100 MB.
+
+Uploads reject unsupported extensions, hidden or escaping paths, duplicate
+names, and collisions with existing files.
 
 ### `POST /api/auth/login`
 

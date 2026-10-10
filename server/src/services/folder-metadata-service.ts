@@ -327,6 +327,13 @@ export function formatFilenameCaption(filename: string): string {
 }
 
 export const folderMetadataService = {
+  invalidateFolder(folderPath: string): void {
+    const absoluteFolderPath = safeJoin(appConfig.galleryRoot, folderPath);
+    for (const filename of FRONTMATTER_FILENAMES) {
+      folderMetadataCache.delete(path.join(absoluteFolderPath, filename));
+    }
+  },
+
   getFolderMetadata(folderPath: string): {
     folderDescription: string | null;
   } {

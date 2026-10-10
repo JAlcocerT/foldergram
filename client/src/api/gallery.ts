@@ -8,6 +8,10 @@ import type {
   ImageDetail,
   LikeMutationResult,
   LikesPayload,
+  ManagedFolderMetadata,
+  ManagedFolderMutationResult,
+  ManagedFolderSummary,
+  ManagedUploadResult,
   ManualScanResult,
   MomentFeedPayload,
   MomentsPayload,
@@ -194,6 +198,55 @@ export function triggerLibraryRebuild() {
 
 export function triggerThumbnailRebuild() {
   return requestJson<RebuildThumbnailsResult>('/api/admin/rebuild-thumbnails', {
+    method: 'POST'
+  });
+}
+
+export function createManagedFolder(input: { folderPath: string; title: string; description: string }) {
+  return requestJson<ManagedFolderMutationResult>('/api/admin/content/folders', {
+    body: JSON.stringify(input),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'POST'
+  });
+}
+
+export async function fetchManagedFolders() {
+  const payload = await requestJson<{ items: ManagedFolderSummary[] }>('/api/admin/content/folders');
+  return payload.items;
+}
+
+export async function fetchManagedFolderMetadata(folderPath: string) {
+  const params = new URLSearchParams({ folderPath });
+  const payload = await requestJson<{ folder: ManagedFolderMetadata }>(
+    `/api/admin/content/metadata?${params.toString()}`
+  );
+  return payload.folder;
+}
+
+export function updateManagedFolderMetadata(input: {
+  folderPath: string;
+  title: string;
+  description: string;
+  captions: Array<{ filename: string; title: string }>;
+}) {
+  return requestJson<ManagedFolderMutationResult>('/api/admin/content/metadata', {
+    body: JSON.stringify(input),
+    headers: {
+      'content-type': 'application/json'
+    },
+    method: 'PUT'
+  });
+}
+
+export function uploadManagedMedia(folderPath: string, files: File[]) {
+  const formData = new FormData();
+  formData.set('folderPath', folderPath);
+  files.forEach((file) => formData.append('files', file));
+
+  return requestJson<ManagedUploadResult>('/api/admin/content/upload', {
+    body: formData,
     method: 'POST'
   });
 }

@@ -11,6 +11,7 @@ import TrashView from '../views/TrashView.vue';
 import { useAppStore } from '../stores/app';
 import { pinia } from '../stores/pinia';
 import SettingsView from '../views/SettingsView.vue';
+import ManageContentView from '../views/ManageContentView.vue';
 
 function shouldPreserveModalScroll(to: RouteLocationNormalized, from: RouteLocationNormalized) {
   const appStore = useAppStore(pinia);
@@ -68,6 +69,11 @@ export const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView
+    },
+    {
+      path: '/manage',
+      name: 'manage',
+      component: ManageContentView
     },
     {
       path: '/moments/:id',

@@ -239,6 +239,18 @@
 
           <RouterLink
             class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
+            :to="{ name: 'manage' }"
+            @click="closeMoreMenu"
+          >
+            <span
+              class="i-fluent-folder-add-16-regular w-[1.18rem] h-[1.18rem] shrink-0"
+              aria-hidden="true"
+            />
+            <span>Manage content</span>
+          </RouterLink>
+
+          <RouterLink
+            class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
             :to="{ name: 'settings' }"
             @click="closeMoreMenu"
           >

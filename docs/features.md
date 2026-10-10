@@ -143,6 +143,24 @@ That flow supports:
 - disabling protection again
 - signing the current browser session out
 
+## Content management
+
+The authenticated `/manage` view replaces the basic upload portion of a
+separate file browser or CMS. It supports:
+
+- creating top-level and nested gallery folders
+- uploading multiple supported photos and videos
+- editing gallery titles and descriptions
+- editing individual media captions
+- preserving existing Hugo frontmatter fields and Markdown body content
+- writing metadata to `index.md`, or to `_index.md` when that file already exists
+- triggering a normal library scan after changes
+
+Content management requires shared-password protection to be enabled. Folder
+paths are confined to `GALLERY_ROOT`; hidden and traversal paths, unsupported
+extensions, duplicate upload names, and existing filename collisions are
+rejected.
+
 ### Rebuild actions
 
 | Action | What changes |
@@ -167,7 +185,6 @@ These are stored in `localStorage` and are not synced anywhere else.
 
 The current repository does **not** implement:
 
-- uploads from the UI
 - comments
 - messaging
 - notifications

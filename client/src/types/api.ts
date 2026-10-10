@@ -199,3 +199,32 @@ export interface AuthMutationResult {
   ok: boolean;
   auth: AuthStatus;
 }
+
+export interface ManagedFolderMedia {
+  filename: string;
+  caption: string;
+}
+
+export interface ManagedFolderMetadata {
+  folderPath: string;
+  title: string;
+  description: string;
+  metadataFilename: 'index.md' | '_index.md';
+  media: ManagedFolderMedia[];
+}
+
+export interface ManagedFolderSummary {
+  folderPath: string;
+  title: string;
+  mediaCount: number;
+}
+
+export interface ManagedFolderMutationResult {
+  ok: boolean;
+  folder: ManagedFolderMetadata;
+}
+
+export interface ManagedUploadResult {
+  ok: boolean;
+  filenames: string[];
+}

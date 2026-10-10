@@ -9,9 +9,11 @@ description: Short answers to common questions about Foldergram's actual scope a
 
 No. The current repository is designed for local-only, self-hosted use.
 
-## Does it upload or sync my media anywhere?
+## Does it upload or sync my media to a cloud service?
 
-No. Originals stay in the configured gallery root.
+No. Originals stay in the configured gallery root. The authenticated content
+manager can upload browser-selected files into that local root, but it does not
+send them to an external service.
 
 ## Does it scan files directly during API requests?
 
