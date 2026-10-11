@@ -34,10 +34,10 @@
       </section>
 
       <section v-if="!appStore.isLibraryUnavailable" class="grid gap-[1rem] mb-5 w-full max-w-[39.375rem]">
-        <section v-if="momentsStore.items.length" class="mb-2">
+        <section v-if="localizedMoments.length" class="mb-2">
           <div class="stories-bar flex gap-[0.95rem] overflow-x-auto pb-5 pr-2 pt-[0.12rem] [scrollbar-width:none]" :aria-label="momentsStore.railTitle">
             <button
-              v-for="moment in momentsStore.items"
+              v-for="moment in localizedMoments"
               :key="moment.id"
               class="flex flex-col items-center gap-[0.48rem] min-w-[5.85rem] border-0 bg-transparent p-0 text-muted text-[0.74rem] text-center cursor-pointer transition-transform duration-180 hover:-translate-y-[1px]"
               :title="`${moment.title} · ${moment.subtitle}`"
@@ -164,8 +164,8 @@
       </template>
 
       <RailViewerModal
-        v-if="activeRailViewerId && momentsStore.items.length"
-        :items="momentsStore.items"
+        v-if="activeRailViewerId && localizedMoments.length"
+        :items="localizedMoments"
         :initial-id="activeRailViewerId"
         :rail-singular-label="momentsStore.railSingularLabel"
         @close="closeRailViewer"
@@ -242,15 +242,18 @@ import { useAppStore } from '../stores/app';
 import { useFeedStore } from '../stores/feed';
 import { useLikesStore } from '../stores/likes';
 import { useFoldersStore } from '../stores/folders';
+import { useLocaleStore } from '../stores/locale';
 import { useMomentsStore } from '../stores/moments';
-import type { FeedMode } from '../types/api';
+import type { FeedMode, MomentCapsule } from '../types/api';
 import { buildLikedCountByFolder, selectHomeRecommendations } from '../utils/home-recommendations';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
 const foldersStore = useFoldersStore();
+const localeStore = useLocaleStore();
 const momentsStore = useMomentsStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const likedCountByFolder = computed(() => buildLikedCountByFolder(likesStore.items));
 const homeRecommendations = computed(() =>
   selectHomeRecommendations(foldersStore.items, likedCountByFolder.value, appStore.lastOpenedFolderSlug)
@@ -280,23 +283,45 @@ const indexedSummaryLabel = computed(() => {
 const formattedIndexedImageCount = computed(() => formatCount(appStore.stats?.indexedImages ?? 0));
 const formattedIndexedVideoCount = computed(() => formatCount(appStore.stats?.indexedVideos ?? 0));
 const formattedFolderCount = computed(() => formatCount(appStore.stats?.folders ?? 0));
-const feedModes: Array<{ id: FeedMode; label: string; description: string }> = [
+const feedModes = computed<Array<{ id: FeedMode; label: string; description: string }>>(() => [
   {
     id: 'recent',
-    label: 'Recent',
-    description: 'Newest posts first, with lighter runs from the same app folder.'
+    label: tr('Recent', 'Recientes'),
+    description: tr(
+      'Newest posts first, with lighter runs from the same app folder.',
+      'Las publicaciones más nuevas primero, evitando largas tandas de la misma carpeta.'
+    )
   },
   {
     id: 'rediscover',
-    label: 'Rediscover',
-    description: 'Older posts resurface when they are worth another look.'
+    label: tr('Rediscover', 'Redescubrir'),
+    description: tr(
+      'Older posts resurface when they are worth another look.',
+      'Las publicaciones antiguas vuelven cuando merecen otra mirada.'
+    )
   },
   {
     id: 'random',
-    label: 'Random',
-    description: 'A fresh shuffle that stays steady while you browse.'
+    label: tr('Random', '¡Sorpresa!'),
+    description: tr(
+      'A fresh shuffle that stays steady while you browse.',
+      'Una nueva mezcla que se mantiene estable mientras navegas.'
+    )
   }
-];
+]);
+
+const highlightTitles: Record<string, string> = {
+  'highlight-recent-batches': 'Tandas recientes',
+  'highlight-deep-cuts': 'Joyas ocultas',
+  'highlight-lucky-dip': 'Prueba suerte'
+};
+
+const localizedMoments = computed<MomentCapsule[]>(() =>
+  momentsStore.items.map((moment) => ({
+    ...moment,
+    title: localeStore.isSpanish ? (highlightTitles[moment.id] ?? moment.title) : moment.title
+  }))
+);
 const showInitialScanState = computed(
   () => appStore.isScanning && feedStore.items.length === 0 && !feedStore.loading && !feedStore.error
 );

@@ -236,7 +236,13 @@ let autoplayStartedAt = 0;
 const activeCapsuleIndex = computed(() => props.items.findIndex((item) => item.id === activeCapsuleId.value));
 const activeCapsule = computed(() => {
   if (momentsStore.currentMoment?.id === activeCapsuleId.value) {
-    return momentsStore.currentMoment;
+    const localizedCapsule = props.items.find((item) => item.id === activeCapsuleId.value);
+    return localizedCapsule
+      ? {
+          ...momentsStore.currentMoment,
+          title: localizedCapsule.title
+        }
+      : momentsStore.currentMoment;
   }
 
   return props.items.find((item) => item.id === activeCapsuleId.value) ?? null;
