@@ -36,6 +36,7 @@ Foldergram indexes supported media from a configured `GALLERY_ROOT`, stores meta
 - Local likes stored in SQLite.
 - Image and video support with generated derivatives for fast browsing.
 - Public gallery browsing with password-protected administration.
+- English and Spanish interface with a browser-persisted language switch.
 - Authenticated content management for creating folders, uploading media, and editing Hugo-compatible descriptions and captions.
 - Settings actions for manual scan, thumbnail rebuild, and full library rebuild.
 - A web app manifest plus production service worker registration.

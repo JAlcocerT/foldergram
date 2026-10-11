@@ -13,7 +13,7 @@
           v-if="isSearchActive"
           class="inline-flex h-11 w-11 items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/84 transition-colors duration-150 hover:bg-white/8 hover:text-white"
           type="button"
-          aria-label="Back to explore posts"
+          :aria-label="tr('Back to explore posts', 'Volver a explorar')"
           @click="closeSearch"
         >
           <svg
@@ -64,7 +64,7 @@
             v-model="searchQuery"
             class="w-full border-0 bg-transparent p-0 text-[1rem] text-white outline-none placeholder:text-white/54"
             type="search"
-            placeholder="Search"
+            :placeholder="tr('Search', 'Buscar')"
             spellcheck="false"
             @focus="activateSearch"
             @keydown.esc.prevent="handleEscape"
@@ -73,7 +73,7 @@
             v-if="searchQuery.length > 0"
             class="inline-flex h-6 w-6 items-center justify-center rounded-full border-0 bg-white/16 p-0 text-white/70 transition-colors duration-150 hover:bg-white/24 hover:text-white"
             type="button"
-            aria-label="Clear search"
+            :aria-label="tr('Clear search', 'Borrar búsqueda')"
             @click="clearSearch"
           >
             <svg
@@ -99,7 +99,7 @@
         class="explore-view__message-card max-w-[35rem]"
       >
         <h1 class="m-0 text-[1.15rem] font-semibold text-white">
-          Library storage unavailable
+          {{ tr('Library storage unavailable', 'Almacenamiento no disponible') }}
         </h1>
         <p class="m-0 text-white/60">{{ appStore.libraryUnavailableReason }}</p>
       </section>
@@ -110,7 +110,7 @@
             <h1
               class="m-0 text-[1.45rem] font-semibold tracking-[-0.03em] text-white"
             >
-              Recent
+              {{ tr('Recent', 'Recientes') }}
             </h1>
           </div>
 
@@ -118,13 +118,13 @@
             v-if="foldersStore.loadingList && foldersStore.items.length === 0"
             class="m-0 text-[0.96rem] text-white/56"
           >
-            Loading folders...
+            {{ tr('Loading folders...', 'Cargando carpetas...') }}
           </p>
           <p
             v-else-if="recentSearchFolders.length === 0"
             class="m-0 text-[1rem] text-white/46"
           >
-            No recent searches.
+            {{ tr('No recent searches.', 'No hay búsquedas recientes.') }}
           </p>
 
           <div v-else class="grid gap-1">
@@ -244,6 +244,7 @@
   import InfiniteLoader from "../components/InfiniteLoader.vue"
   import { useAppStore } from "../stores/app"
   import { useExploreStore } from "../stores/explore"
+  import { useLocaleStore } from "../stores/locale"
   import { useFoldersStore } from "../stores/folders"
   import { useLikesStore } from "../stores/likes"
   import type { FolderSummary } from "../types/api"
@@ -254,6 +255,8 @@
 
   const appStore = useAppStore()
   const exploreStore = useExploreStore()
+  const localeStore = useLocaleStore()
+  const tr = (english: string, spanish: string) => localeStore.text(english, spanish)
   const foldersStore = useFoldersStore()
   const likesStore = useLikesStore()
   const router = useRouter()

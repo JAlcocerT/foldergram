@@ -185,7 +185,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>Open original</span>
+          <span>{{ tr('Open original', 'Abrir original') }}</span>
         </button>
         <button
           v-if="authStore.isAdmin"
@@ -204,7 +204,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>{{ deleting ? 'Deleting...' : 'Delete post' }}</span>
+          <span>{{ deleting ? tr('Deleting...', 'Eliminando...') : tr('Delete post', 'Eliminar publicación') }}</span>
         </button>
         <button
           class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left"
@@ -221,14 +221,14 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>Cancel</span>
+          <span>{{ tr('Cancel', 'Cancelar') }}</span>
         </button>
       </div>
     </div>
 
     <ConfirmDialog
       v-if="confirmDeleteOpen"
-      title="Delete this post?"
+      :title="tr('Delete this post?', '¿Eliminar esta publicación?')"
       :message="deleteDialogMessage"
       :confirm-label="deleteDialogConfirmLabel"
       :loading="deleting"
@@ -244,15 +244,15 @@
             :disabled="deleting"
           />
           <span class="grid gap-[0.18rem]">
-            <span class="text-[0.92rem] font-semibold text-text">Also permanently delete original file from disk</span>
-            <span class="text-[0.84rem] text-muted">Keep this unchecked to move the post to Trash while keeping the source file on disk.</span>
+            <span class="text-[0.92rem] font-semibold text-text">{{ tr('Also permanently delete original file from disk', 'Eliminar también el archivo original del disco') }}</span>
+            <span class="text-[0.84rem] text-muted">{{ tr('Keep this unchecked to move the post to Trash while keeping the source file on disk.', 'Déjalo sin marcar para mover la publicación a la Papelera y conservar el archivo original.') }}</span>
           </span>
         </label>
         <p
           v-if="deleteOriginalFromDisk"
           class="m-0 mt-3 px-3 py-[0.8rem] rounded-[0.9rem] border border-[rgba(217,48,37,0.24)] text-[0.84rem] text-[#b42318] bg-[rgba(217,48,37,0.08)]"
         >
-          This will permanently delete the original file, thumbnail, and preview from disk. This action cannot be undone.
+          {{ tr('This will permanently delete the original file, thumbnail, and preview from disk. This action cannot be undone.', 'Se eliminarán definitivamente el archivo original, la miniatura y la vista previa. Esta acción no se puede deshacer.') }}
         </p>
         <p
           v-if="deleteError"
@@ -275,6 +275,7 @@ import { useAuthStore } from '../stores/auth';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
+import { useLocaleStore } from '../stores/locale';
 import { useMomentsStore } from '../stores/moments';
 import type { FeedItem } from '../types/api';
 import { formatMediaDuration } from '../utils/media';
@@ -313,6 +314,8 @@ const appStore = useAppStore();
 const authStore = useAuthStore();
 const feedStore = useFeedStore();
 const likesStore = useLikesStore();
+const localeStore = useLocaleStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const foldersStore = useFoldersStore();
 const momentsStore = useMomentsStore();
 const route = useRoute();
@@ -351,10 +354,10 @@ const formattedDuration = computed(() => formatMediaDuration(props.item.duration
 const mediaAspectRatio = computed(() => resolveFeedAspectRatio(props.item.width, props.item.height));
 const deleteDialogMessage = computed(() =>
   deleteOriginalFromDisk.value
-    ? 'This will permanently delete the post from the app and remove original media from disk.'
-    : 'This will delete the post from the app and move it to Trash. The original file will stay on disk unless you choose permanent deletion.'
+    ? tr('This will permanently delete the post from the app and remove original media from disk.', 'La publicación y su archivo original se eliminarán definitivamente.')
+    : tr('This will delete the post from the app and move it to Trash. The original file will stay on disk unless you choose permanent deletion.', 'La publicación se moverá a la Papelera. El archivo original permanecerá en el disco.')
 );
-const deleteDialogConfirmLabel = computed(() => (deleteOriginalFromDisk.value ? 'Permanently Delete' : 'Delete'));
+const deleteDialogConfirmLabel = computed(() => deleteOriginalFromDisk.value ? tr('Permanently Delete', 'Eliminar definitivamente') : tr('Delete', 'Eliminar'));
 
 function isPrimaryPlainClick(event: MouseEvent) {
   return !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;

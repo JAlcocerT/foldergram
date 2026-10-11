@@ -5,14 +5,14 @@
       class="flex items-end justify-between gap-4 max-sm:flex-col max-sm:items-start"
     >
       <div>
-        <span class="eyebrow">Library</span>
+        <span class="eyebrow">{{ tr('Library', 'Biblioteca') }}</span>
         <h1
           class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]"
         >
-          All folders
+          {{ tr('All folders', 'Todas las carpetas') }}
         </h1>
         <p class="m-0 mt-1 text-muted">
-          Browse and search every indexed app folder.
+          {{ tr('Browse and search every indexed app folder.', 'Explora y busca en todas las carpetas indexadas.') }}
         </p>
       </div>
       <div
@@ -23,7 +23,7 @@
             {{ formatCount(foldersStore.items.length) }}
           </p>
           <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">
-            Folders
+            {{ tr('Folders', 'Carpetas') }}
           </p>
         </div>
         <div class="w-px h-8 bg-border"></div>
@@ -32,7 +32,7 @@
             {{ formatCount(totalIndexedImages) }}
           </p>
           <p class="m-0 text-muted text-[0.72rem] uppercase tracking-[0.08em]">
-            Posts
+            {{ tr('Posts', 'Publicaciones') }}
           </p>
         </div>
       </div>
@@ -40,12 +40,12 @@
 
     <EmptyState
       v-if="appStore.isLibraryUnavailable"
-      title="Library storage unavailable"
+      :title="tr('Library storage unavailable', 'Almacenamiento no disponible')"
       :description="appStore.libraryUnavailableReason"
     />
     <ErrorState
       v-else-if="foldersStore.listError && foldersStore.items.length === 0"
-      title="Could not load folders"
+      :title="tr('Could not load folders', 'No se pudieron cargar las carpetas')"
       :message="foldersStore.listError"
     />
     <template v-else>
@@ -70,7 +70,7 @@
             v-model.trim="searchQuery"
             class="w-full h-10 pl-9 pr-4 border border-border rounded-[0.75rem] text-text text-[0.88rem] bg-surface-alt transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-accent/40 focus:shadow-[0_0_0_3px_var(--accent-soft)]"
             type="search"
-            placeholder="Search names or path segments…"
+            :placeholder="tr('Search names or path segments…', 'Buscar nombres o rutas…')"
           />
         </div>
 
@@ -79,11 +79,11 @@
             v-model="sortMode"
             class="h-10 pl-3 pr-9 border border-border rounded-[0.75rem] text-text text-[0.82rem] bg-surface-alt cursor-pointer appearance-none focus:outline-none focus:border-accent/40"
           >
-            <option value="recent-desc">Recently updated</option>
-            <option value="images-desc">Most posts</option>
-            <option value="name-asc">Name A–Z</option>
-            <option value="name-desc">Name Z–A</option>
-            <option value="path-asc">Path A–Z</option>
+            <option value="recent-desc">{{ tr('Recently updated', 'Actualizadas recientemente') }}</option>
+            <option value="images-desc">{{ tr('Most posts', 'Más publicaciones') }}</option>
+            <option value="name-asc">{{ tr('Name A–Z', 'Nombre A–Z') }}</option>
+            <option value="name-desc">{{ tr('Name Z–A', 'Nombre Z–A') }}</option>
+            <option value="path-asc">{{ tr('Path A–Z', 'Ruta A–Z') }}</option>
           </select>
           <svg
             class="pointer-events-none absolute right-[0.65rem] top-1/2 -translate-y-1/2 w-[0.85rem] h-[0.85rem] text-muted"
@@ -99,9 +99,7 @@
         </div>
 
         <span class="ml-auto text-muted text-[0.8rem] shrink-0"
-          >{{ formatCount(filteredFolders.length) }} result{{
-            filteredFolders.length !== 1 ? "s" : ""
-          }}</span
+          >{{ formatCount(filteredFolders.length) }} {{ filteredFolders.length === 1 ? tr('result', 'resultado') : tr('results', 'resultados') }}</span
         >
       </div>
 
@@ -109,13 +107,13 @@
         v-if="foldersStore.loadingList && foldersStore.items.length === 0"
         class="card p-12 text-center"
       >
-        <p class="text-muted">Loading folders…</p>
+        <p class="text-muted">{{ tr('Loading folders…', 'Cargando carpetas…') }}</p>
       </section>
 
       <EmptyState
         v-else-if="foldersStore.items.length === 0"
-        title="No folders indexed yet"
-        description="Add media-containing source folders under the gallery root and run a scan."
+        :title="tr('No folders indexed yet', 'Todavía no hay carpetas indexadas')"
+        :description="tr('Add media-containing source folders under the gallery root and run a scan.', 'Añade carpetas con fotos o vídeos y ejecuta un escaneo.')"
       />
 
       <section
@@ -123,7 +121,7 @@
         class="card p-12 text-center"
       >
         <p class="m-0 text-muted">
-          No folders match. Try a different search or filter.
+          {{ tr('No folders match. Try a different search or filter.', 'No hay carpetas que coincidan. Prueba otra búsqueda o filtro.') }}
         </p>
       </section>
 
@@ -228,7 +226,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>Open folder</span>
+          <span>{{ tr('Open folder', 'Abrir carpeta') }}</span>
         </button>
         <button
           v-if="authStore.isAdmin"
@@ -250,7 +248,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>Delete folder</span>
+          <span>{{ tr('Delete folder', 'Eliminar carpeta') }}</span>
         </button>
         <button
           class="flex items-center gap-[0.8rem] w-full px-4 py-[0.95rem] border-0 text-text bg-transparent cursor-pointer text-left"
@@ -271,7 +269,7 @@
               stroke-width="1.8"
             />
           </svg>
-          <span>Cancel</span>
+          <span>{{ tr('Cancel', 'Cancelar') }}</span>
         </button>
       </div>
     </div>
@@ -338,6 +336,7 @@
   import { useLikesStore } from "../stores/likes"
   import { useFoldersStore } from "../stores/folders"
   import { useMomentsStore } from "../stores/moments"
+  import { useLocaleStore } from "../stores/locale"
   import type { FolderSummary } from "../types/api"
 
   type LibrarySort =
@@ -353,6 +352,8 @@
   const likesStore = useLikesStore()
   const foldersStore = useFoldersStore()
   const momentsStore = useMomentsStore()
+  const localeStore = useLocaleStore()
+  const tr = (english: string, spanish: string) => localeStore.text(english, spanish)
   const router = useRouter()
   const searchQuery = ref("")
   const sortMode = ref<LibrarySort>("recent-desc")

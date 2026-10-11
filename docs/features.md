@@ -162,6 +162,14 @@ paths are confined to `GALLERY_ROOT`; hidden and traversal paths, unsupported
 extensions, duplicate upload names, and existing filename collisions are
 rejected.
 
+## Interface languages
+
+Foldergram includes English and Spanish interface text. Use the language option
+under **More** (or the `EN`/`ES` button on mobile) to switch without changing
+gallery titles, descriptions, or photo captions. The choice is saved in the
+current browser; Spanish is selected automatically when the browser language is
+Spanish and no preference has been saved yet.
+
 ### Rebuild actions
 
 | Action | What changes |

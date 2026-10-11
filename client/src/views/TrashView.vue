@@ -2,21 +2,21 @@
   <section class="w-[min(100%,72rem)] mx-auto grid gap-[1.1rem]">
     <header class="flex items-end justify-between gap-4 max-sm:flex-col max-sm:items-start">
       <div class="flex flex-col items-start gap-[0.25rem]">
-        <span class="eyebrow">Trash</span>
-        <h1 class="m-0 text-[clamp(1.5rem,2.2vw,1.9rem)] tracking-[-0.03em]">Deleted posts</h1>
+        <span class="eyebrow">{{ tr('Trash', 'Papelera') }}</span>
+        <h1 class="m-0 text-[clamp(1.5rem,2.2vw,1.9rem)] tracking-[-0.03em]">{{ tr('Deleted posts', 'Publicaciones eliminadas') }}</h1>
         <p class="m-0 text-muted">
-          Posts moved here stay on disk until you permanently delete them.
+          {{ tr('Posts moved here stay on disk until you permanently delete them.', 'Las publicaciones permanecen en el disco hasta que las elimines definitivamente.') }}
         </p>
       </div>
       <div class="flex items-center gap-3">
-        <span class="text-[0.82rem] text-muted tabular-nums">{{ selectedCount }} selected</span>
+        <span class="text-[0.82rem] text-muted tabular-nums">{{ selectedCount }} {{ tr('selected', 'seleccionadas') }}</span>
         <button
           class="min-h-[2.35rem] px-4 py-[0.6rem] rounded-[0.75rem] border border-border bg-surface text-text font-semibold disabled:opacity-55 disabled:cursor-not-allowed"
           type="button"
           :disabled="selectedCount === 0 || processing"
           @click="restoreConfirmOpen = true"
         >
-          Restore
+          {{ tr('Restore', 'Restaurar') }}
         </button>
         <button
           class="min-h-[2.35rem] px-4 py-[0.6rem] rounded-[0.75rem] border border-transparent bg-[#b42318] text-white font-semibold disabled:opacity-55 disabled:cursor-not-allowed"
@@ -24,19 +24,19 @@
           :disabled="selectedCount === 0 || processing"
           @click="permanentConfirmOpen = true"
         >
-          Permanently Delete
+          {{ tr('Permanently Delete', 'Eliminar definitivamente') }}
         </button>
       </div>
     </header>
 
     <EmptyState
       v-if="appStore.isLibraryUnavailable"
-      title="Library storage unavailable"
+      :title="tr('Library storage unavailable', 'Almacenamiento no disponible')"
       :description="appStore.libraryUnavailableReason"
     />
     <ErrorState
       v-else-if="trashStore.error && trashStore.items.length === 0"
-      title="Could not load trash"
+      :title="tr('Could not load trash', 'No se pudo cargar la papelera')"
       :message="trashStore.error"
     />
     <template v-else>
@@ -48,12 +48,12 @@
       </p>
 
       <section v-if="trashStore.loading && trashStore.items.length === 0" class="card p-8 text-center">
-        <p class="m-0 text-muted">Loading trash...</p>
+        <p class="m-0 text-muted">{{ tr('Loading trash...', 'Cargando papelera...') }}</p>
       </section>
       <EmptyState
         v-else-if="trashStore.initialized && trashStore.items.length === 0"
-        title="Trash is empty"
-        description="Deleted posts will appear here so you can restore them or remove them permanently."
+        :title="tr('Trash is empty', 'La papelera está vacía')"
+        :description="tr('Deleted posts will appear here so you can restore them or remove them permanently.', 'Las publicaciones eliminadas aparecerán aquí para restaurarlas o borrarlas definitivamente.')"
       />
       <template v-else>
         <section class="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
@@ -125,9 +125,9 @@
 
             <div class="grid gap-[0.35rem] px-3 py-3">
               <p class="m-0 text-[0.84rem] truncate">{{ readableFilename(item.filename) }}</p>
-              <p class="m-0 text-[0.74rem] text-muted">Trashed {{ formatTrashedAt(item.trashedAt) }}</p>
+              <p class="m-0 text-[0.74rem] text-muted">{{ tr('Deleted', 'Eliminada') }} {{ formatTrashedAt(item.trashedAt) }}</p>
               <RouterLink class="text-[0.74rem] font-semibold text-accent-strong" :to="{ name: 'folder', params: { slug: item.folderSlug } }">
-                Open folder
+                {{ tr('Open folder', 'Abrir carpeta') }}
               </RouterLink>
             </div>
           </article>
@@ -139,10 +139,10 @@
 
     <ConfirmDialog
       v-if="restoreConfirmOpen"
-      title="Restore selected posts?"
-      :message="`Restore ${selectedCount} selected post${selectedCount === 1 ? '' : 's'} to the app?`"
-      confirm-label="Restore"
-      loading-label="Restoring..."
+      :title="tr('Restore selected posts?', '¿Restaurar las publicaciones seleccionadas?')"
+      :message="localeStore.isSpanish ? `¿Restaurar ${selectedCount} publicaciones seleccionadas?` : `Restore ${selectedCount} selected post${selectedCount === 1 ? '' : 's'} to the app?`"
+      :confirm-label="tr('Restore', 'Restaurar')"
+      :loading-label="tr('Restoring...', 'Restaurando...')"
       :loading="processing"
       @cancel="restoreConfirmOpen = false"
       @confirm="handleRestore"
@@ -150,17 +150,17 @@
 
     <ConfirmDialog
       v-if="permanentConfirmOpen"
-      title="Permanently delete selected posts?"
-      :message="`This will permanently delete ${selectedCount} selected post${selectedCount === 1 ? '' : 's'} and remove original files from disk.`"
-      confirm-label="Permanently Delete"
-      loading-label="Deleting..."
+      :title="tr('Permanently delete selected posts?', '¿Eliminar definitivamente las publicaciones seleccionadas?')"
+      :message="localeStore.isSpanish ? `Se eliminarán definitivamente ${selectedCount} publicaciones y sus archivos originales del disco.` : `This will permanently delete ${selectedCount} selected post${selectedCount === 1 ? '' : 's'} and remove original files from disk.`"
+      :confirm-label="tr('Permanently Delete', 'Eliminar definitivamente')"
+      :loading-label="tr('Deleting...', 'Eliminando...')"
       :loading="processing"
       @cancel="permanentConfirmOpen = false"
       @confirm="handlePermanentDelete"
     >
       <template #details>
         <p class="m-0 mt-3 px-3 py-[0.8rem] rounded-[0.9rem] border border-[rgba(217,48,37,0.24)] text-[0.84rem] text-[#b42318] bg-[rgba(217,48,37,0.08)]">
-          Original files, thumbnails, and previews will be removed permanently. This action cannot be undone.
+          {{ tr('Original files, thumbnails, and previews will be removed permanently. This action cannot be undone.', 'Los archivos originales, miniaturas y vistas previas se eliminarán definitivamente. Esta acción no se puede deshacer.') }}
         </p>
       </template>
     </ConfirmDialog>
@@ -183,6 +183,7 @@ import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
 import { useMomentsStore } from '../stores/moments';
 import { useTrashStore } from '../stores/trash';
+import { useLocaleStore } from '../stores/locale';
 
 const appStore = useAppStore();
 const feedStore = useFeedStore();
@@ -190,6 +191,8 @@ const foldersStore = useFoldersStore();
 const likesStore = useLikesStore();
 const momentsStore = useMomentsStore();
 const trashStore = useTrashStore();
+const localeStore = useLocaleStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const selectedIds = ref<number[]>([]);
 const actionError = ref<string | null>(null);
 const processing = ref(false);

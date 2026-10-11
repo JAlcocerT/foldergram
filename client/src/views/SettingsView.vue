@@ -2,24 +2,24 @@
   <section class="w-[min(100%,72rem)] mx-auto flex flex-col gap-[1.2rem]">
     <header class="flex items-end justify-between gap-4 pb-[0.8rem] max-sm:flex-col max-sm:items-start">
       <div>
-        <span class="eyebrow">Settings</span>
-        <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">Library Controls</h1>
-        <p class="m-0 text-muted">Run scans, refresh thumbnails, or reset the library index.</p>
+        <span class="eyebrow">{{ tr('Settings', 'Configuración') }}</span>
+        <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">{{ tr('Library Controls', 'Controles de la biblioteca') }}</h1>
+        <p class="m-0 text-muted">{{ tr('Run scans, refresh thumbnails, or reset the library index.', 'Escanea, actualiza miniaturas o restablece el índice de la biblioteca.') }}</p>
       </div>
     </header>
 
     <section v-if="!authStore.adminEnabled" class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(24,119,242,0.14), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #f3f8ff 4%) 0%, var(--surface) 100%);">
       <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
         <div>
-          <span class="eyebrow text-accent-strong">Access Protection</span>
-          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Administrator password</h2>
-          <p class="m-0 mt-[0.35rem] text-muted">The gallery is public. This password protects content and library management.</p>
+          <span class="eyebrow text-accent-strong">{{ tr('Access Protection', 'Protección de acceso') }}</span>
+          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">{{ tr('Administrator password', 'Contraseña de administración') }}</h2>
+          <p class="m-0 mt-[0.35rem] text-muted">{{ tr('The gallery is public. This password protects content and library management.', 'La galería es pública. Esta contraseña protege la gestión del contenido y la biblioteca.') }}</p>
         </div>
         <span
           class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
           :class="authStore.enabled ? 'text-accent-strong bg-[color-mix(in_srgb,var(--accent-soft)_78%,transparent_22%)]' : 'text-muted bg-surface-alt'"
         >
-          {{ authStore.enabled ? 'Enabled' : 'Disabled' }}
+          {{ authStore.enabled ? tr('Enabled', 'Activada') : tr('Disabled', 'Desactivada') }}
         </span>
       </div>
 
@@ -34,7 +34,7 @@
       <section v-if="!authStore.enabled" class="grid gap-[1rem]">
         <div class="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
           <label class="grid gap-[0.45rem]">
-            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New password</span>
+            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('New password', 'Nueva contraseña') }}</span>
             <input
               v-model="enablePassword"
               class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
@@ -45,7 +45,7 @@
             />
           </label>
           <label class="grid gap-[0.45rem]">
-            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm password</span>
+            <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('Confirm password', 'Confirmar contraseña') }}</span>
             <input
               v-model="enablePasswordConfirmation"
               class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
@@ -59,22 +59,22 @@
 
         <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
           <button class="btn-primary min-w-[13rem]" type="button" :disabled="authStore.loading" @click="enableAccessProtection">
-            {{ authStore.loading ? 'Enabling...' : 'Enable Password Protection' }}
+            {{ authStore.loading ? tr('Enabling...', 'Activando...') : tr('Enable Password Protection', 'Activar protección') }}
           </button>
-          <p class="m-0 text-muted">The password is stored as a one-way hash and unlocks this browser with a signed session cookie.</p>
+          <p class="m-0 text-muted">{{ tr('The password is stored as a one-way hash and unlocks this browser with a signed session cookie.', 'La contraseña se guarda de forma segura y desbloquea este navegador mediante una sesión firmada.') }}</p>
         </div>
       </section>
 
       <section v-else class="grid gap-[1rem]">
         <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[color-mix(in_srgb,var(--border)_78%,var(--accent)_22%)] p-5">
           <div>
-            <h3 class="m-0 text-[1rem]">Change administrator password</h3>
-            <p class="m-0 mt-[0.25rem] text-muted">Update administrator access and invalidate older sessions.</p>
+            <h3 class="m-0 text-[1rem]">{{ tr('Change administrator password', 'Cambiar contraseña de administración') }}</h3>
+            <p class="m-0 mt-[0.25rem] text-muted">{{ tr('Update administrator access and invalidate older sessions.', 'Actualiza el acceso de administración y cierra las sesiones anteriores.') }}</p>
           </div>
 
           <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
             <label class="grid gap-[0.45rem]">
-              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Current password</span>
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('Current password', 'Contraseña actual') }}</span>
               <input
                 v-model="currentPassword"
                 class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
@@ -84,7 +84,7 @@
               />
             </label>
             <label class="grid gap-[0.45rem]">
-              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New password</span>
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('New password', 'Nueva contraseña') }}</span>
               <input
                 v-model="nextPassword"
                 class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
@@ -94,7 +94,7 @@
               />
             </label>
             <label class="grid gap-[0.45rem]">
-              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm new password</span>
+              <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('Confirm new password', 'Confirmar nueva contraseña') }}</span>
               <input
                 v-model="nextPasswordConfirmation"
                 class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
@@ -107,15 +107,15 @@
 
           <div class="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
             <button class="btn-primary min-w-[11.5rem]" type="button" :disabled="authStore.loading" @click="changeAccessPassword">
-              {{ authStore.loading ? 'Updating...' : 'Change Password' }}
+              {{ authStore.loading ? tr('Updating...', 'Actualizando...') : tr('Change Password', 'Cambiar contraseña') }}
             </button>
-            <p class="m-0 text-muted">Use at least 8 characters. Changing the password signs out any older sessions.</p>
+            <p class="m-0 text-muted">{{ tr('Use at least 8 characters. Changing the password signs out any older sessions.', 'Usa al menos 8 caracteres. El cambio cerrará las sesiones anteriores.') }}</p>
           </div>
         </div>
 
         <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[rgba(214,48,49,0.16)] p-5">
           <div>
-            <h3 class="m-0 text-[1rem]">Disable protection</h3>
+            <h3 class="m-0 text-[1rem]">{{ tr('Disable protection', 'Desactivar protección') }}</h3>
             <p class="m-0 mt-[0.25rem] text-muted">Turn the shared password back off for this Foldergram instance.</p>
           </div>
 
@@ -131,10 +131,10 @@
               />
             </label>
             <button class="btn-primary min-w-[10.5rem] bg-[#d93025] hover:bg-[#c5281c]" type="button" :disabled="authStore.loading" @click="disableAccessProtection">
-              {{ authStore.loading ? 'Disabling...' : 'Disable Protection' }}
+              {{ authStore.loading ? tr('Disabling...', 'Desactivando...') : tr('Disable Protection', 'Desactivar protección') }}
             </button>
             <button class="inline-flex min-h-12 items-center justify-center rounded-[0.95rem] border border-border bg-transparent px-4 text-[0.92rem] font-semibold text-text transition-colors duration-180 hover:bg-surface-alt disabled:cursor-wait disabled:opacity-60" type="button" :disabled="authStore.loading" @click="signOut">
-              Sign Out
+              {{ tr('Sign Out', 'Cerrar sesión') }}
             </button>
           </div>
         </div>
@@ -143,26 +143,26 @@
 
     <section v-if="authStore.enabled" class="card grid gap-[1rem] p-8">
       <div>
-        <span class="eyebrow text-accent-strong">Administrator Access</span>
-        <h2 class="m-0 mt-1 text-[1.18rem]">{{ authStore.adminEnabled ? 'Change admin password' : 'Create admin password' }}</h2>
-        <p class="m-0 mt-1 text-muted">The admin password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. Visitors need no password.</p>
+        <span class="eyebrow text-accent-strong">{{ tr('Administrator Access', 'Acceso de administración') }}</span>
+        <h2 class="m-0 mt-1 text-[1.18rem]">{{ authStore.adminEnabled ? tr('Change admin password', 'Cambiar contraseña de administración') : tr('Create admin password', 'Crear contraseña de administración') }}</h2>
+        <p class="m-0 mt-1 text-muted">{{ tr('The admin password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. Visitors need no password.', 'La contraseña permite subir archivos, editar textos, escanear, configurar y eliminar. Los visitantes no necesitan contraseña.') }}</p>
       </div>
       <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
         <label v-if="authStore.adminEnabled" class="grid gap-2">
-          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Current admin password</span>
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('Current admin password', 'Contraseña actual') }}</span>
           <input v-model="currentAdminPassword" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="current-password" />
         </label>
         <label class="grid gap-2">
-          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">New admin password</span>
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('New admin password', 'Nueva contraseña') }}</span>
           <input v-model="nextAdminPassword" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="new-password" />
         </label>
         <label class="grid gap-2">
-          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">Confirm admin password</span>
+          <span class="text-[0.76rem] font-bold uppercase tracking-[0.08em] text-muted">{{ tr('Confirm admin password', 'Confirmar contraseña') }}</span>
           <input v-model="nextAdminPasswordConfirmation" class="h-12 rounded-[0.95rem] border border-border bg-surface-alt px-4 text-text" type="password" autocomplete="new-password" />
         </label>
       </div>
       <button class="btn-primary w-fit min-w-[12rem]" type="button" :disabled="authStore.loading" @click="saveAdminPassword">
-        {{ authStore.loading ? 'Saving...' : authStore.adminEnabled ? 'Change Admin Password' : 'Create Admin Password' }}
+        {{ authStore.loading ? tr('Saving...', 'Guardando...') : authStore.adminEnabled ? tr('Change Admin Password', 'Cambiar contraseña') : tr('Create Admin Password', 'Crear contraseña') }}
       </button>
     </section>
 
@@ -173,8 +173,8 @@
     >
       <div class="flex items-start justify-between gap-4">
         <div class="grid gap-[0.35rem]">
-          <span class="eyebrow text-[#9f6a00]">Scan Needs Attention</span>
-          <h2 class="m-0 text-[1.1rem]">The last scan completed with errors</h2>
+          <span class="eyebrow text-[#9f6a00]">{{ tr('Scan Needs Attention', 'El escaneo necesita atención') }}</span>
+          <h2 class="m-0 text-[1.1rem]">{{ tr('The last scan completed with errors', 'El último escaneo terminó con errores') }}</h2>
           <p class="m-0 text-muted">{{ scanErrorNoticeMessage }}</p>
         </div>
         <button
@@ -191,7 +191,7 @@
         <button class="btn-primary min-w-[11.5rem]" type="button" :disabled="scanActionDisabled" @click="runManualScan">
           {{ scanButtonLabel }}
         </button>
-        <p class="m-0 text-muted">Run a new library scan to retry failed media and fill in any missing thumbnails or previews.</p>
+        <p class="m-0 text-muted">{{ tr('Run a new library scan to retry failed media and fill in any missing thumbnails or previews.', 'Ejecuta otro escaneo para reintentar los archivos fallidos y generar las miniaturas que falten.') }}</p>
       </div>
     </section>
 
@@ -219,8 +219,8 @@
         <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(0,149,246,0.15), transparent 40%), linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%);">
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Scan Library</h2>
-              <p class="m-0 text-muted">Run a scan after adding folders or when you want to refresh indexed media.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">{{ tr('Scan Library', 'Escanear biblioteca') }}</h2>
+              <p class="m-0 text-muted">{{ tr('Run a scan after adding folders or when you want to refresh indexed media.', 'Escanea después de añadir carpetas o para actualizar los archivos indexados.') }}</p>
             </div>
             <span
               class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
@@ -255,24 +255,24 @@
         >
           <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
             <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Rebuild Library</h2>
-              <p class="m-0 text-muted">Refresh thumbnails or reset the library index from the current gallery root.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">{{ tr('Rebuild Library', 'Reconstruir biblioteca') }}</h2>
+              <p class="m-0 text-muted">{{ tr('Refresh thumbnails or reset the library index from the current gallery root.', 'Actualiza las miniaturas o restablece el índice desde la carpeta actual.') }}</p>
             </div>
             <span
               class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
               :class="appStore.isLibraryRebuildRequired ? 'text-[#9f6a00] bg-[rgba(210,161,51,0.14)]' : 'text-muted bg-surface-alt'"
             >
-              {{ appStore.isLibraryRebuildRequired ? 'Recommended' : 'Optional' }}
+              {{ appStore.isLibraryRebuildRequired ? tr('Recommended', 'Recomendado') : tr('Optional', 'Opcional') }}
             </span>
           </div>
 
           <dl class="grid gap-[0.8rem] m-0">
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, var(--accent) 8%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Current gallery root</dt>
-              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats?.libraryIndex.currentGalleryRoot ?? 'Unavailable' }}</dd>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Current gallery root', 'Carpeta actual de la galería') }}</dt>
+              <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats?.libraryIndex.currentGalleryRoot ?? tr('Unavailable', 'No disponible') }}</dd>
             </div>
             <div v-if="appStore.stats?.libraryIndex.previousGalleryRoot" class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 92%, #d2a133 8%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Previous gallery root</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Previous gallery root', 'Carpeta anterior de la galería') }}</dt>
               <dd class="m-0 text-[0.92rem] font-semibold break-all">{{ appStore.stats.libraryIndex.previousGalleryRoot }}</dd>
             </div>
           </dl>
@@ -284,7 +284,7 @@
                   {{ thumbnailRebuildButtonLabel }}
                 </button>
                 <p class="m-0 text-muted">
-                  Rebuild feed and profile thumbnails plus video posters from indexed media only.
+                  {{ tr('Rebuild feed and profile thumbnails plus video posters from indexed media only.', 'Regenera las miniaturas y carátulas de vídeo usando solo los archivos indexados.') }}
                 </p>
               </div>
               <p class="m-0 text-muted">{{ thumbnailRebuildActionNote }}</p>
@@ -297,7 +297,7 @@
                   {{ rebuildButtonLabel }}
                 </button>
                 <p class="m-0 text-muted">
-                  Reset the library index, reuse matching cached media, and generate only missing derivatives from the current gallery root.
+                  {{ tr('Reset the library index, reuse matching cached media, and generate only missing derivatives from the current gallery root.', 'Restablece el índice, reutiliza los archivos en caché y genera solo los elementos que falten.') }}
                 </p>
               </div>
               <p class="m-0 text-muted">{{ rebuildActionNote }}</p>
@@ -312,25 +312,25 @@
         <section class="card grid gap-[1.15rem] p-8">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Library Status</h2>
-              <p class="m-0 text-muted">Current storage and index state.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">{{ tr('Library Status', 'Estado de la biblioteca') }}</h2>
+              <p class="m-0 text-muted">{{ tr('Current storage and index state.', 'Estado actual del almacenamiento y del índice.') }}</p>
             </div>
           </div>
           <dl class="grid grid-cols-2 gap-[0.8rem] m-0">
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Storage</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Storage', 'Almacenamiento') }}</dt>
               <dd class="m-0 text-base font-bold">{{ storageLabel }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Folders</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Folders', 'Carpetas') }}</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.folders ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed posts</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Indexed posts', 'Publicaciones indexadas') }}</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedImages ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Indexed videos</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Indexed videos', 'Vídeos indexados') }}</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(appStore.stats?.indexedVideos ?? 0) }}</dd>
             </div>
           </dl>
@@ -339,25 +339,25 @@
         <section class="card grid gap-[1.15rem] p-8">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">Last Scan</h2>
-              <p class="m-0 text-muted">Most recent completed run tracked by the app.</p>
+              <h2 class="m-0 mb-[0.18rem] text-[1.1rem]">{{ tr('Last Scan', 'Último escaneo') }}</h2>
+              <p class="m-0 text-muted">{{ tr('Most recent completed run tracked by the app.', 'Último escaneo completado registrado por la aplicación.') }}</p>
             </div>
           </div>
           <dl class="grid grid-cols-2 gap-[0.8rem] m-0">
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Status</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Status', 'Estado') }}</dt>
               <dd class="m-0 text-base font-bold">{{ lastScanStatus }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Finished</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Finished', 'Finalizado') }}</dt>
               <dd class="m-0 text-base font-bold">{{ lastScanFinishedAt }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Files scanned</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Files scanned', 'Archivos escaneados') }}</dt>
               <dd class="m-0 text-base font-bold">{{ formatCount(lastCompletedScan?.scanned_files ?? 0) }}</dd>
             </div>
             <div class="px-4 py-[0.9rem] rounded-[0.9rem]" style="background: color-mix(in srgb, var(--surface-alt) 90%, var(--accent) 10%)">
-              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">Changes</dt>
+              <dt class="m-0 mb-[0.25rem] text-muted text-[0.72rem] font-bold tracking-[0.08em] uppercase">{{ tr('Changes', 'Cambios') }}</dt>
               <dd class="m-0 text-base font-bold whitespace-pre-line">{{ lastScanChangeSummary }}</dd>
             </div>
           </dl>
@@ -367,20 +367,20 @@
 
     <ConfirmDialog
       v-if="confirmRebuildOpen"
-      title="Rebuild the current library index?"
-      message="This will clear the indexed database tables for folders, posts, likes, and scan history, then rescan the active gallery root. Existing thumbnails and previews at the configured storage paths will be reused when their mirrored files already exist, and only missing derivatives will be generated. Original files in the gallery will not be deleted."
-      confirm-label="Rebuild Library Index"
-      loading-label="Rebuilding..."
+      :title="tr('Rebuild the current library index?', '¿Reconstruir el índice de la biblioteca?')"
+      :message="tr('This will clear the indexed database tables and rescan the active gallery. Original files will not be deleted.', 'Se borrará el índice y se volverá a escanear la galería activa. Los archivos originales no se eliminarán.')"
+      :confirm-label="tr('Rebuild Library Index', 'Reconstruir índice')"
+      :loading-label="tr('Rebuilding...', 'Reconstruyendo...')"
       :loading="rebuilding"
       @cancel="confirmRebuildOpen = false"
       @confirm="runLibraryRebuild"
     />
     <ConfirmDialog
       v-if="confirmThumbnailRebuildOpen"
-      title="Regenerate thumbnails only?"
-      message="This will remove generated feed and profile thumbnails plus video poster images, then rebuild them from the current indexed library. Previews, likes, scan history, and indexed library records will not be changed. Original files in the gallery will not be deleted."
-      confirm-label="Regenerate Thumbnails"
-      loading-label="Regenerating..."
+      :title="tr('Regenerate thumbnails only?', '¿Regenerar solo las miniaturas?')"
+      :message="tr('This will rebuild generated thumbnails from the indexed library. Original files will not be deleted.', 'Se regenerarán las miniaturas desde la biblioteca indexada. Los archivos originales no se eliminarán.')"
+      :confirm-label="tr('Regenerate Thumbnails', 'Regenerar miniaturas')"
+      :loading-label="tr('Regenerating...', 'Regenerando...')"
       :loading="rebuildingThumbnails"
       @cancel="confirmThumbnailRebuildOpen = false"
       @confirm="runThumbnailRebuild"
@@ -399,6 +399,7 @@ import { useAuthStore } from '../stores/auth';
 import { useFeedStore } from '../stores/feed';
 import { useFoldersStore } from '../stores/folders';
 import { useLikesStore } from '../stores/likes';
+import { useLocaleStore } from '../stores/locale';
 import { useMomentsStore } from '../stores/moments';
 import { useViewerStore } from '../stores/viewer';
 
@@ -407,6 +408,8 @@ const authStore = useAuthStore();
 const feedStore = useFeedStore();
 const foldersStore = useFoldersStore();
 const likesStore = useLikesStore();
+const localeStore = useLocaleStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const momentsStore = useMomentsStore();
 const viewerStore = useViewerStore();
 const route = useRoute();
@@ -506,15 +509,15 @@ function setAuthSuccess(message: string) {
 
 function validatePasswordConfirmation(password: string, confirmation: string): string | null {
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+    return tr(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
   }
 
   if (password.trim().length === 0) {
-    return 'Password cannot be empty.';
+    return tr('Password cannot be empty.', 'La contraseña no puede estar vacía.');
   }
 
   if (password !== confirmation) {
-    return 'The password confirmation does not match.';
+    return tr('The password confirmation does not match.', 'La confirmación de la contraseña no coincide.');
   }
 
   return null;
@@ -584,29 +587,29 @@ const statusTone = computed(() => {
 });
 const statusLabel = computed(() => {
   if (appStore.isLibraryUnavailable) {
-    return 'Storage unavailable';
+    return tr('Storage unavailable', 'Almacenamiento no disponible');
   }
 
   if (scanProgressActive.value) {
-    return 'Scan in progress';
+    return tr('Scan in progress', 'Escaneo en curso');
   }
 
   if (isRebuildOperationActive.value) {
-    return 'Rebuild active';
+    return tr('Rebuild active', 'Reconstrucción en curso');
   }
 
-  return 'Ready';
+  return tr('Ready', 'Listo');
 });
 const scanButtonLabel = computed(() => {
   if (scanProgressActive.value) {
-    return 'Scanning library...';
+    return tr('Scanning library...', 'Escaneando biblioteca...');
   }
 
-  return 'Run Scan Library';
+  return tr('Run Scan Library', 'Escanear biblioteca');
 });
 const scanActionNote = computed(() => {
   if (waitingForInitialStatus.value) {
-    return 'Loading current library status...';
+    return tr('Loading current library status...', 'Cargando el estado de la biblioteca...');
   }
 
   if (appStore.isLibraryUnavailable) {
@@ -614,7 +617,7 @@ const scanActionNote = computed(() => {
   }
 
   if (appStore.isLibraryRebuildRequired) {
-    return 'Rebuild the library index first because the gallery location changed.';
+    return tr('Rebuild the library index first because the gallery location changed.', 'Reconstruye primero el índice porque cambió la ubicación de la galería.');
   }
 
   if (isRebuildOperationActive.value) {
@@ -625,21 +628,21 @@ const scanActionNote = computed(() => {
     return 'Live progress appears in the sticky status bar.';
   }
 
-  return 'Scans check for added, updated, or missing media.';
+  return tr('Scans check for added, updated, or missing media.', 'El escaneo busca archivos añadidos, modificados o ausentes.');
 });
 const rebuildButtonLabel = computed(() => {
   if (isLibraryRebuildActive.value) {
-    return 'Rebuilding now...';
+    return tr('Rebuilding now...', 'Reconstruyendo...');
   }
 
-  return 'Rebuild Library Index';
+  return tr('Rebuild Library Index', 'Reconstruir índice');
 });
 const thumbnailRebuildButtonLabel = computed(() => {
   if (isThumbnailRebuildActive.value) {
-    return 'Regenerating now...';
+    return tr('Regenerating now...', 'Regenerando...');
   }
 
-  return 'Regenerate Thumbnails';
+  return tr('Regenerate Thumbnails', 'Regenerar miniaturas');
 });
 const rebuildActionNote = computed(() => {
   if (waitingForInitialStatus.value) {
@@ -702,10 +705,10 @@ const authProtectionDescription = computed(() =>
 );
 const authFeedbackMessage = computed(() => authFeedback.value?.message ?? authStore.error);
 const authFeedbackTone = computed(() => authFeedback.value?.tone ?? 'error');
-const storageLabel = computed(() => (appStore.isLibraryUnavailable ? 'Unavailable' : 'Available'));
+const storageLabel = computed(() => (appStore.isLibraryUnavailable ? tr('Unavailable', 'No disponible') : tr('Available', 'Disponible')));
 const lastScanStatus = computed(() => {
   if (!lastCompletedScan.value) {
-    return 'No completed scans yet';
+    return tr('No completed scans yet', 'Todavía no hay escaneos completados');
   }
 
   return lastCompletedScan.value.status.replaceAll('_', ' ');
@@ -855,7 +858,7 @@ async function enableAccessProtection() {
     await authStore.enablePassword(enablePassword.value);
     enablePassword.value = '';
     enablePasswordConfirmation.value = '';
-    setAuthSuccess('Password protection is now enabled for this Foldergram instance.');
+    setAuthSuccess(tr('Password protection is now enabled for this Foldergram instance.', 'La protección de administración está activada.'));
   } catch (error) {
     setAuthError(error instanceof Error ? error.message : 'Unable to enable password protection.');
   }
@@ -868,7 +871,7 @@ async function changeAccessPassword() {
 
   clearAuthFeedback();
   if (currentPassword.value.length === 0) {
-    setAuthError('Enter the current password to change it.');
+    setAuthError(tr('Enter the current password to change it.', 'Introduce la contraseña actual para cambiarla.'));
     return;
   }
 
@@ -883,7 +886,7 @@ async function changeAccessPassword() {
     currentPassword.value = '';
     nextPassword.value = '';
     nextPasswordConfirmation.value = '';
-    setAuthSuccess('The shared password was updated and existing sessions were invalidated.');
+    setAuthSuccess(tr('The administrator password was updated and existing sessions were invalidated.', 'La contraseña de administración se actualizó y se cerraron las sesiones anteriores.'));
   } catch (error) {
     setAuthError(error instanceof Error ? error.message : 'Unable to change the password.');
   }
@@ -896,7 +899,7 @@ async function disableAccessProtection() {
 
   clearAuthFeedback();
   if (disablePassword.value.length === 0) {
-    setAuthError('Enter the current password to disable protection.');
+    setAuthError(tr('Enter the current password to disable protection.', 'Introduce la contraseña actual para desactivar la protección.'));
     return;
   }
 
@@ -906,7 +909,7 @@ async function disableAccessProtection() {
     currentPassword.value = '';
     nextPassword.value = '';
     nextPasswordConfirmation.value = '';
-    setAuthSuccess('Password protection has been disabled.');
+    setAuthSuccess(tr('Password protection has been disabled.', 'La protección se ha desactivado.'));
   } catch (error) {
     setAuthError(error instanceof Error ? error.message : 'Unable to disable password protection.');
   }
@@ -915,7 +918,7 @@ async function disableAccessProtection() {
 async function saveAdminPassword() {
   clearAuthFeedback();
   if (authStore.adminEnabled && currentAdminPassword.value.length === 0) {
-    setAuthError('Enter the current administrator password.');
+    setAuthError(tr('Enter the current administrator password.', 'Introduce la contraseña actual de administración.'));
     return;
   }
   const validationError = validatePasswordConfirmation(nextAdminPassword.value, nextAdminPasswordConfirmation.value);
@@ -928,7 +931,7 @@ async function saveAdminPassword() {
     currentAdminPassword.value = '';
     nextAdminPassword.value = '';
     nextAdminPasswordConfirmation.value = '';
-    setAuthSuccess('The administrator password was saved. Viewer sessions can no longer access management controls.');
+    setAuthSuccess(tr('The administrator password was saved.', 'La contraseña de administración se ha guardado.'));
   } catch (error) {
     setAuthError(error instanceof Error ? error.message : 'Unable to save the administrator password.');
   }

@@ -23,10 +23,10 @@
       <!-- Actions -->
       <div class="flex justify-end gap-3 mt-[1.4rem]">
         <button class="min-h-[2.5rem] px-4 py-[0.6rem] border border-transparent rounded-[0.75rem] font-semibold cursor-pointer bg-surface-hover text-text disabled:opacity-70 disabled:cursor-wait" type="button" @click="$emit('cancel')">
-          {{ cancelLabel }}
+          {{ resolvedCancelLabel }}
         </button>
         <button class="min-h-[2.5rem] px-4 py-[0.6rem] border border-transparent rounded-[0.75rem] font-semibold cursor-pointer bg-[#d93025] text-white disabled:opacity-70 disabled:cursor-wait" type="button" :disabled="loading" @click="$emit('confirm')">
-          {{ loading ? loadingLabel : confirmLabel }}
+          {{ loading ? resolvedLoadingLabel : resolvedConfirmLabel }}
         </button>
       </div>
     </section>
@@ -34,7 +34,11 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(
+import { computed } from 'vue';
+
+import { useLocaleStore } from '../stores/locale';
+
+const props = withDefaults(
   defineProps<{
     title: string;
     message: string;
@@ -44,12 +48,17 @@ withDefaults(
     loading?: boolean;
   }>(),
   {
-    confirmLabel: 'Delete post',
-    cancelLabel: 'Cancel',
-    loadingLabel: 'Deleting...',
+    confirmLabel: '',
+    cancelLabel: '',
+    loadingLabel: '',
     loading: false
   }
 );
+
+const localeStore = useLocaleStore();
+const resolvedConfirmLabel = computed(() => props.confirmLabel || localeStore.text('Delete post', 'Eliminar publicación'));
+const resolvedCancelLabel = computed(() => props.cancelLabel || localeStore.text('Cancel', 'Cancelar'));
+const resolvedLoadingLabel = computed(() => props.loadingLabel || localeStore.text('Deleting...', 'Eliminando...'));
 
 defineEmits<{
   cancel: [];

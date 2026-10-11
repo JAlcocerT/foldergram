@@ -40,7 +40,7 @@
                 opacity 0.18s ease,
                 max-width 0.22s ease;
             "
-            >Home</span
+            >{{ tr('Home', 'Inicio') }}</span
           >
         </a>
       </RouterLink>
@@ -72,7 +72,7 @@
                 opacity 0.18s ease,
                 max-width 0.22s ease;
             "
-            >Search</span
+            >{{ tr('Search', 'Buscar') }}</span
           >
         </a>
       </RouterLink>
@@ -104,7 +104,7 @@
                 opacity 0.18s ease,
                 max-width 0.22s ease;
             "
-            >Library</span
+            >{{ tr('Library', 'Biblioteca') }}</span
           >
         </a>
       </RouterLink>
@@ -136,7 +136,7 @@
                 opacity 0.18s ease,
                 max-width 0.22s ease;
             "
-            >Likes</span
+            >{{ tr('Likes', 'Favoritos') }}</span
           >
           <small
             class="sidebar__badge sidebar__meta ml-auto max-w-0 min-w-[1.5rem] overflow-hidden whitespace-nowrap rounded-full bg-white/12 px-[0.45rem] py-[0.1rem] text-center text-[0.72rem] font-bold text-white/86 opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100"
@@ -157,7 +157,7 @@
             opacity 0.18s ease,
             max-width 0.22s ease;
         "
-        >Folders Spotlight</span
+        >{{ tr('Folders Spotlight', 'Carpetas destacadas') }}</span
       >
       <div
         class="flex min-h-0 flex-col gap-[0.2rem] max-h-[22.5rem] overflow-y-auto [scrollbar-width:none]"
@@ -195,7 +195,7 @@
             >
               <strong class="truncate text-[0.82rem]">{{ folder.name }}</strong>
               <small class="truncate text-[0.68rem] text-muted">{{
-                folder.breadcrumb ?? `${folder.imageCount} posts`
+                folder.breadcrumb ?? `${folder.imageCount} ${tr('posts', 'publicaciones')}`
               }}</small>
             </span>
           </a>
@@ -235,7 +235,7 @@
                 stroke-width="1.8"
               />
             </svg>
-            <span>Trash</span>
+            <span>{{ tr('Trash', 'Papelera') }}</span>
           </RouterLink>
 
           <RouterLink
@@ -248,7 +248,7 @@
               class="i-fluent-folder-add-16-regular w-[1.18rem] h-[1.18rem] shrink-0"
               aria-hidden="true"
             />
-            <span>Manage content</span>
+            <span>{{ tr('Manage content', 'Gestionar contenido') }}</span>
           </RouterLink>
 
           <RouterLink
@@ -261,7 +261,7 @@
               class="i-fluent-settings-16-regular w-[1.18rem] h-[1.18rem] shrink-0"
               aria-hidden="true"
             />
-            <span>Settings</span>
+            <span>{{ tr('Settings', 'Configuración') }}</span>
           </RouterLink>
 
           <RouterLink
@@ -271,7 +271,7 @@
             @click="closeMoreMenu"
           >
             <span class="i-fluent-lock-closed-20-regular w-[1.18rem] h-[1.18rem] shrink-0" aria-hidden="true" />
-            <span>Admin sign in</span>
+            <span>{{ tr('Admin sign in', 'Acceso de administración') }}</span>
           </RouterLink>
 
           <button
@@ -310,7 +310,15 @@
                 stroke-width="1.8"
               />
             </svg>
-            <span>Switch appearance</span>
+            <span>{{ tr('Switch appearance', 'Cambiar apariencia') }}</span>
+          </button>
+          <button
+            class="flex items-center gap-[0.95rem] w-full px-[1.2rem] py-[1rem] border-0 bg-transparent text-[0.98rem] text-text cursor-pointer text-left transition-colors duration-150 hover:bg-surface-hover"
+            type="button"
+            @click="handleLocaleToggle"
+          >
+            <span class="i-fluent-local-language-20-regular w-[1.18rem] h-[1.18rem] shrink-0" aria-hidden="true" />
+            <span>{{ localeStore.isSpanish ? 'English' : 'Español' }}</span>
           </button>
           <button
             v-if="authStore.isAdmin"
@@ -319,7 +327,7 @@
             @click="handleLogout"
           >
             <span class="i-fluent-sign-out-20-regular w-[1.18rem] h-[1.18rem] shrink-0" aria-hidden="true" />
-            <span>Sign out</span>
+            <span>{{ tr('Sign out', 'Cerrar sesión') }}</span>
           </button>
         </div>
 
@@ -343,7 +351,7 @@
                 opacity 0.18s ease,
                 max-width 0.22s ease;
             "
-            >More</span
+            >{{ tr('More', 'Más') }}</span
           >
         </button>
       </div>
@@ -358,6 +366,7 @@
   import { useAppStore } from "../stores/app"
   import { useAuthStore } from "../stores/auth"
   import { useLikesStore } from "../stores/likes"
+  import { useLocaleStore } from "../stores/locale"
   import { useFoldersStore } from "../stores/folders"
   import { buildLikedCountByFolder } from "../utils/home-recommendations"
   import { selectSidebarFolders } from "../utils/sidebar-folders"
@@ -368,9 +377,11 @@
   const appStore = useAppStore()
   const authStore = useAuthStore()
   const likesStore = useLikesStore()
+  const localeStore = useLocaleStore()
   const foldersStore = useFoldersStore()
   const route = useRoute()
   const moreMenuOpen = ref(false)
+  const tr = (english: string, spanish: string) => localeStore.text(english, spanish)
 
   const likedCountByFolder = computed(() =>
     buildLikedCountByFolder(likesStore.items),
@@ -398,6 +409,11 @@
 
   function handleAppearanceToggle() {
     appStore.toggleTheme()
+    closeMoreMenu()
+  }
+
+  function handleLocaleToggle() {
+    localeStore.toggleLocale()
     closeMoreMenu()
   }
 

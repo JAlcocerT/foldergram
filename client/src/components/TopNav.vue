@@ -10,7 +10,7 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          aria-label="Home"
+          :aria-label="tr('Home', 'Inicio')"
           @click="navigate"
         >
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-home-16-filled' : 'i-fluent-home-16-regular'" aria-hidden="true" />
@@ -21,7 +21,7 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          aria-label="Search"
+          :aria-label="tr('Search', 'Buscar')"
           @click="navigate"
         >
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-search-16-filled' : 'i-fluent-search-16-regular'" aria-hidden="true" />
@@ -32,7 +32,7 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          aria-label="Library"
+          :aria-label="tr('Library', 'Biblioteca')"
           @click="navigate"
         >
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-folder-16-filled' : 'i-fluent-folder-16-regular'" aria-hidden="true" />
@@ -43,7 +43,7 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          :aria-label="`Likes (${likesStore.items.length})`"
+          :aria-label="`${tr('Likes', 'Favoritos')} (${likesStore.items.length})`"
           @click="navigate"
         >
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-heart-16-filled' : 'i-fluent-heart-16-regular'" aria-hidden="true" />
@@ -55,7 +55,7 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          aria-label="Trash"
+          :aria-label="tr('Trash', 'Papelera')"
           @click="navigate"
         >
           <svg class="w-[1.45rem] h-[1.45rem]" viewBox="0 0 24 24" role="presentation">
@@ -71,7 +71,7 @@
         </a>
       </RouterLink>
       <RouterLink v-if="authStore.enabled && !authStore.isAdmin" custom :to="{ name: 'admin-login' }" v-slot="{ href, navigate }">
-        <a :href="href" class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem]" aria-label="Admin sign in" @click="navigate">
+        <a :href="href" class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem]" :aria-label="tr('Admin sign in', 'Acceso de administración')" @click="navigate">
           <span class="i-fluent-lock-closed-20-regular w-[1.45rem] h-[1.45rem]" aria-hidden="true" />
         </a>
       </RouterLink>
@@ -81,14 +81,17 @@
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
-          aria-label="Settings"
+          :aria-label="tr('Settings', 'Configuración')"
           @click="navigate"
         >
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-settings-16-filled' : 'i-fluent-settings-16-regular'" aria-hidden="true" />
         </a>
       </RouterLink>
-      <button v-if="authStore.isAdmin" class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer" type="button" aria-label="Sign out" @click="authStore.logout()">
+      <button v-if="authStore.isAdmin" class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer" type="button" :aria-label="tr('Sign out', 'Cerrar sesión')" @click="authStore.logout()">
         <span class="i-fluent-sign-out-20-regular w-[1.45rem] h-[1.45rem]" aria-hidden="true" />
+      </button>
+      <button class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer" type="button" :aria-label="localeStore.isSpanish ? 'Switch to English' : 'Cambiar a español'" @click="localeStore.toggleLocale()">
+        <span class="text-[0.72rem] font-bold">{{ localeStore.isSpanish ? 'EN' : 'ES' }}</span>
       </button>
       <button class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer transition-colors duration-150 hover:bg-white/8" type="button" :aria-label="themeLabel" @click="appStore.toggleTheme()">
         <svg v-if="appStore.theme === 'light'" class="w-[1.45rem] h-[1.45rem]" viewBox="0 0 24 24" role="presentation">
@@ -123,11 +126,14 @@ import { RouterLink } from 'vue-router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { useLikesStore } from '../stores/likes';
+import { useLocaleStore } from '../stores/locale';
 import BrandMark from './BrandMark.vue';
 
 const appStore = useAppStore();
 const authStore = useAuthStore();
 const likesStore = useLikesStore();
+const localeStore = useLocaleStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const themeLabel = computed(() => (appStore.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'));
 const topbarActiveClass = 'router-link-active bg-[rgba(255,255,255,0.08)]';
 </script>

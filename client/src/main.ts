@@ -5,6 +5,7 @@ import { AUTH_REQUIRED_EVENT } from './api/http';
 import { router } from './router';
 import { useAppStore } from './stores/app';
 import { useAuthStore } from './stores/auth';
+import { useLocaleStore } from './stores/locale';
 import { pinia } from './stores/pinia';
 import './styles/base.css';
 import 'virtual:uno.css';
@@ -51,8 +52,10 @@ async function bootstrap() {
 
   const appStore = useAppStore(pinia);
   const authStore = useAuthStore(pinia);
+  const localeStore = useLocaleStore(pinia);
 
   appStore.initializeTheme();
+  localeStore.applyDocumentLanguage();
 
   if (typeof appStore.initializeVideoMuted === 'function') {
     appStore.initializeVideoMuted();

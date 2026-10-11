@@ -2,11 +2,11 @@
   <section class="w-[min(100%,72rem)] mx-auto flex flex-col gap-[1.4rem]">
     <header class="flex items-end justify-between gap-4 max-sm:flex-col max-sm:items-start">
       <div>
-        <span class="eyebrow">Administration</span>
+        <span class="eyebrow">{{ tr('Administration', 'Administración') }}</span>
         <h1 class="mt-[0.15rem] mb-0 text-[clamp(1.55rem,2.4vw,2rem)] font-medium tracking-[-0.04em]">
-          Manage content
+          {{ tr('Manage content', 'Gestionar contenido') }}
         </h1>
-        <p class="m-0 mt-1 text-muted">Create galleries, upload media, and edit Hugo-compatible metadata.</p>
+        <p class="m-0 mt-1 text-muted">{{ tr('Create galleries, upload media, and edit Hugo-compatible metadata.', 'Crea galerías, sube archivos y edita metadatos compatibles con Hugo.') }}</p>
       </div>
       <button
         v-if="authStore.isAdmin"
@@ -15,18 +15,18 @@
         :disabled="scanning || appStore.isScanning"
         @click="runScan"
       >
-        {{ scanning || appStore.isScanning ? 'Scanning…' : 'Scan library' }}
+        {{ scanning || appStore.isScanning ? tr('Scanning…', 'Escaneando…') : tr('Scan library', 'Escanear biblioteca') }}
       </button>
     </header>
 
     <section v-if="!authStore.isAdmin" class="card p-8 grid gap-4">
       <div>
-        <h2 class="m-0 text-[1.1rem]">Password protection required</h2>
+        <h2 class="m-0 text-[1.1rem]">{{ tr('Password protection required', 'Se requiere contraseña') }}</h2>
         <p class="m-0 mt-2 text-muted">
-          Content management requires an administrator session.
+          {{ tr('Content management requires an administrator session.', 'La gestión de contenido requiere una sesión de administrador.') }}
         </p>
       </div>
-      <RouterLink class="btn-primary w-fit" :to="{ name: 'settings' }">Open settings</RouterLink>
+      <RouterLink class="btn-primary w-fit" :to="{ name: 'settings' }">{{ tr('Open settings', 'Abrir configuración') }}</RouterLink>
     </section>
 
     <template v-else>
@@ -42,14 +42,14 @@
         <aside class="flex flex-col gap-[1.15rem]">
           <section class="card p-6 grid gap-4">
             <div>
-              <h2 class="m-0 text-[1.05rem]">Choose a gallery</h2>
-              <p class="m-0 mt-1 text-sm text-muted">Select any indexed media folder.</p>
+              <h2 class="m-0 text-[1.05rem]">{{ tr('Choose a gallery', 'Elegir una galería') }}</h2>
+              <p class="m-0 mt-1 text-sm text-muted">{{ tr('Select any indexed media folder.', 'Selecciona cualquier carpeta multimedia indexada.') }}</p>
             </div>
             <select
               v-model="selectedFolderPath"
               class="w-full h-11 px-3 border border-border rounded-[0.75rem] text-text bg-surface-alt focus:outline-none focus:border-accent/40"
             >
-              <option value="">Select a folder…</option>
+              <option value="">{{ tr('Select a folder…', 'Selecciona una carpeta…') }}</option>
               <option v-for="folder in folderOptions" :key="folder.path" :value="folder.path">
                 {{ folder.label }}
               </option>
@@ -58,62 +58,62 @@
 
           <form class="card p-6 grid gap-4" @submit.prevent="createFolder">
             <div>
-              <h2 class="m-0 text-[1.05rem]">Create a gallery</h2>
-              <p class="m-0 mt-1 text-sm text-muted">Nested paths such as <code>Knitting/Baby</code> are supported.</p>
+              <h2 class="m-0 text-[1.05rem]">{{ tr('Create a gallery', 'Crear una galería') }}</h2>
+              <p class="m-0 mt-1 text-sm text-muted">{{ tr('Nested paths are supported, for example', 'Se admiten rutas anidadas, por ejemplo') }} <code>Tejido/Bebé</code>.</p>
             </div>
             <label class="grid gap-1.5 text-sm font-semibold">
-              Folder path
-              <input v-model.trim="newFolder.folderPath" class="form-control" required maxlength="500" placeholder="Projects/New gallery" />
+              {{ tr('Folder path', 'Ruta de la carpeta') }}
+              <input v-model.trim="newFolder.folderPath" class="form-control" required maxlength="500" :placeholder="tr('Projects/New gallery', 'Proyectos/Nueva galería')" />
             </label>
             <label class="grid gap-1.5 text-sm font-semibold">
-              Gallery title
-              <input v-model="newFolder.title" class="form-control" maxlength="200" placeholder="New gallery" />
+              {{ tr('Gallery title', 'Título de la galería') }}
+              <input v-model="newFolder.title" class="form-control" maxlength="200" :placeholder="tr('New gallery', 'Nueva galería')" />
             </label>
             <label class="grid gap-1.5 text-sm font-semibold">
-              Description
-              <textarea v-model="newFolder.description" class="form-control min-h-24 resize-y" maxlength="5000" placeholder="What is this gallery about?"></textarea>
+              {{ tr('Description', 'Descripción') }}
+              <textarea v-model="newFolder.description" class="form-control min-h-24 resize-y" maxlength="5000" :placeholder="tr('What is this gallery about?', '¿De qué trata esta galería?')"></textarea>
             </label>
             <button class="btn-primary" type="submit" :disabled="creating">
-              {{ creating ? 'Creating…' : 'Create gallery' }}
+              {{ creating ? tr('Creating…', 'Creando…') : tr('Create gallery', 'Crear galería') }}
             </button>
           </form>
         </aside>
 
         <main class="min-w-0">
-          <section v-if="loadingMetadata" class="card p-10 text-center text-muted">Loading gallery…</section>
+          <section v-if="loadingMetadata" class="card p-10 text-center text-muted">{{ tr('Loading gallery…', 'Cargando galería…') }}</section>
           <section v-else-if="!metadata" class="card p-10 text-center">
-            <h2 class="m-0 text-[1.05rem]">Select or create a gallery</h2>
-            <p class="m-0 mt-2 text-muted">Its uploads and text fields will appear here.</p>
+            <h2 class="m-0 text-[1.05rem]">{{ tr('Select or create a gallery', 'Selecciona o crea una galería') }}</h2>
+            <p class="m-0 mt-2 text-muted">{{ tr('Its uploads and text fields will appear here.', 'Sus archivos y campos de texto aparecerán aquí.') }}</p>
           </section>
           <div v-else class="flex flex-col gap-[1.15rem]">
             <form class="card p-6 grid gap-5" @submit.prevent="saveMetadata">
               <div class="flex items-start justify-between gap-4 max-sm:flex-col">
                 <div class="min-w-0">
-                  <h2 class="m-0 text-[1.05rem]">Gallery text</h2>
+                  <h2 class="m-0 text-[1.05rem]">{{ tr('Gallery text', 'Texto de la galería') }}</h2>
                   <p class="m-0 mt-1 text-sm text-muted break-all">
                     {{ metadata.folderPath }}/{{ metadata.metadataFilename }}
                   </p>
                 </div>
                 <button class="btn-primary shrink-0" type="submit" :disabled="saving">
-                  {{ saving ? 'Saving…' : 'Save text' }}
+                  {{ saving ? tr('Saving…', 'Guardando…') : tr('Save text', 'Guardar texto') }}
                 </button>
               </div>
               <label class="grid gap-1.5 text-sm font-semibold">
-                Title
+                {{ tr('Title', 'Título') }}
                 <input v-model="metadata.title" class="form-control" maxlength="200" />
               </label>
               <label class="grid gap-1.5 text-sm font-semibold">
-                Description
+                {{ tr('Description', 'Descripción') }}
                 <textarea v-model="metadata.description" class="form-control min-h-28 resize-y" maxlength="5000"></textarea>
               </label>
 
               <div class="grid gap-3">
                 <div>
-                  <h3 class="m-0 text-[0.95rem]">Photo and video captions</h3>
-                  <p class="m-0 mt-1 text-sm text-muted">Captions are stored in the frontmatter <code>resources</code> list.</p>
+                  <h3 class="m-0 text-[0.95rem]">{{ tr('Photo and video captions', 'Textos de fotos y vídeos') }}</h3>
+                  <p class="m-0 mt-1 text-sm text-muted">{{ tr('Captions are stored in the frontmatter resources list.', 'Los textos se guardan en la lista resources del frontmatter.') }}</p>
                 </div>
                 <p v-if="metadata.media.length === 0" class="m-0 p-4 rounded-[0.8rem] bg-surface-alt text-muted">
-                  Upload media below to add captions.
+                  {{ tr('Upload media below to add captions.', 'Sube archivos abajo para añadir textos.') }}
                 </p>
                 <label
                   v-for="item in metadata.media"
@@ -121,15 +121,15 @@
                   class="grid grid-cols-[minmax(9rem,0.55fr)_minmax(0,1fr)] gap-3 items-center max-sm:grid-cols-1 p-3 rounded-[0.8rem] bg-surface-alt"
                 >
                   <span class="text-sm font-semibold truncate" :title="item.filename">{{ item.filename }}</span>
-                  <input v-model="item.caption" class="form-control" maxlength="1000" :aria-label="`Caption for ${item.filename}`" />
+                  <input v-model="item.caption" class="form-control" maxlength="1000" :aria-label="`${tr('Caption for', 'Texto para')} ${item.filename}`" />
                 </label>
               </div>
             </form>
 
             <form class="card p-6 grid gap-4" @submit.prevent="uploadFiles">
               <div>
-                <h2 class="m-0 text-[1.05rem]">Upload media</h2>
-                <p class="m-0 mt-1 text-sm text-muted">Up to 100 supported photos or videos, 100 MB each.</p>
+                <h2 class="m-0 text-[1.05rem]">{{ tr('Upload media', 'Subir archivos') }}</h2>
+                <p class="m-0 mt-1 text-sm text-muted">{{ tr('Up to 100 supported photos or videos, 100 MB each.', 'Hasta 100 fotos o vídeos compatibles, de 100 MB cada uno.') }}</p>
               </div>
               <input
                 :key="fileInputKey"
@@ -141,10 +141,10 @@
                 @change="selectFiles"
               />
               <p v-if="selectedFiles.length" class="m-0 text-sm text-muted">
-                {{ selectedFiles.length }} file{{ selectedFiles.length === 1 ? '' : 's' }} selected
+                {{ selectedFiles.length }} {{ selectedFiles.length === 1 ? tr('file selected', 'archivo seleccionado') : tr('files selected', 'archivos seleccionados') }}
               </p>
               <button class="btn-primary w-fit" type="submit" :disabled="uploading || selectedFiles.length === 0">
-                {{ uploading ? 'Uploading…' : 'Upload files' }}
+                {{ uploading ? tr('Uploading…', 'Subiendo…') : tr('Upload files', 'Subir archivos') }}
               </button>
             </form>
           </div>
@@ -168,11 +168,14 @@ import {
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { useFoldersStore } from '../stores/folders';
+import { useLocaleStore } from '../stores/locale';
 import type { ManagedFolderMetadata, ManagedFolderSummary } from '../types/api';
 
 const appStore = useAppStore();
 const authStore = useAuthStore();
 const foldersStore = useFoldersStore();
+const localeStore = useLocaleStore();
+const tr = (english: string, spanish: string) => localeStore.text(english, spanish);
 const selectedFolderPath = ref('');
 const metadata = ref<ManagedFolderMetadata | null>(null);
 const originalCaptions = ref<Record<string, string>>({});
@@ -219,7 +222,7 @@ async function loadManagedFolders() {
   try {
     managedFolders.value = await fetchManagedFolders();
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : 'Unable to list gallery folders.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to list gallery folders.', 'No se pudieron listar las carpetas.'), true);
   }
 }
 
@@ -233,7 +236,7 @@ async function loadMetadata(folderPath: string) {
     applyMetadata(await fetchManagedFolderMetadata(folderPath));
   } catch (error) {
     applyMetadata(null);
-    showMessage(error instanceof Error ? error.message : 'Unable to load gallery metadata.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to load gallery metadata.', 'No se pudieron cargar los datos de la galería.'), true);
   } finally {
     loadingMetadata.value = false;
   }
@@ -249,9 +252,9 @@ async function createFolder() {
     newFolder.folderPath = '';
     newFolder.title = '';
     newFolder.description = '';
-    showMessage('Gallery created. Upload media, then scan the library.');
+    showMessage(tr('Gallery created. Upload media, then scan the library.', 'Galería creada. Sube archivos y después escanea la biblioteca.'));
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : 'Unable to create the gallery.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to create the gallery.', 'No se pudo crear la galería.'), true);
   } finally {
     creating.value = false;
   }
@@ -271,9 +274,9 @@ async function saveMetadata() {
     });
     applyMetadata(payload.folder);
     await foldersStore.fetchFolders(true);
-    showMessage('Gallery text saved to frontmatter.');
+    showMessage(tr('Gallery text saved to frontmatter.', 'Texto de la galería guardado en el frontmatter.'));
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : 'Unable to save gallery text.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to save gallery text.', 'No se pudo guardar el texto de la galería.'), true);
   } finally {
     saving.value = false;
   }
@@ -292,9 +295,11 @@ async function uploadFiles() {
     fileInputKey.value += 1;
     await loadMetadata(metadata.value.folderPath);
     await loadManagedFolders();
-    showMessage(`${payload.filenames.length} file${payload.filenames.length === 1 ? '' : 's'} uploaded. Run a scan to publish them.`);
+    showMessage(localeStore.isSpanish
+      ? `${payload.filenames.length} archivo${payload.filenames.length === 1 ? '' : 's'} subido${payload.filenames.length === 1 ? '' : 's'}. Ejecuta un escaneo para publicarlo${payload.filenames.length === 1 ? '' : 's'}.`
+      : `${payload.filenames.length} file${payload.filenames.length === 1 ? '' : 's'} uploaded. Run a scan to publish them.`);
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : 'Unable to upload media.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to upload media.', 'No se pudieron subir los archivos.'), true);
   } finally {
     uploading.value = false;
   }
@@ -306,9 +311,11 @@ async function runScan() {
     const payload = await triggerManualScan();
     await Promise.all([foldersStore.fetchFolders(true), appStore.fetchStats({ background: true })]);
     await loadManagedFolders();
-    showMessage(`Scan ${payload.lastScan?.status ?? 'completed'}. The library is up to date.`);
+    showMessage(localeStore.isSpanish
+      ? 'Escaneo completado. La biblioteca está actualizada.'
+      : `Scan ${payload.lastScan?.status ?? 'completed'}. The library is up to date.`);
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : 'Unable to scan the library.', true);
+    showMessage(error instanceof Error ? error.message : tr('Unable to scan the library.', 'No se pudo escanear la biblioteca.'), true);
   } finally {
     scanning.value = false;
   }
