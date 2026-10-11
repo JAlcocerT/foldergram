@@ -140,6 +140,12 @@ router.get('/health', (_request, response) => {
   });
 });
 
+router.get('/config', (_request, response) => {
+  response.json({
+    defaultLocale: appConfig.defaultLocale
+  });
+});
+
 router.get('/auth/status', (request, response) => {
   authService.setNoStoreHeaders(response);
   response.json(authService.getStatus(request));

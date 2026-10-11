@@ -10,6 +10,7 @@ services:
       DB_DIR: /app/data/db
       THUMBNAILS_DIR: /app/data/thumbnails
       PREVIEWS_DIR: /app/data/previews
+      DEFAULT_LOCALE: "${DEFAULT_LOCALE:-}"
     volumes:
       - ./data/gallery:/app/data/gallery
       - ./data/db:/app/data/db

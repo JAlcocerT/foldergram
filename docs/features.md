@@ -168,7 +168,9 @@ Foldergram includes English and Spanish interface text. Use the language option
 under **More** (or the `EN`/`ES` button on mobile) to switch without changing
 gallery titles, descriptions, or photo captions. The choice is saved in the
 current browser; Spanish is selected automatically when the browser language is
-Spanish and no preference has been saved yet.
+Spanish and no preference has been saved yet. Container deployments can set
+`DEFAULT_LOCALE=en` or `DEFAULT_LOCALE=es`; a saved browser preference still
+takes priority.
 
 ### Rebuild actions
 

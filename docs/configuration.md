@@ -25,6 +25,7 @@ Foldergram reads `.env` from the repository root and validates it in
 | `SCAN_DISCOVERY_CONCURRENCY` | `4` | Discovery concurrency, validated from `1` to `32`. |
 | `SCAN_DERIVATIVE_CONCURRENCY` | `4` | Derivative concurrency, validated from `1` to `32`. |
 | `PUBLIC_DEMO_MODE` | `0` | When enabled, mutating API routes return `403` for read-only demo deployments. |
+| `DEFAULT_LOCALE` | browser language | Default interface language. Accepts `en` or `es`, case-insensitively. |
 | `CSRF_TRUSTED_ORIGINS` | unset | Comma-separated extra browser origins allowed for mutating API requests. Useful behind reverse proxies or HTTPS terminators. |
 | `NODE_ENV` | `development` | Must be `development`, `test`, or `production`. |
 
@@ -76,9 +77,13 @@ LOG_VERBOSE=0
 SCAN_DISCOVERY_CONCURRENCY=4
 SCAN_DERIVATIVE_CONCURRENCY=4
 PUBLIC_DEMO_MODE=0
+DEFAULT_LOCALE=es
 CSRF_TRUSTED_ORIGINS=
 NODE_ENV=development
 ```
+
+The saved language choice in a browser takes priority over `DEFAULT_LOCALE`.
+When neither exists, Foldergram follows the browser language.
 
 ## Concurrency tuning
 

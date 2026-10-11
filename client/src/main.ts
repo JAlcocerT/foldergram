@@ -55,7 +55,7 @@ async function bootstrap() {
   const localeStore = useLocaleStore(pinia);
 
   appStore.initializeTheme();
-  localeStore.applyDocumentLanguage();
+  await localeStore.initialize();
 
   if (typeof appStore.initializeVideoMuted === 'function') {
     appStore.initializeVideoMuted();

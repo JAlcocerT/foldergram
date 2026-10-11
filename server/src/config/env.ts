@@ -25,6 +25,14 @@ const envSchema = z.object({
   SCAN_DISCOVERY_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   SCAN_DERIVATIVE_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   PUBLIC_DEMO_MODE: z.string().optional(),
+  DEFAULT_LOCALE: z.preprocess(
+    (value) => {
+      if (typeof value !== 'string') return value;
+      const normalized = value.trim().toLowerCase();
+      return normalized.length > 0 ? normalized : undefined;
+    },
+    z.enum(['en', 'es']).optional()
+  ),
   CSRF_TRUSTED_ORIGINS: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
@@ -132,6 +140,7 @@ export const appConfig = {
   managedGalleryRelativeIgnores,
   logVerbose,
   publicDemoMode,
+  defaultLocale: parsed.DEFAULT_LOCALE ?? null,
   csrfTrustedOrigins,
   scanDiscoveryConcurrency: parsed.SCAN_DISCOVERY_CONCURRENCY,
   scanDerivativeConcurrency: parsed.SCAN_DERIVATIVE_CONCURRENCY,

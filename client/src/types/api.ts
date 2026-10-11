@@ -1,6 +1,10 @@
 export type FeedMode = 'recent' | 'rediscover' | 'random';
 export type FeedRailKind = 'moments' | 'highlights';
 
+export interface RuntimeConfig {
+  defaultLocale: 'en' | 'es' | null;
+}
+
 export interface FeedItem {
   id: number;
   folderId: number;

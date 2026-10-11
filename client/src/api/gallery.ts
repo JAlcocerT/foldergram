@@ -18,6 +18,7 @@ import type {
   PaginatedFeed,
   FolderImagesPayload,
   RestoreImageResult,
+  RuntimeConfig,
   RebuildLibraryResult,
   RebuildThumbnailsResult,
   FolderSummary,
@@ -25,6 +26,10 @@ import type {
   TrashImagesPayload
 } from '../types/api';
 import { requestJson } from './http';
+
+export function fetchRuntimeConfig() {
+  return requestJson<RuntimeConfig>('/api/config');
+}
 
 export function fetchFeed(page = 1, limit = 24, mode: FeedMode = 'recent', seed?: number) {
   const params = new URLSearchParams({
