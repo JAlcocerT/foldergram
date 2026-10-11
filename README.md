@@ -35,7 +35,7 @@ Foldergram indexes supported media from a configured `GALLERY_ROOT`, stores meta
 - App Folder pages with a posts grid and a `Reels` tab when videos exist.
 - Local likes stored in SQLite.
 - Image and video support with generated derivatives for fast browsing.
-- Separate viewer and administrator passwords for local and homelab access.
+- Public gallery browsing with password-protected administration.
 - Authenticated content management for creating folders, uploading media, and editing Hugo-compatible descriptions and captions.
 - Settings actions for manual scan, thumbnail rebuild, and full library rebuild.
 - A web app manifest plus production service worker registration.
@@ -209,11 +209,11 @@ The shipped `.env.example` only includes the `DEV_*` port values. Docker uses th
 
 ### Access Protection
 
-Access protection is configured from the Settings page, not from `.env`. The viewer password unlocks browsing and likes. A separate administrator password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. Passwords are stored as one-way hashes and sessions use signed cookies.
+Administrator protection is configured from the Settings page, not from `.env`. Gallery browsing, generated media, and likes remain public. The administrator password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. The password is stored as a one-way hash and admin sessions use signed cookies.
 
 ### Content Management
 
-Enable the viewer password, create a separate administrator password, then sign in as administrator and open **More → Manage content** to:
+Configure the administrator password, sign in through **More → Admin sign in**, then open **More → Manage content** to:
 
 - create top-level or nested gallery folders
 - upload up to 100 supported photos or videos at once

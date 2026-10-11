@@ -5,61 +5,22 @@ import { authService } from '../services/auth-service.js';
 export const AUTH_REQUIRED_MESSAGE = 'Authentication required.';
 export const AUTH_REQUIRED_HEADER = 'x-foldergram-auth-required';
 
-function isPublicApiRoute(request: express.Request): boolean {
-  const method = request.method.toUpperCase();
-  const path = request.path;
-
-  return (
-    (method === 'GET' && (path === '/health' || path === '/auth/status')) ||
-    (method === 'POST' && (path === '/auth/login' || path === '/auth/logout'))
-  );
-}
-
 export function requireApiAuthentication(
   request: express.Request,
   response: express.Response,
   next: express.NextFunction
 ): void {
-  if (!authService.isEnabled()) {
-    next();
-    return;
-  }
-
-  if (isPublicApiRoute(request)) {
-    next();
-    return;
-  }
-
-  if (authService.isAuthenticatedRequest(request)) {
+  if (authService.isEnabled() && authService.isAuthenticatedRequest(request)) {
     authService.setNoStoreHeaders(response);
     response.setHeader('Vary', 'Cookie');
-    next();
-    return;
   }
-
-  authService.setNoStoreHeaders(response);
-  response.setHeader(AUTH_REQUIRED_HEADER, '1');
-  response.status(401).json({ message: AUTH_REQUIRED_MESSAGE });
+  next();
 }
 
 export function requireMediaAuthentication(
-  request: express.Request,
-  response: express.Response,
+  _request: express.Request,
+  _response: express.Response,
   next: express.NextFunction
 ): void {
-  if (!authService.isEnabled()) {
-    next();
-    return;
-  }
-
-  if (authService.isAuthenticatedRequest(request)) {
-    authService.setNoStoreHeaders(response);
-    response.setHeader('Vary', 'Cookie');
-    next();
-    return;
-  }
-
-  authService.setNoStoreHeaders(response);
-  response.setHeader(AUTH_REQUIRED_HEADER, '1');
-  response.status(401).type('text/plain').send(AUTH_REQUIRED_MESSAGE);
+  next();
 }

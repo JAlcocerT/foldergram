@@ -5,7 +5,7 @@ import { authService } from '../services/auth-service.js';
 export const ADMIN_REQUIRED_HEADER = 'x-foldergram-admin-required';
 export const ADMIN_REQUIRED_MESSAGE = 'Administrator access required.';
 export const ADMIN_SETUP_REQUIRED_MESSAGE =
-  'Enable viewer password protection before using administrator features.';
+  'Configure an administrator password before using administrator features.';
 
 export function requireAdminAuthentication(
   request: express.Request,

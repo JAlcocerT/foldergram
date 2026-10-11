@@ -1,18 +1,18 @@
 <template>
-  <section class="min-h-screen px-6 py-10 flex items-center justify-center" style="background: radial-gradient(circle at top, rgba(0,149,246,0.14), transparent 32%), linear-gradient(180deg, color-mix(in srgb, var(--bg) 86%, #ffffff 14%) 0%, var(--bg) 100%);">
+  <section class="w-[min(100%,72rem)] mx-auto px-6 py-10 flex items-center justify-center" style="background: radial-gradient(circle at top, rgba(0,149,246,0.14), transparent 32%), linear-gradient(180deg, color-mix(in srgb, var(--bg) 86%, #ffffff 14%) 0%, var(--bg) 100%);">
     <div class="w-full max-w-[27rem] rounded-[1.5rem] border border-border bg-surface p-8 shadow-[var(--shadow)]">
       <div class="flex items-center gap-3">
         <div class="flex h-12 w-12 items-center justify-center rounded-[1rem] text-white shadow-[0_16px_34px_rgba(0,149,246,0.24)]" style="background: linear-gradient(135deg, #0095f6 0%, #1877f2 100%);">
           <BrandMark />
         </div>
         <div>
-          <p class="m-0 text-[0.74rem] font-bold uppercase tracking-[0.08em] text-accent-strong">Shared Password</p>
-          <h1 class="m-0 text-[1.5rem] font-semibold tracking-[-0.04em]">Unlock Foldergram</h1>
+          <p class="m-0 text-[0.74rem] font-bold uppercase tracking-[0.08em] text-accent-strong">Administration</p>
+          <h1 class="m-0 text-[1.5rem] font-semibold tracking-[-0.04em]">Admin sign in</h1>
         </div>
       </div>
 
       <p class="mt-5 mb-0 text-[0.95rem] leading-[1.65] text-muted">
-        Enter the viewer password to browse, or the administrator password to manage the library.
+        The gallery is public. Sign in here only to upload, edit, scan, or delete content.
       </p>
 
       <form class="mt-6 grid gap-4" @submit.prevent="submitLogin">
@@ -23,7 +23,7 @@
             class="h-12 rounded-[0.95rem] border border-border bg-[color-mix(in_srgb,var(--surface-alt)_84%,transparent_16%)] px-4 text-[0.95rem] text-text outline-none transition-[border-color,box-shadow] duration-180 focus:border-[color-mix(in_srgb,var(--accent)_48%,var(--border)_52%)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent-soft)_76%,transparent_24%)]"
             type="password"
             autocomplete="current-password"
-            placeholder="Enter viewer or admin password"
+            placeholder="Enter admin password"
             :disabled="submitting"
           />
         </label>
@@ -33,7 +33,7 @@
         </p>
 
         <button class="btn-primary min-h-12 justify-center" type="submit" :disabled="submitting || password.length === 0">
-          {{ submitting ? 'Unlocking...' : 'Unlock Library' }}
+          {{ submitting ? 'Signing in...' : 'Sign In as Admin' }}
         </button>
       </form>
     </div>
@@ -42,11 +42,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import BrandMark from './BrandMark.vue';
 import { useAuthStore } from '../stores/auth';
 
 const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 const password = ref('');
 const submitting = ref(false);
 const localError = ref<string | null>(null);
@@ -64,6 +67,8 @@ async function submitLogin() {
   try {
     await authStore.login(password.value);
     password.value = '';
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/manage';
+    await router.replace(redirect);
   } catch (error) {
     localError.value = error instanceof Error ? error.message : 'Unable to sign in.';
   } finally {

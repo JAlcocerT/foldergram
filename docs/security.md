@@ -1,6 +1,6 @@
 ---
 title: Security
-description: The real security posture of Foldergram, including viewer/admin password protection, mutation trust checks, and local-only caveats.
+description: The real security posture of Foldergram, including administrator protection, mutation trust checks, and local-only caveats.
 ---
 
 # Security
@@ -13,27 +13,25 @@ optional shared-password gate for homelab and LAN use.
 
 - you run it on your own machine or behind a trusted local-network or reverse-proxy setup
 - the app is not exposed directly to the public internet without additional protection
-- the built-in auth story has shared viewer and administrator roles, not individual user accounts
+- gallery viewing is anonymous; the built-in auth story protects one shared administrator role, not individual user accounts
 
-## Viewer and administrator protection
+## Administrator protection
 
-Foldergram can optionally protect the library with a shared viewer password and
-a separate administrator password configured from the Settings page. Either
-password can log in; the resulting signed session records its role.
+Foldergram protects management operations with an administrator password
+configured from the Settings page. Visitors do not need an account or password
+to browse the gallery.
 
 When enabled:
 
 - Foldergram stores a one-way password hash, salt, and session metadata in SQLite `app_settings`
 - the browser unlocks access with a signed `HttpOnly` session cookie
-- `/api` routes require that session, except for `GET /api/health`, `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout`
-- generated media under `/thumbnails` and `/previews` also require that session
-- authenticated API and media responses are marked `Cache-Control: no-store` and `Vary: Cookie`
-- the production service worker skips caching protected thumbnail and preview responses
+- gallery reads, originals, thumbnails, previews, and likes remain public
+- uploads, metadata writes, scans, Settings, Trash, restore, and deletion require an administrator session
+- authenticated API responses are marked `Cache-Control: no-store` and `Vary: Cookie`
 
-Changing either password rotates the session version, which invalidates older
-sessions. Disabling protection clears both password roles. Existing installations
-temporarily treat their current password session as administrator access so the
-first distinct administrator password can be created safely in Settings.
+Changing the administrator password rotates the session version, which
+invalidates older sessions. Existing password settings are retained as a safe
+migration path and can be replaced from Settings.
 
 ## Mutation protection
 
@@ -149,11 +147,11 @@ Foldergram does **not** currently provide:
 
 Use Foldergram like a local app:
 
-- use a strong shared password if you expose it on a homelab or LAN
+- use a strong administrator password if you expose it on a homelab or LAN
 - keep it on loopback unless you know exactly how you are proxying and protecting it
 - terminate HTTPS upstream if the app is reachable off-box
 - remember that on plain HTTP, both the password and session cookie are visible to anyone who can sniff that local network traffic
-- do not assume the shared-password layer and mutation checks are a full internet-facing security boundary
+- do not assume the administrator layer and mutation checks are a full internet-facing security boundary
 - treat delete actions as destructive and permanent
 
 ## A precise caveat about headers

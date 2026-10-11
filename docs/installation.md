@@ -89,8 +89,8 @@ The default Compose file uses the GHCR image and exposes `4141:4141`. If you
 need a different host port, edit the left side of that mapping in
 `docker-compose.yml`.
 
-If the app will be reachable from other devices on your network, enable the
-shared password from the Settings page after first startup.
+After first startup, configure the administrator password from Settings.
+Gallery viewing remains public to devices that can reach the app.
 
 ## If you already cloned this repository
 

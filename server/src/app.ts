@@ -8,18 +8,11 @@ import { requireApiAuthentication, requireMediaAuthentication } from './middlewa
 import { requireTrustedMutationRequest } from './middleware/csrf-protection.js';
 import { blockPublicDemoMutations } from './middleware/public-demo-mode.js';
 import { apiRouter } from './routes/api.js';
-import { authService } from './services/auth-service.js';
 
 function createProtectedStaticOptions() {
   return {
     fallthrough: false,
     setHeaders(response: { setHeader(name: string, value: string): void }) {
-      if (authService.isEnabled()) {
-        response.setHeader('Cache-Control', 'private, no-store');
-        response.setHeader('Vary', 'Cookie');
-        return;
-      }
-
       response.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     }
   };

@@ -13,6 +13,7 @@ import { useAuthStore } from '../stores/auth';
 import { pinia } from '../stores/pinia';
 import SettingsView from '../views/SettingsView.vue';
 import ManageContentView from '../views/ManageContentView.vue';
+import AuthGate from '../components/AuthGate.vue';
 
 function shouldPreserveModalScroll(to: RouteLocationNormalized, from: RouteLocationNormalized) {
   const appStore = useAppStore(pinia);
@@ -60,6 +61,11 @@ export const router = createRouter({
       path: '/likes/posts',
       name: 'likes',
       component: LikesView
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: AuthGate
     },
     {
       path: '/trash',
@@ -112,5 +118,8 @@ router.beforeEach(async (to) => {
   }
   const authStore = useAuthStore(pinia);
   await authStore.initialize();
-  return authStore.isAdmin ? true : { name: 'home' };
+  if (authStore.isAdmin || (to.name === 'settings' && !authStore.enabled)) {
+    return true;
+  }
+  return { name: 'admin-login', query: { redirect: to.fullPath } };
 });

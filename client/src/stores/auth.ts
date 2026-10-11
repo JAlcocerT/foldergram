@@ -41,8 +41,8 @@ export const useAuthStore = defineStore('auth', {
     error: null
   }),
   getters: {
-    accessGranted: (state) => !state.enabled || state.authenticated,
-    requiresLogin: (state) => state.enabled && !state.authenticated,
+    accessGranted: () => true,
+    requiresLogin: () => false,
     isAdmin: (state) => state.authenticated && state.role === 'admin'
   },
   actions: {

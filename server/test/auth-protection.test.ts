@@ -55,7 +55,6 @@ describe.sequential('auth protection', () => {
   let authService: AuthServiceModule['authService'];
   let requireApiAuthentication: AuthProtectionModule['requireApiAuthentication'];
   let requireMediaAuthentication: AuthProtectionModule['requireMediaAuthentication'];
-  let AUTH_REQUIRED_HEADER: AuthProtectionModule['AUTH_REQUIRED_HEADER'];
 
   beforeAll(async () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'insta-auth-protection-'));
@@ -74,7 +73,7 @@ describe.sequential('auth protection', () => {
 
     vi.resetModules();
     ({ authService } = await import('../src/services/auth-service.js'));
-    ({ requireApiAuthentication, requireMediaAuthentication, AUTH_REQUIRED_HEADER } = await import(
+    ({ requireApiAuthentication, requireMediaAuthentication } = await import(
       '../src/middleware/auth-protection.js'
     ));
   });
@@ -103,7 +102,7 @@ describe.sequential('auth protection', () => {
     expect(response.status).not.toHaveBeenCalled();
   });
 
-  it('blocks protected API and media routes when password protection is enabled but the request has no session', () => {
+  it('keeps gallery API and media routes public when administrator protection is enabled', () => {
     authService.setPassword('password123');
 
     const apiRequest = createRequest('GET', '/feed');
@@ -112,10 +111,8 @@ describe.sequential('auth protection', () => {
 
     requireApiAuthentication(apiRequest, apiResponse as unknown as express.Response, apiNext);
 
-    expect(apiNext).not.toHaveBeenCalled();
-    expect(apiResponse.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
-    expect(apiResponse.setHeader).toHaveBeenCalledWith(AUTH_REQUIRED_HEADER, '1');
-    expect(apiResponse.status).toHaveBeenCalledWith(401);
+    expect(apiNext).toHaveBeenCalledOnce();
+    expect(apiResponse.status).not.toHaveBeenCalled();
 
     const mediaRequest = createRequest('GET', '/thumbnails/example.webp');
     const mediaResponse = createResponse();
@@ -123,9 +120,8 @@ describe.sequential('auth protection', () => {
 
     requireMediaAuthentication(mediaRequest, mediaResponse as unknown as express.Response, mediaNext);
 
-    expect(mediaNext).not.toHaveBeenCalled();
-    expect(mediaResponse.type).toHaveBeenCalledWith('text/plain');
-    expect(mediaResponse.status).toHaveBeenCalledWith(401);
+    expect(mediaNext).toHaveBeenCalledOnce();
+    expect(mediaResponse.status).not.toHaveBeenCalled();
 
     const publicRequest = createRequest('GET', '/auth/status');
     const publicResponse = createResponse();

@@ -154,20 +154,18 @@ router.post('/auth/login', authRateLimiter, (request, response) => {
   }
 
   const body = loginBodySchema.parse(request.body);
-  const role = authService.verifyAdminPassword(body.password)
-    ? 'admin'
-    : authService.verifyPassword(body.password)
-      ? 'viewer'
-      : null;
-  if (!role) {
+  const passwordAccepted = authService.isAdminEnabled()
+    ? authService.verifyAdminPassword(body.password)
+    : authService.verifyPassword(body.password);
+  if (!passwordAccepted) {
     response.status(401).json({ message: 'Incorrect password.' });
     return;
   }
 
-  authService.setAuthenticatedSession(response, request, role);
+  authService.setAuthenticatedSession(response, request, 'admin');
   response.json({
     ok: true,
-    auth: authService.getAuthenticatedStatus(role)
+    auth: authService.getAuthenticatedStatus('admin')
   });
 });
 

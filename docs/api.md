@@ -17,16 +17,14 @@ All documented routes come from `server/src/routes/api.ts`.
 
 ## Authentication and protected routes
 
-Foldergram can optionally require a viewer or administrator session.
+Foldergram keeps gallery reads public and requires an administrator session for management.
 
-When password protection is enabled:
+When administrator protection is enabled:
 
-- most `/api` routes return `401` until the browser logs in
-- `GET /api/health`, `GET /api/auth/status`, `POST /api/auth/login`, and `POST /api/auth/logout` stay reachable without an authenticated session
+- gallery, folder, image, original-media, thumbnail, preview, and like routes remain public
 - `PUT /api/auth/password` is public only when password protection is currently disabled, so the first password can be set
-- `PUT /api/auth/admin-password` creates or changes the distinct administrator password
-- uploads, metadata writes, scans, Trash, restore, and delete routes return `403` for viewer sessions
-- `/thumbnails/...` and `/previews/...` also require the same authenticated session
+- `PUT /api/auth/admin-password` creates or changes the administrator password
+- uploads, metadata writes, scans, Trash, restore, and delete routes return `403` without an administrator session
 
 The frontend sends same-origin credentials automatically and uses a signed
 cookie-based session.
@@ -343,7 +341,7 @@ Body:
 
 ```json
 {
-  "password": "your-viewer-or-admin-password"
+  "password": "your-admin-password"
 }
 ```
 
@@ -356,7 +354,7 @@ Success:
     "enabled": true,
     "authenticated": true,
     "adminEnabled": true,
-    "role": "viewer"
+    "role": "admin"
   }
 }
 ```
@@ -387,7 +385,7 @@ Success:
 
 ### `PUT /api/auth/password`
 
-Sets or changes the viewer password.
+Sets or changes the initial administrator credential.
 
 Body when protection is disabled:
 
@@ -413,14 +411,12 @@ Notes:
 
 ### `PUT /api/auth/admin-password`
 
-Creates or changes the administrator password. The first call requires the
-current pre-split administrator session. Later changes also require
-`currentPassword`. The administrator password must differ from the viewer
-password, and changing it invalidates older sessions.
+Creates or changes the administrator password. Later changes require
+`currentPassword`, and changing it invalidates older sessions.
 
 ### `DELETE /api/auth/password`
 
-Disables viewer/admin password protection.
+Disables administrator password protection.
 
 Body:
 

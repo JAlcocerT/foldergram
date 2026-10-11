@@ -8,12 +8,12 @@
       </div>
     </header>
 
-    <section class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(24,119,242,0.14), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #f3f8ff 4%) 0%, var(--surface) 100%);">
+    <section v-if="!authStore.adminEnabled" class="card grid gap-[1.15rem] p-8" style="background: radial-gradient(circle at top right, rgba(24,119,242,0.14), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #f3f8ff 4%) 0%, var(--surface) 100%);">
       <div class="flex items-start justify-between gap-4 max-sm:flex-col max-sm:items-start">
         <div>
           <span class="eyebrow text-accent-strong">Access Protection</span>
-          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Viewer password</h2>
-          <p class="m-0 mt-[0.35rem] text-muted">This password lets family and friends browse the gallery and use likes.</p>
+          <h2 class="m-0 mt-[0.2rem] text-[1.18rem]">Administrator password</h2>
+          <p class="m-0 mt-[0.35rem] text-muted">The gallery is public. This password protects content and library management.</p>
         </div>
         <span
           class="inline-flex items-center justify-center min-h-8 px-[0.7rem] py-[0.35rem] rounded-full text-[0.76rem] font-bold whitespace-nowrap"
@@ -68,8 +68,8 @@
       <section v-else class="grid gap-[1rem]">
         <div class="grid gap-[0.9rem] rounded-[1.05rem] border border-[color-mix(in_srgb,var(--border)_78%,var(--accent)_22%)] p-5">
           <div>
-            <h3 class="m-0 text-[1rem]">Change viewer password</h3>
-            <p class="m-0 mt-[0.25rem] text-muted">Update viewer access and invalidate older sessions.</p>
+            <h3 class="m-0 text-[1rem]">Change administrator password</h3>
+            <p class="m-0 mt-[0.25rem] text-muted">Update administrator access and invalidate older sessions.</p>
           </div>
 
           <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
@@ -145,7 +145,7 @@
       <div>
         <span class="eyebrow text-accent-strong">Administrator Access</span>
         <h2 class="m-0 mt-1 text-[1.18rem]">{{ authStore.adminEnabled ? 'Change admin password' : 'Create admin password' }}</h2>
-        <p class="m-0 mt-1 text-muted">The admin password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. It must differ from the viewer password.</p>
+        <p class="m-0 mt-1 text-muted">The admin password unlocks uploads, metadata editing, scans, settings, Trash, and deletion. Visitors need no password.</p>
       </div>
       <div class="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
         <label v-if="authStore.adminEnabled" class="grid gap-2">
@@ -697,8 +697,8 @@ const thumbnailRebuildActionNote = computed(() => {
 });
 const authProtectionDescription = computed(() =>
   authStore.enabled
-    ? 'Password protection is active for this browser session. Use the controls below to rotate the shared password, sign out, or turn protection off again.'
-    : 'Protection is currently off. Anyone who can reach this app on your network can browse the library until you enable a password.'
+    ? 'Administrator protection is active. Public visitors can still browse the gallery without signing in.'
+    : 'The gallery is public and administrator actions are disabled until you configure a password.'
 );
 const authFeedbackMessage = computed(() => authFeedback.value?.message ?? authStore.error);
 const authFeedbackTone = computed(() => authFeedback.value?.tone ?? 'error');

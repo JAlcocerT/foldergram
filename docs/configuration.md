@@ -30,7 +30,7 @@ Foldergram reads `.env` from the repository root and validates it in
 
 ## Access protection configuration
 
-Shared-password protection is **not** configured in `.env`.
+Administrator protection is **not** configured in `.env`.
 
 Instead:
 
@@ -38,8 +38,8 @@ Instead:
 - Foldergram stores the password hash and session metadata in SQLite `app_settings`
 - deleting or replacing the SQLite database resets the configured password protection state
 
-The built-in auth model is a single shared password for one app instance, not a
-multi-user account system.
+The built-in auth model keeps viewing public and provides one shared
+administrator credential, not a multi-user account system.
 
 ## Path resolution rules
 

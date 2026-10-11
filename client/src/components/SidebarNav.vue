@@ -252,7 +252,7 @@
           </RouterLink>
 
           <RouterLink
-            v-if="authStore.isAdmin"
+            v-if="authStore.isAdmin || !authStore.enabled"
             class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
             :to="{ name: 'settings' }"
             @click="closeMoreMenu"
@@ -262,6 +262,16 @@
               aria-hidden="true"
             />
             <span>Settings</span>
+          </RouterLink>
+
+          <RouterLink
+            v-if="authStore.enabled && !authStore.isAdmin"
+            class="flex items-center gap-[0.95rem] px-[1.2rem] py-[1rem] text-[0.98rem] text-text transition-colors duration-150 hover:bg-surface-hover"
+            :to="{ name: 'admin-login' }"
+            @click="closeMoreMenu"
+          >
+            <span class="i-fluent-lock-closed-20-regular w-[1.18rem] h-[1.18rem] shrink-0" aria-hidden="true" />
+            <span>Admin sign in</span>
           </RouterLink>
 
           <button
@@ -303,7 +313,7 @@
             <span>Switch appearance</span>
           </button>
           <button
-            v-if="authStore.enabled"
+            v-if="authStore.isAdmin"
             class="flex items-center gap-[0.95rem] w-full px-[1.2rem] py-[1rem] border-0 bg-transparent text-[0.98rem] text-text cursor-pointer text-left transition-colors duration-150 hover:bg-surface-hover"
             type="button"
             @click="handleLogout"

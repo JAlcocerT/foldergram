@@ -10,7 +10,6 @@
       <p class="m-0 text-muted">Loading the current password protection status.</p>
     </div>
   </section>
-  <AuthGate v-else-if="authStore.requiresLogin" />
   <AppShell v-else>
     <RouterView :route="displayRoute" />
     <div v-if="showImageModal" class="fixed inset-0 z-40 flex items-center justify-center px-8 py-8 max-md:px-4 max-md:py-4 bg-black/72" @click.self="closeImageModal">
@@ -24,7 +23,6 @@ import { computed, nextTick, onUnmounted, watch } from 'vue';
 import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router';
 
 import AppShell from './components/AppShell.vue';
-import AuthGate from './components/AuthGate.vue';
 import ImageView from './views/ImageView.vue';
 import { useAppStore } from './stores/app';
 import { useAuthStore } from './stores/auth';
@@ -188,6 +186,15 @@ watch(
   },
   {
     immediate: true
+  }
+);
+
+watch(
+  () => authStore.isAdmin,
+  (isAdmin, wasAdmin) => {
+    if (wasAdmin && !isAdmin && route.meta.requiresAdmin) {
+      void router.replace({ name: 'home' });
+    }
   }
 );
 

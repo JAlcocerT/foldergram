@@ -70,9 +70,14 @@
           </svg>
         </a>
       </RouterLink>
+      <RouterLink v-if="authStore.enabled && !authStore.isAdmin" custom :to="{ name: 'admin-login' }" v-slot="{ href, navigate }">
+        <a :href="href" class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem]" aria-label="Admin sign in" @click="navigate">
+          <span class="i-fluent-lock-closed-20-regular w-[1.45rem] h-[1.45rem]" aria-hidden="true" />
+        </a>
+      </RouterLink>
       <RouterLink custom :to="{ name: 'settings' }" v-slot="{ href, navigate, isActive }">
         <a
-          v-if="authStore.isAdmin"
+          v-if="authStore.isAdmin || !authStore.enabled"
           :href="href"
           class="topbar__icon-link inline-flex items-center justify-center w-11 h-12 rounded-[1rem] border-0 bg-transparent color-inherit cursor-pointer transition-colors duration-150 hover:bg-white/8"
           :class="isActive ? topbarActiveClass : ''"
@@ -82,7 +87,7 @@
           <span class="w-[1.45rem] h-[1.45rem]" :class="isActive ? 'i-fluent-settings-16-filled' : 'i-fluent-settings-16-regular'" aria-hidden="true" />
         </a>
       </RouterLink>
-      <button v-if="authStore.enabled" class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer" type="button" aria-label="Sign out" @click="authStore.logout()">
+      <button v-if="authStore.isAdmin" class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer" type="button" aria-label="Sign out" @click="authStore.logout()">
         <span class="i-fluent-sign-out-20-regular w-[1.45rem] h-[1.45rem]" aria-hidden="true" />
       </button>
       <button class="inline-flex items-center justify-center w-11 h-12 rounded-[1rem] color-inherit bg-transparent border-0 cursor-pointer transition-colors duration-150 hover:bg-white/8" type="button" :aria-label="themeLabel" @click="appStore.toggleTheme()">

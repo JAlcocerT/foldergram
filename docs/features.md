@@ -124,7 +124,7 @@ Settings is the operational control surface for the library.
 
 It exposes:
 
-- shared-password protection controls
+- administrator protection controls
 - live scan status
 - storage and index status
 - last completed scan details
@@ -132,15 +132,15 @@ It exposes:
 - thumbnail-only rebuild
 - full library rebuild
 
-### Viewer and administrator protection
+### Public viewing and administrator protection
 
-Settings can enable a viewer password for browsing and likes, then a distinct
-administrator password for content and library management.
+Gallery browsing and likes are public. Settings can enable an administrator
+password for content and library management.
 
 That flow supports:
 
 - turning password protection on
-- changing either password
+- changing the administrator password
 - disabling protection again
 - signing the current browser session out
 
