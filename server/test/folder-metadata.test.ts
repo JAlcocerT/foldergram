@@ -88,6 +88,7 @@ resources:
 
     expect(detail).toMatchObject({
       id: image.id,
+      folderName: 'Mantas',
       caption: 'Manta para bebe',
       captionSource: 'frontmatter',
       folderDescription: 'Mantas multi-proposito'
@@ -159,6 +160,7 @@ description: Broken file without closing delimiter
     const image = await createIndexedImage('showcase', 'hero-shot.jpg', {
       metadataFilename: 'index.md',
       metadataSource: `---
+title: Escaparate
 description: Showcase collection from Hugo
 resources:
   - src: hero-shot.jpg
@@ -173,19 +175,23 @@ resources:
 
     expect(feedItem).toMatchObject({
       id: image.id,
+      folderName: 'Escaparate',
       caption: 'Imported feed caption',
       captionSource: 'frontmatter'
     });
     expect(folder).toMatchObject({
       slug: 'showcase',
+      name: 'Escaparate',
       folderDescription: 'Showcase collection from Hugo'
     });
     expect(folderImages?.folder).toMatchObject({
       slug: 'showcase',
+      name: 'Escaparate',
       folderDescription: 'Showcase collection from Hugo'
     });
     expect(folderImages?.items[0]).toMatchObject({
       id: image.id,
+      folderName: 'Escaparate',
       caption: 'Imported feed caption',
       captionSource: 'frontmatter'
     });

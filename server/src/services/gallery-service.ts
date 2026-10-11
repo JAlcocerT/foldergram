@@ -206,7 +206,7 @@ function buildFolderSummary(folder: FolderSummaryRecord) {
   return {
     id: folder.id,
     slug: folder.slug,
-    name: folder.name,
+    name: metadata.folderName ?? folder.name,
     folderPath: folder.folder_path,
     breadcrumb: getPathBreadcrumb(folder.folder_path),
     folderDescription: metadata.folderDescription,

@@ -13,6 +13,7 @@ interface ParsedFolderResourceMetadata {
 }
 
 interface ParsedFolderMetadata {
+  title: string | null;
   description: string | null;
   resources: ParsedFolderResourceMetadata[];
 }
@@ -226,6 +227,7 @@ export function parseFolderFrontmatter(source: string): ParsedFolderMetadata | n
   }
 
   const lines = frontmatter.split('\n');
+  let title: string | null = null;
   let description: string | null = null;
   const resources: ParsedFolderResourceMetadata[] = [];
 
@@ -239,6 +241,12 @@ export function parseFolderFrontmatter(source: string): ParsedFolderMetadata | n
 
     const field = parseFieldLine(line);
     if (!field) {
+      index += 1;
+      continue;
+    }
+
+    if (field.key === 'title') {
+      title = parseScalarValue(field.rawValue);
       index += 1;
       continue;
     }
@@ -260,6 +268,7 @@ export function parseFolderFrontmatter(source: string): ParsedFolderMetadata | n
   }
 
   return {
+    title,
     description,
     resources
   };
@@ -335,11 +344,13 @@ export const folderMetadataService = {
   },
 
   getFolderMetadata(folderPath: string): {
+    folderName: string | null;
     folderDescription: string | null;
   } {
     const metadata = readFolderMetadata(folderPath);
 
     return {
+      folderName: metadata?.title?.trim() || null,
       folderDescription: metadata?.description?.trim() || null
     };
   },
@@ -347,16 +358,19 @@ export const folderMetadataService = {
   getImageDetailMetadata(folderPath: string, filename: string): {
     caption: string;
     captionSource: CaptionSource;
+    folderName?: string;
     folderDescription: string | null;
   } {
     const fallbackCaption = formatFilenameCaption(filename);
     const metadata = readFolderMetadata(folderPath);
     const normalizedFilename = path.posix.basename(normalizePath(filename)).toLowerCase();
     const importedCaption = metadata?.resources.find((resource) => resource.basename === normalizedFilename)?.title?.trim() || null;
+    const folderName = metadata?.title?.trim() || null;
 
     return {
       caption: importedCaption ?? fallbackCaption,
       captionSource: importedCaption ? 'frontmatter' : 'filename',
+      ...(folderName ? { folderName } : {}),
       folderDescription: metadata?.description?.trim() || null
     };
   },
@@ -364,12 +378,14 @@ export const folderMetadataService = {
   getFeedImageMetadata(folderPath: string, filename: string): {
     caption: string;
     captionSource: CaptionSource;
+    folderName?: string;
   } {
     const detail = this.getImageDetailMetadata(folderPath, filename);
 
     return {
       caption: detail.caption,
-      captionSource: detail.captionSource
+      captionSource: detail.captionSource,
+      ...(detail.folderName ? { folderName: detail.folderName } : {})
     };
   }
 };
